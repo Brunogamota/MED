@@ -69,6 +69,9 @@ Falta apenas cadastrar tres secrets no repositorio (`VERCEL_TOKEN`,
 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Sem eles, o job avisa e segue verde,
 sem publicar.
 
+Para ver a versao atual no ar sem configurar nada, dispare **Actions -> Deploy
+temporario**: publica um deployment publico em modo demo, sem credenciais.
+
 ## Documentacao
 
 - [`CLAUDE.md`](CLAUDE.md) — guia do projeto e regras invioláveis

@@ -68,6 +68,23 @@ execucao que faltam credenciais e segue verde.
 
 > `.vercel/` esta no `.gitignore` — o arquivo de link nunca entra no repositorio.
 
+### Ver a versao no ar agora, sem nenhuma credencial
+
+O workflow `.github/workflows/deploy-temporario.yml` publica um deployment
+temporario usando `vercel deploy --temporary`, que dispensa login. Dispare em
+**Actions -> Deploy temporario -> Run workflow**.
+
+O que ele publica:
+
+- URL **publica e sem autenticacao**;
+- modo demo (sem `DATABASE_URL`), com os dados ficticios de exemplo;
+- estado em memoria, que some no primeiro cold start;
+- nenhum secret envolvido, nenhum dado real exposto.
+
+Serve para conferir a versao atual e para reivindicar o deployment na sua conta
+Vercel depois. Nao substitui o caminho A: ele roda so quando disparado a mao,
+nunca a cada push.
+
 ### Caminho B — Integracao Git da Vercel
 
 Importe o repositorio em <https://vercel.com/new>. Cada push passa a gerar um

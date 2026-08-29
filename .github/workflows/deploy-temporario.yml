@@ -1,0 +1,94 @@
+# Deploy temporario, sem credenciais.
+#
+# Serve para ver a versao atual no ar antes de existir um projeto Vercel ligado
+# ao repositorio. A CLI da Vercel cria um deployment com `--temporary`, que pode
+# ser reivindicado depois pela conta da Vercel e associado a um projeto de
+# verdade.
+#
+# O que voce precisa saber sobre o que este workflow publica:
+#   - a URL gerada e PUBLICA e nao tem autenticacao;
+#   - sobe em modo demo (sem DATABASE_URL), com os dados ficticios de exemplo;
+#   - o estado vive em memoria e some no primeiro cold start;
+#   - nenhum secret e usado, e nenhum dado real e exposto.
+#
+# Por isso ele roda apenas quando alguem dispara a mao, nunca a cada push. O
+# deploy continuo de verdade e o job `deploy` em `ci.yml`, que exige os secrets.
+name: Deploy temporario
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Publicar versao temporaria
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # A mesma verificacao do CI: nao publicar versao quebrada vale aqui tambem.
+      - name: Verificar antes de publicar
+        run: |
+          npx prisma generate
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
+
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Publicar
+        id: deploy
+        run: |
+          set -o pipefail
+          out=$(vercel deploy --temporary --yes 2>&1 | tee /tmp/vercel.log) || {
+            echo '::error::Falha ao publicar. Log acima.'
+            exit 1
+          }
+          url=$(printf '%s\n' "$out" | grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' | tail -1)
+          if [ -z "$url" ]; then
+            echo '::error::A CLI nao devolveu uma URL. Log acima.'
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Publicado em $url"
+
+      - name: Verificar a versao publicada
+        run: |
+          url='${{ steps.deploy.outputs.url }}'
+          for attempt in 1 2 3 4 5 6; do
+            code=$(curl -s -o /tmp/health.json -w '%{http_code}' "$url/api/health" || echo 000)
+            if [ "$code" = "200" ]; then
+              {
+                echo '## Versao temporaria no ar'
+                echo ''
+                echo "**$url**"
+                echo ''
+                echo "- Telas: $url/meds"
+                echo "- Importar lote: $url/meds/import"
+                echo "- Health: $url/api/health"
+                echo ''
+                echo 'Modo demo: dados ficticios, sem banco, estado em memoria.'
+                echo 'A URL e publica e o deployment pode ser reivindicado na sua conta Vercel.'
+                echo ''
+                echo '```json'
+                cat /tmp/health.json
+                echo ''
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              cat /tmp/health.json
+              exit 0
+            fi
+            echo "Tentativa $attempt: HTTP $code. Nova tentativa em 10s."
+            sleep 10
+          done
+          echo "::error::A versao publicada nao respondeu em $url/api/health."
+          exit 1
