@@ -12,7 +12,7 @@
 
 ## Vercel
 
-O projeto ja esta configurado para a Vercel:
+O projeto ja esta pronto para a Vercel:
 
 - `vercel.json` — framework, regiao `gru1`, `maxDuration` de 60s nas rotas de API.
 - Build command `npm run vercel-build` = `prisma generate && next build`.
@@ -21,24 +21,71 @@ O projeto ja esta configurado para a Vercel:
 - Todas as rotas de API sao `force-dynamic`; nada que dependa de dados de tenant
   e pre-renderizado.
 
-### Fluxo Git (recomendado)
+### Estado atual: o projeto ainda nao esta conectado
 
-Repositorio conectado ao projeto Vercel: cada push gera um Preview Deployment; o
-merge na branch de producao gera o deploy de producao. Nenhum passo manual.
+Nenhum deploy aconteceu ate agora. Nao ha projeto Vercel ligado a este
+repositorio, e o ambiente onde o agente roda **nao alcanca a rede da Vercel**
+(`vercel.com` e `api.vercel.com` sao bloqueados pela politica de rede; npm passa).
+Ou seja: publicar a partir da sessao do agente e impossivel, mesmo com token.
 
-### Vercel CLI (alternativa)
+Por isso o deploy foi movido para o CI, onde ele funciona sem depender do agente.
+Escolha um dos dois caminhos abaixo — os dois deixam toda versao nova publicada
+automaticamente.
 
-Com a CLI autenticada no ambiente:
+### Caminho A — GitHub Actions (ja implementado, falta so cadastrar os secrets)
+
+O workflow `.github/workflows/ci.yml` tem um job `deploy` que roda **depois** de
+lint, typecheck, testes e build. Versao quebrada nao chega a ser publicada.
+
+Para ligar, faca uma vez:
+
+1. Gere um token em <https://vercel.com/account/tokens>.
+2. Crie o projeto uma vez, a partir da sua maquina, na raiz do repositorio:
+
+   ```bash
+   npx vercel@latest login
+   npx vercel@latest link      # cria .vercel/project.json
+   cat .vercel/project.json    # mostra orgId e projectId
+   ```
+
+3. No GitHub, em **Settings -> Secrets and variables -> Actions**, cadastre:
+
+   | Secret | Valor |
+   | --- | --- |
+   | `VERCEL_TOKEN` | o token gerado no passo 1 |
+   | `VERCEL_ORG_ID` | `orgId` do `.vercel/project.json` |
+   | `VERCEL_PROJECT_ID` | `projectId` do `.vercel/project.json` |
+
+Pronto. A partir do proximo push:
+
+- push na branch padrao -> **Production**;
+- push em qualquer outra branch -> **Preview**;
+- o job confere `GET /api/health` na URL publicada e **falha** se a versao no ar
+  nao responder, para que "publicado" nao signifique apenas "o upload terminou".
+
+Enquanto os secrets nao existirem, o job nao quebra o CI: ele avisa no resumo da
+execucao que faltam credenciais e segue verde.
+
+> `.vercel/` esta no `.gitignore` — o arquivo de link nunca entra no repositorio.
+
+### Caminho B — Integracao Git da Vercel
+
+Importe o repositorio em <https://vercel.com/new>. Cada push passa a gerar um
+deployment automaticamente, sem secrets e sem workflow.
+
+A diferenca em relacao ao caminho A: a Vercel publica **antes** de saber se o CI
+passou. Se voce quer a garantia de nunca publicar uma versao com teste quebrado,
+prefira o caminho A, ou ative "Ignored Build Step" no projeto para condicionar o
+build ao CI.
+
+### Vercel CLI direto (fora do CI)
+
+Com a CLI autenticada na sua maquina:
 
 ```bash
-vercel --yes                 # preview
-vercel --prod --yes          # producao
+npx vercel@latest --yes          # preview
+npx vercel@latest --prod --yes   # producao
 ```
-
-> Estado atual do ambiente de desenvolvimento deste repositorio: a Vercel CLI
-> **nao** esta instalada nem autenticada, e nao ha `VERCEL_TOKEN`. Portanto o
-> deploy acontece pelo fluxo Git. Para habilitar a CLI, exporte `VERCEL_TOKEN`,
-> `VERCEL_ORG_ID` e `VERCEL_PROJECT_ID` no ambiente.
 
 ## Variaveis de ambiente
 
@@ -100,6 +147,9 @@ Atalho para os passos 2 a 5: `npm run verify`.
 
 ## Verificacao pos-deploy
 
+O job de deploy ja faz isso automaticamente e falha se a versao publicada nao
+responder. Para conferir a mao:
+
 ```bash
 curl -s https://<deployment>/api/health
 # { "status": "ok", "appEnv": "...", "persistence": "..." }
@@ -107,3 +157,7 @@ curl -s https://<deployment>/api/health
 
 Depois abra `/meds` e confirme que a listagem responde. Em modo demo a tela mostra
 o aviso "modo demo - dados nao persistidos".
+
+Sem `DATABASE_URL` o deploy sobe em modo demo e e exploravel de imediato, com os
+dados de exemplo. Para valer, configure `DATABASE_URL` no projeto Vercel e rode
+`npm run db:deploy` apontando para `DIRECT_DATABASE_URL`.

@@ -4,6 +4,7 @@ on:
   push:
     branches: ['**']
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -11,6 +12,7 @@ concurrency:
 
 jobs:
   verify:
+    name: Verificacao
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,12 +22,12 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Install dependencies
+      - name: Instalar dependencias
         run: npm ci
 
-      # No database is needed: `prisma generate` reads the schema only, and the
-      # app builds in demo mode when DATABASE_URL is absent.
-      - name: Generate Prisma client
+      # Nao precisa de banco: `prisma generate` le apenas o schema, e a aplicacao
+      # compila em modo demo quando DATABASE_URL esta ausente.
+      - name: Gerar Prisma Client
         run: npx prisma generate
 
       - name: Lint
@@ -34,8 +36,129 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
+      - name: Testes
         run: npm run test
 
-      - name: Build
+      - name: Build de producao
         run: npm run build
+
+  deploy:
+    name: Deploy (Vercel)
+    # A versao so vai ao ar depois que lint, typecheck, testes e build passam.
+    # E o que impede publicar uma versao quebrada.
+    needs: verify
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref_name == github.event.repository.default_branch && 'production' || 'preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # A CLI le VERCEL_TOKEN, VERCEL_ORG_ID e VERCEL_PROJECT_ID do ambiente.
+      # Nada de token em linha de comando: argumento aparece em log, variavel nao.
+      - name: Conferir credenciais
+        id: creds
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo 'configured=false' >> "$GITHUB_OUTPUT"
+            {
+              echo '## Deploy nao executado'
+              echo ''
+              echo 'Faltam os secrets do Vercel neste repositorio. Cadastre em'
+              echo '**Settings -> Secrets and variables -> Actions**:'
+              echo ''
+              echo '- `VERCEL_TOKEN`'
+              echo '- `VERCEL_ORG_ID`'
+              echo '- `VERCEL_PROJECT_ID`'
+              echo ''
+              echo 'Passo a passo em `docs/DEPLOYMENT.md`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Deploy pulado: secrets do Vercel ausentes. Veja docs/DEPLOYMENT.md."
+          else
+            echo 'configured=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Instalar Vercel CLI
+        if: steps.creds.outputs.configured == 'true'
+        run: npm install --global vercel@latest
+
+      - name: Definir ambiente alvo
+        id: target
+        if: steps.creds.outputs.configured == 'true'
+        run: |
+          if [ "${{ github.ref_name }}" = "${{ github.event.repository.default_branch }}" ]; then
+            echo 'environment=production' >> "$GITHUB_OUTPUT"
+            echo 'flag=--prod' >> "$GITHUB_OUTPUT"
+          else
+            echo 'environment=preview' >> "$GITHUB_OUTPUT"
+            echo 'flag=' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Baixar configuracao do projeto
+        if: steps.creds.outputs.configured == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=${{ steps.target.outputs.environment }}
+
+      - name: Build
+        if: steps.creds.outputs.configured == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel build ${{ steps.target.outputs.flag }}
+
+      - name: Publicar
+        id: deploy
+        if: steps.creds.outputs.configured == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          url=$(vercel deploy --prebuilt ${{ steps.target.outputs.flag }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Publicado em $url"
+
+      # Verificar o ambiente publicado faz parte do deploy: sem isso, "publicado"
+      # significa apenas "o upload terminou".
+      - name: Verificar a versao publicada
+        if: steps.creds.outputs.configured == 'true'
+        run: |
+          url='${{ steps.deploy.outputs.url }}'
+          for attempt in 1 2 3 4 5; do
+            code=$(curl -s -o /tmp/health.json -w '%{http_code}' "$url/api/health" || echo 000)
+            if [ "$code" = "200" ]; then
+              echo "Health check OK:"
+              cat /tmp/health.json
+              {
+                echo "## Deploy verificado"
+                echo ''
+                echo "Ambiente: **${{ steps.target.outputs.environment }}**"
+                echo ''
+                echo "URL: $url"
+                echo ''
+                echo '```json'
+                cat /tmp/health.json
+                echo ''
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Tentativa $attempt: HTTP $code. Nova tentativa em 10s."
+            sleep 10
+          done
+          echo "::error::A versao publicada nao respondeu em $url/api/health."
+          exit 1

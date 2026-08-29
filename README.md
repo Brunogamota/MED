@@ -58,6 +58,17 @@ npm run dev
 npm run verify   # lint + typecheck + test + build
 ```
 
+## Deploy
+
+Toda versao nova e publicada pelo CI: o job `deploy` em
+`.github/workflows/ci.yml` roda depois de lint, typecheck, testes e build, e
+confere `GET /api/health` na URL publicada.
+
+Falta apenas cadastrar tres secrets no repositorio (`VERCEL_TOKEN`,
+`VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`) — passo a passo em
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Sem eles, o job avisa e segue verde,
+sem publicar.
+
 ## Documentacao
 
 - [`CLAUDE.md`](CLAUDE.md) — guia do projeto e regras invioláveis
