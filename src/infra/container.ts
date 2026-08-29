@@ -43,3 +43,18 @@ export async function getRepository(): Promise<Repository> {
 
   return repository;
 }
+
+/**
+ * Test seam: replaces the process-wide repository with a caller-provided one.
+ * Passing `null` clears it so the next `getRepository()` builds a fresh
+ * instance. Only tests should call this.
+ */
+export function __setRepositoryForTests(repository: Repository | null): void {
+  if (repository === null) {
+    delete globalStore.__medRepository;
+    delete globalStore.__medSeeded;
+    return;
+  }
+  globalStore.__medRepository = repository;
+  globalStore.__medSeeded = true;
+}
