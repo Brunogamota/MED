@@ -221,8 +221,7 @@ export function TrackingForm({ medCase }: { medCase: MedCase }) {
           <Field
             label="Codigo de rastreio"
             name="trackingCode"
-            required
-            defaultValue={tracking?.trackingCode}
+            defaultValue={tracking?.trackingCode ?? undefined}
           />
           <Field label="Transportadora" name="carrier" defaultValue={tracking?.carrier ?? undefined} />
           <Select

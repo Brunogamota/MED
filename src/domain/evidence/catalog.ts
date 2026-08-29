@@ -71,6 +71,9 @@ const DEFINITIONS: EvidenceTypeDefinition[] = [
   def('DELIVERY_RECEIPT_SIGNED', 'DELIVERY', 'Comprovante de entrega assinado', 'STRONG', 'Documento assinado no ato da entrega.'),
 
   // --- Digital delivery ----------------------------------------------------
+  def('ACCESS_DELIVERY_CHANNEL', 'DELIVERY', 'Canal de entrega do acesso', 'MEDIUM', 'Por onde o acesso foi enviado ao comprador.'),
+  def('ACCESS_SENT_TO', 'DELIVERY', 'Destino do envio do acesso', 'STRONG', 'Para qual e-mail ou contato o acesso foi enviado.', true),
+  def('ACCESS_SENT_AT', 'DELIVERY', 'Data do envio do acesso', 'STRONG', 'Momento em que o produto foi disponibilizado ao comprador.'),
   def('FIRST_ACCESS_AT', 'DELIVERY', 'Data do primeiro acesso', 'STRONG', 'Comprova o uso do produto digital.'),
   def('ACCESS_LOG', 'DELIVERY', 'Log de acessos', 'STRONG', 'Cadeia de acessos com data, hora e origem.'),
   def('ACCESS_COUNT', 'DELIVERY', 'Numero de acessos', 'MEDIUM', 'Mostra uso recorrente do produto.'),

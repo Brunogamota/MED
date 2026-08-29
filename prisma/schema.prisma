@@ -79,12 +79,22 @@ enum VerificationStatus {
 
 enum ShipmentStatus {
   CREATED
+  IN_PRODUCTION
   POSTED
   IN_TRANSIT
   OUT_FOR_DELIVERY
   DELIVERED
+  NOT_DELIVERED
   RETURNED
   UNKNOWN
+}
+
+enum DeliveryChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+  PLATFORM
+  OTHER
 }
 
 enum DocumentKind {
@@ -144,10 +154,11 @@ model Med {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  transaction MedTransaction?
-  customer    Customer?
-  order       Order?
-  tracking    Tracking?
+  transaction     MedTransaction?
+  customer        Customer?
+  order           Order?
+  tracking        Tracking?
+  digitalDelivery DigitalDelivery?
   evidences   Evidence[]
   documents   Document[]
   defenses    Defense[]
@@ -223,7 +234,7 @@ model Tracking {
   organizationId    String
   medId             String         @unique
   carrier           String?
-  trackingCode      String
+  trackingCode      String?
   status            ShipmentStatus
   postedAt          DateTime?
   deliveredAt       DateTime?
@@ -238,6 +249,28 @@ model Tracking {
 
   @@index([organizationId])
   @@index([trackingCode])
+}
+
+// Entrega de produto digital, servico ou assinatura: o equivalente do rastreio
+// para o que nao e transportado.
+model DigitalDelivery {
+  id              String          @id @default(cuid())
+  organizationId  String
+  medId           String          @unique
+  channel         DeliveryChannel
+  sentTo          String?
+  sentAt          DateTime?
+  platform        String?
+  firstAccessAt   DateTime?
+  accessCount     Int?
+  source          EvidenceSource
+  sourceProvider  String?
+  sourceReference String?
+  createdAt       DateTime        @default(now())
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
 }
 
 model Evidence {

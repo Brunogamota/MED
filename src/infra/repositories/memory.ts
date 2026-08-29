@@ -1,6 +1,7 @@
 import type {
   AuditLogEntry,
   Customer,
+  DigitalDelivery,
   Defense,
   DefenseSubmission,
   Evidence,
@@ -33,6 +34,7 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
   private readonly customers = new Map<string, Customer>();
   private readonly orders = new Map<string, Order>();
   private readonly trackings = new Map<string, Tracking>();
+  private readonly digitalDeliveries = new Map<string, DigitalDelivery>();
   private readonly evidences = new Map<string, Evidence[]>();
   private readonly documents = new Map<string, StoredDocument[]>();
   private readonly defenses = new Map<string, Defense[]>();
@@ -128,6 +130,11 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
   async upsertTracking(tracking: Tracking): Promise<Tracking> {
     this.trackings.set(this.scoped(tracking.organizationId, tracking.medId), tracking);
     return tracking;
+  }
+
+  async upsertDigitalDelivery(delivery: DigitalDelivery): Promise<DigitalDelivery> {
+    this.digitalDeliveries.set(this.scoped(delivery.organizationId, delivery.medId), delivery);
+    return delivery;
   }
 
   private appendTo<T>(map: Map<string, T[]>, key: string, value: T): T {
@@ -231,6 +238,7 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
       customer: this.customers.get(key) ?? null,
       order: this.orders.get(key) ?? null,
       tracking: this.trackings.get(key) ?? null,
+      digitalDelivery: this.digitalDeliveries.get(key) ?? null,
       evidences: await this.listEvidence(organizationId, medId),
       documents: await this.listDocuments(organizationId, medId),
     };

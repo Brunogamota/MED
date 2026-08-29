@@ -2,6 +2,7 @@ import type { EvidencePack } from '@/domain/types';
 import { getEvidenceDefinition } from '@/domain/evidence/catalog';
 import { evaluateStrength } from '@/domain/evidence/strength';
 import { formatAddress, formatAmount, formatDate, formatDateTime } from '@/lib/format';
+import { DELIVERY_CHANNEL_LABEL, SHIPMENT_STATUS_LABEL } from '@/lib/labels';
 import {
   A4,
   COLORS,
@@ -382,25 +383,77 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
     { label: 'IP INFORMADO NO MED', value: med.payerIp ?? 'Nao informado' },
   ]);
 
+  const digitalDelivery = pack.digitalDelivery;
+
   drawSectionTitle(context, 'Dados de entrega');
-  if (!tracking) {
-    drawParagraph(context, 'Nao ha dados de envio registrados para este caso.', {
+
+  if (!tracking && !digitalDelivery) {
+    drawParagraph(context, 'Nao ha dados de entrega registrados para este caso.', {
       color: COLORS.muted,
     });
     return;
   }
-  drawKeyValueGrid(context, [
-    { label: 'TRANSPORTADORA', value: tracking.carrier ?? 'Nao informada' },
-    { label: 'CODIGO DE RASTREIO', value: tracking.trackingCode },
-    { label: 'STATUS', value: tracking.status },
-    { label: 'POSTAGEM', value: formatDateTime(tracking.postedAt) ?? 'Nao informada' },
-    { label: 'ENTREGA', value: formatDateTime(tracking.deliveredAt) ?? 'Nao registrada' },
-    { label: 'RECEBIDO POR', value: tracking.receiverName ?? 'Nao informado' },
-    {
-      label: 'ENDERECO DE ENTREGA',
-      value: formatAddress(order?.shippingAddress) ?? 'Nao informado',
-    },
-  ]);
+
+  if (tracking) {
+    drawKeyValueGrid(context, [
+      { label: 'TRANSPORTADORA', value: tracking.carrier ?? 'Nao informada' },
+      { label: 'CODIGO DE RASTREIO', value: tracking.trackingCode ?? 'Nao informado' },
+      { label: 'STATUS', value: SHIPMENT_STATUS_LABEL[tracking.status] },
+      { label: 'POSTAGEM', value: formatDateTime(tracking.postedAt) ?? 'Nao informada' },
+      { label: 'ENTREGA', value: formatDateTime(tracking.deliveredAt) ?? 'Nao registrada' },
+      { label: 'RECEBIDO POR', value: tracking.receiverName ?? 'Nao informado' },
+      {
+        label: 'ENDERECO DE ENTREGA',
+        value: formatAddress(order?.shippingAddress) ?? 'Nao informado',
+      },
+    ]);
+
+    if (tracking.events.length > 0) {
+      drawTable(
+        context,
+        [
+          { header: 'Data e hora', width: 120 },
+          { header: 'Etapa', width: 120 },
+          { header: 'Descricao', width: 150 },
+          { header: 'Origem', width: 109 },
+        ],
+        tracking.events.map((event) => [
+          formatDateTime(event.occurredAt) ?? event.occurredAt,
+          SHIPMENT_STATUS_LABEL[event.status],
+          event.location ? `${event.description} - ${event.location}` : event.description,
+          `${SOURCE_LABEL[event.source] ?? event.source}${
+            event.sourceReference ? `\n${event.sourceReference}` : ''
+          }`,
+        ]),
+      );
+    }
+  }
+
+  if (digitalDelivery) {
+    drawKeyValueGrid(context, [
+      { label: 'CANAL DE ENTREGA', value: DELIVERY_CHANNEL_LABEL[digitalDelivery.channel] },
+      { label: 'ENVIADO PARA', value: digitalDelivery.sentTo ?? 'Nao informado' },
+      { label: 'ENVIADO EM', value: formatDateTime(digitalDelivery.sentAt) ?? 'Nao informado' },
+      { label: 'PLATAFORMA', value: digitalDelivery.platform ?? 'Nao informada' },
+      {
+        label: 'PRIMEIRO ACESSO',
+        value: formatDateTime(digitalDelivery.firstAccessAt) ?? 'Nao registrado',
+      },
+      {
+        label: 'NUMERO DE ACESSOS',
+        value:
+          digitalDelivery.accessCount === null || digitalDelivery.accessCount === undefined
+            ? 'Nao registrado'
+            : String(digitalDelivery.accessCount),
+      },
+      {
+        label: 'ORIGEM DO REGISTRO',
+        value: `${SOURCE_LABEL[digitalDelivery.source] ?? digitalDelivery.source}${
+          digitalDelivery.sourceReference ? ` - ${digitalDelivery.sourceReference}` : ''
+        }`,
+      },
+    ]);
+  }
 }
 
 function drawDocuments(context: DocumentContext, pack: EvidencePack): void {

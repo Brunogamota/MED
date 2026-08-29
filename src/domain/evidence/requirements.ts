@@ -73,8 +73,14 @@ const PHYSICAL_REQUIREMENTS: EvidenceRequirement[] = [
 ];
 
 const DIGITAL_REQUIREMENTS: EvidenceRequirement[] = [
-  req('FIRST_ACCESS_AT', 'REQUIRED'),
-  req('ACCESS_LOG', 'REQUIRED'),
+  // A entrega do digital e o envio do acesso. O uso pelo cliente reforca, mas
+  // depender dele deixaria a defesa refem de uma confirmacao que o comprador
+  // contestante nao tem motivo para dar.
+  req('ACCESS_SENT_AT', 'REQUIRED'),
+  req('ACCESS_SENT_TO', 'REQUIRED'),
+  req('ACCESS_DELIVERY_CHANNEL', 'RECOMMENDED'),
+  req('FIRST_ACCESS_AT', 'RECOMMENDED'),
+  req('ACCESS_LOG', 'RECOMMENDED'),
   req('ACCESS_COUNT', 'RECOMMENDED'),
   req('CONTENT_CONSUMPTION', 'RECOMMENDED'),
   req('DOWNLOAD_LOG', 'RECOMMENDED'),
@@ -170,8 +176,8 @@ const REASON_OVERLAYS: Partial<Record<MedReason, ReasonOverlay>> = {
       req('TRACKING_EVENTS', 'REQUIRED'),
       req('DELIVERY_CONFIRMATION', 'REQUIRED'),
       req('DELIVERED_AT', 'REQUIRED'),
-      req('FIRST_ACCESS_AT', 'REQUIRED'),
-      req('ACCESS_LOG', 'REQUIRED'),
+      req('ACCESS_SENT_AT', 'REQUIRED'),
+      req('ACCESS_SENT_TO', 'REQUIRED'),
       req('SERVICE_EXECUTION', 'REQUIRED'),
     ],
     weightBias: { DELIVERY: 45 },

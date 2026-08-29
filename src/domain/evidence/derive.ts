@@ -61,7 +61,7 @@ function digitsOnly(value: string | null | undefined): string | null {
 }
 
 export function deriveEvidence(medCase: MedCase, now: Date = new Date()): Evidence[] {
-  const { med, transaction, customer, order, tracking, documents } = medCase;
+  const { med, transaction, customer, order, tracking, digitalDelivery, documents } = medCase;
   const drafts: Draft[] = [];
   const receivedAt = now.toISOString();
 
@@ -167,11 +167,13 @@ export function deriveEvidence(medCase: MedCase, now: Date = new Date()): Eviden
     const base = {
       source: tracking.source,
       sourceProvider: tracking.sourceProvider ?? tracking.carrier ?? null,
-      sourceReference: tracking.sourceReference ?? tracking.trackingCode,
+      sourceReference: tracking.sourceReference ?? tracking.trackingCode ?? null,
       receivedAt: tracking.createdAt,
       metadata: { derivedFrom: `tracking:${tracking.id}` } as Record<string, JsonValue>,
     };
-    add({ ...base, type: 'TRACKING_CODE', value: tracking.trackingCode });
+    if (tracking.trackingCode) {
+      add({ ...base, type: 'TRACKING_CODE', value: tracking.trackingCode });
+    }
     if (tracking.carrier) add({ ...base, type: 'CARRIER', value: tracking.carrier });
     if (tracking.postedAt) add({ ...base, type: 'POSTED_AT', value: tracking.postedAt });
     if (tracking.events.length > 0) {
@@ -182,17 +184,50 @@ export function deriveEvidence(medCase: MedCase, now: Date = new Date()): Eviden
         displayValue: `${tracking.events.length} evento(s) de rastreamento`,
       });
     }
+    // Confirmacao de entrega so existe quando o status e entregue E ha data.
+    // Status sem data nao vira comprovacao de entrega.
     if (tracking.status === 'DELIVERED' && tracking.deliveredAt) {
       add({
         ...base,
         type: 'DELIVERY_CONFIRMATION',
-        value: tracking.trackingCode,
-        displayValue: `Entrega confirmada pelo rastreio ${tracking.trackingCode}`,
+        value: tracking.trackingCode ?? tracking.id,
+        displayValue: tracking.trackingCode
+          ? `Entrega confirmada pelo rastreio ${tracking.trackingCode}`
+          : 'Entrega confirmada pelo registro de expedicao',
       });
       add({ ...base, type: 'DELIVERED_AT', value: tracking.deliveredAt });
     }
     if (tracking.receiverName) {
       add({ ...base, type: 'RECEIVER_NAME', value: tracking.receiverName });
+    }
+  }
+
+  // --- Entrega digital -----------------------------------------------------
+  if (digitalDelivery) {
+    const base = {
+      source: digitalDelivery.source,
+      sourceProvider: digitalDelivery.sourceProvider ?? digitalDelivery.platform ?? null,
+      sourceReference: digitalDelivery.sourceReference ?? null,
+      receivedAt: digitalDelivery.createdAt,
+      metadata: { derivedFrom: `digitalDelivery:${digitalDelivery.id}` } as Record<string, JsonValue>,
+    };
+    add({ ...base, type: 'ACCESS_DELIVERY_CHANNEL', value: digitalDelivery.channel });
+    if (digitalDelivery.sentTo) {
+      add({ ...base, type: 'ACCESS_SENT_TO', value: digitalDelivery.sentTo });
+    }
+    if (digitalDelivery.sentAt) {
+      add({ ...base, type: 'ACCESS_SENT_AT', value: digitalDelivery.sentAt });
+    }
+    if (digitalDelivery.firstAccessAt) {
+      add({ ...base, type: 'FIRST_ACCESS_AT', value: digitalDelivery.firstAccessAt });
+    }
+    if (typeof digitalDelivery.accessCount === 'number') {
+      add({
+        ...base,
+        type: 'ACCESS_COUNT',
+        value: digitalDelivery.accessCount,
+        displayValue: String(digitalDelivery.accessCount),
+      });
     }
   }
 

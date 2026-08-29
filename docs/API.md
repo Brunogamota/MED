@@ -22,12 +22,16 @@ Erros seguem `{ "error": string, "details"?: unknown }` com os status:
 | GET | `/api/health` | Liveness e configuracao efetiva (sem secrets). |
 | GET | `/api/meds` | Lista MEDs. Query: `status`, `search`, `limit`. |
 | POST | `/api/meds` | Cria MED. Idempotente por `medId` dentro da organizacao. |
+| POST | `/api/meds/import` | Importa o arquivo da adquirente (CSV). Idempotente. |
+| POST | `/api/meds/batch` | Cria varios MEDs em uma chamada, com resultado por item. |
 | GET | `/api/meds/:id` | Caso completo (MedCase). |
 | PATCH | `/api/meds/:id` | Atualiza tipo de produto, status, prazo, observacoes. |
 | POST | `/api/meds/:id/transaction` | Upsert da transacao. |
 | POST | `/api/meds/:id/customer` | Upsert do cliente. |
 | POST | `/api/meds/:id/order` | Upsert do pedido. |
-| POST | `/api/meds/:id/tracking` | Upsert do rastreio e seus eventos. |
+| POST | `/api/meds/:id/tracking` | Upsert do rastreio e seus eventos (substitui a lista). |
+| POST | `/api/meds/:id/shipment` | Registra status de entrega + marcos datados (complementa os eventos do provedor). |
+| POST | `/api/meds/:id/digital-delivery` | Registra o envio do acesso: canal, destino e data. |
 | GET | `/api/meds/:id/evidence` | Avaliacao atual: disponivel, faltante, score. |
 | POST | `/api/meds/:id/evidence` | Registra evidencia com origem. |
 | POST | `/api/meds/:id/documents` | Registra a referencia de um documento (sem upload). |
@@ -40,6 +44,41 @@ Erros seguem `{ "error": string, "details"?: unknown }` com os status:
 | GET/POST | `/api/meds/:id/submissions` | Lista / prepara payload por provider. |
 | GET | `/api/meds/:id/audit` | Audit log do caso. |
 | POST | `/api/webhooks/med` | Ingestao de MED. HMAC-SHA256 + idempotencia. |
+
+## Importacao em lote
+
+```bash
+curl -X POST $BASE/api/meds/import -H 'content-type: application/json' -d '{
+  "csv": "MED ID;Valor;Data da compra;Data abertura;Prazo;Motivo;Nome do cliente;CPF\nMED-001;R$ 349,90;10/08/2026 14:32;20/08/2026;05/09/2026;Produto nao recebido;Maria Souza;12345678909",
+  "defaultOpenedAt": "2026-08-28T12:00:00Z",
+  "batchReference": "lote-28-08"
+}'
+```
+
+Tambem aceita o corpo bruto com `content-type: text/csv`.
+
+Cabecalhos sao reconhecidos em portugues (com ou sem acento), o separador pode
+ser `;`, `,`, tab ou `|`, e datas no formato `dd/mm/aaaa hh:mm` sao interpretadas
+no horario de Brasilia. A resposta traz as colunas reconhecidas, as ignoradas e o
+resultado linha a linha: `CREATED`, `DUPLICATE`, `SKIPPED` ou `FAILED`.
+
+Linha com valor ou data ilegivel e reportada e **nao** e importada. `defaultOpenedAt`
+so e usada nas linhas em que o arquivo nao traz a data de abertura.
+
+## Entrega
+
+`POST /api/meds/:id/shipment` grava o status do produto fisico junto com os
+marcos datados (`inProductionAt`, `postedAt`, `inTransitAt`, `outForDeliveryAt`,
+`deliveredAt`, `notDeliveredAt`, `returnedAt`). Cada marco informado vira um
+evento da timeline com a origem declarada; marco sem data nao gera evento.
+Status `DELIVERED` sem `deliveredAt` e recusado com 422.
+
+Eventos ja recebidos de integracao sao preservados: o registro manual complementa
+o que a transportadora informou, nunca apaga.
+
+`POST /api/meds/:id/digital-delivery` grava a entrega de produto digital,
+servico ou assinatura: `channel`, `sentTo`, `sentAt`, `platform` e, quando
+existirem, `firstAccessAt` e `accessCount`.
 
 ## Documentos e links assinados
 

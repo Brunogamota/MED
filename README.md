@@ -12,6 +12,7 @@ que esta faltando, monta a defesa e gera o pacote de evidencias pronto para envi
 
 ## O que o sistema faz
 
+0. Recebe o lote diario da adquirente (arquivo CSV, tela ou API) e normaliza cada linha.
 1. Recebe o MED (manual ou webhook) e normaliza os dados.
 2. Identifica o tipo de transacao (fisico, digital, servico, assinatura, ...).
 3. Determina quais evidencias sao exigidas para aquele tipo **e** aquele motivo.
@@ -19,6 +20,8 @@ que esta faltando, monta a defesa e gera o pacote de evidencias pronto para envi
    documentos) em evidencias com origem preservada.
 5. Monta a timeline unificando eventos de fontes distintas.
 6. Mostra o que existe, o que falta e a forca de cada evidencia.
+6a. Registra a entrega: status e marcos datados no fisico; canal, destino e data
+   do envio do acesso no digital, sem depender de confirmacao do comprador.
 7. Gera claims — cada frase amarrada as evidencias que a sustentam.
 8. Produz o Defense JSON, o texto da defesa, o Evidence Pack e o PDF.
 9. Prepara o payload de submissao por instituicao, mantendo o pack universal.

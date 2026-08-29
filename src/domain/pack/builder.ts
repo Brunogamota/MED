@@ -26,6 +26,7 @@ export function buildEvidencePack(medCase: MedCase, defense: Defense): EvidenceP
     order: medCase.order,
     customer: medCase.customer,
     tracking: medCase.tracking,
+    digitalDelivery: medCase.digitalDelivery,
     evidences,
     documents: medCase.documents,
     timeline: buildTimeline(enriched),

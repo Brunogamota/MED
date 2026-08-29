@@ -4,6 +4,7 @@ import type {
   Address,
   AuditLogEntry,
   Customer,
+  DigitalDelivery,
   Defense,
   DefenseSubmission,
   Evidence,
@@ -74,6 +75,7 @@ type TransactionRow = Prisma.MedTransactionGetPayload<Record<string, never>>;
 type CustomerRow = Prisma.CustomerGetPayload<Record<string, never>>;
 type OrderRow = Prisma.OrderGetPayload<Record<string, never>>;
 type TrackingRow = Prisma.TrackingGetPayload<Record<string, never>>;
+type DigitalDeliveryRow = Prisma.DigitalDeliveryGetPayload<Record<string, never>>;
 type EvidenceRow = Prisma.EvidenceGetPayload<Record<string, never>>;
 type DocumentRow = Prisma.DocumentGetPayload<Record<string, never>>;
 type DefenseRow = Prisma.DefenseGetPayload<Record<string, never>>;
@@ -174,6 +176,24 @@ function mapTracking(row: TrackingRow): Tracking {
     deliveredAt: iso(row.deliveredAt),
     receiverName: row.receiverName,
     events: json<TrackingEvent[]>(row.events) ?? [],
+    source: row.source,
+    sourceProvider: row.sourceProvider,
+    sourceReference: row.sourceReference,
+    createdAt: required(row.createdAt),
+  };
+}
+
+function mapDigitalDelivery(row: DigitalDeliveryRow): DigitalDelivery {
+  return {
+    id: row.id,
+    organizationId: row.organizationId,
+    medId: row.medId,
+    channel: row.channel,
+    sentTo: row.sentTo,
+    sentAt: iso(row.sentAt),
+    platform: row.platform,
+    firstAccessAt: iso(row.firstAccessAt),
+    accessCount: row.accessCount,
     source: row.source,
     sourceProvider: row.sourceProvider,
     sourceReference: row.sourceReference,
@@ -464,6 +484,27 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
     return mapTracking(row);
   }
 
+  async upsertDigitalDelivery(delivery: DigitalDelivery): Promise<DigitalDelivery> {
+    const data = {
+      organizationId: delivery.organizationId,
+      channel: delivery.channel,
+      sentTo: delivery.sentTo,
+      sentAt: date(delivery.sentAt),
+      platform: delivery.platform,
+      firstAccessAt: date(delivery.firstAccessAt),
+      accessCount: delivery.accessCount,
+      source: delivery.source,
+      sourceProvider: delivery.sourceProvider,
+      sourceReference: delivery.sourceReference,
+    };
+    const row = await this.prisma.digitalDelivery.upsert({
+      where: { medId: delivery.medId },
+      create: { ...data, medId: delivery.medId },
+      update: data,
+    });
+    return mapDigitalDelivery(row);
+  }
+
   async addEvidence(evidence: Evidence): Promise<Evidence> {
     const row = await this.prisma.evidence.create({
       data: {
@@ -634,6 +675,7 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
         customer: true,
         order: true,
         tracking: true,
+        digitalDelivery: true,
         evidences: { orderBy: { createdAt: 'asc' } },
         documents: { orderBy: { uploadedAt: 'asc' } },
       },
@@ -646,6 +688,7 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
       customer: row.customer ? mapCustomer(row.customer) : null,
       order: row.order ? mapOrder(row.order) : null,
       tracking: row.tracking ? mapTracking(row.tracking) : null,
+      digitalDelivery: row.digitalDelivery ? mapDigitalDelivery(row.digitalDelivery) : null,
       evidences: row.evidences.map(mapEvidence),
       documents: row.documents.map(mapDocument),
     };

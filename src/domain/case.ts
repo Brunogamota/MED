@@ -1,5 +1,6 @@
 import type {
   Customer,
+  DigitalDelivery,
   Evidence,
   EvidenceType,
   Med,
@@ -20,6 +21,7 @@ export interface MedCase {
   customer: Customer | null;
   order: Order | null;
   tracking: Tracking | null;
+  digitalDelivery: DigitalDelivery | null;
   evidences: Evidence[];
   documents: StoredDocument[];
 }

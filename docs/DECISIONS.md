@@ -97,3 +97,44 @@ Um MED cuja janela de resposta fechou sem envio passa a `EXPIRED`, qualquer que
 seja a qualidade das evidencias. Continuar exibindo `READY_TO_SUBMIT` depois do
 prazo informaria ao operador algo que nao e verdade. Casos ja submetidos ou
 decididos nao sao afetados: status terminal nao e sobrescrito.
+
+## 14. Marco de entrega digitado a mao e permitido, com procedencia MANUAL
+
+A decisao anterior era nao aceitar evento de rastreio digitado. Estava errada
+para a operacao real: o dado existe no ERP ou no painel da transportadora, e o
+operador esta transcrevendo, nao inventando. O que importa e a procedencia ficar
+visivel — evento manual entra com `source: MANUAL`, aparece assim no PDF e vale
+menos na regra de forca (R2/R3) do que o dado vindo direto do provedor.
+
+O limite continua de pe: **status sozinho nao vira afirmacao**. Cada marco so
+existe se vier com a data e a hora. Marcar "entregue" sem informar quando e
+recusado pelo servico, porque geraria uma data inventada.
+
+## 15. No digital, a entrega e o envio do acesso — nao a confirmacao do cliente
+
+Exigir log de acesso ou confirmacao do comprador deixava a defesa refem de uma
+acao do proprio contestante, que nao tem incentivo para responder dentro do
+prazo do MED. O que o estabelecimento controla e comprova e o envio: data, canal
+e destino. Entao `ACCESS_SENT_AT` e `ACCESS_SENT_TO` sao obrigatorios no digital,
+e `FIRST_ACCESS_AT`/`ACCESS_LOG` passaram a recomendados — reforcam a defesa
+quando existem, sem trava-la quando nao existem.
+
+## 16. Deduplicacao da timeline por autoridade da origem
+
+O mesmo marco chega por dois caminhos (o campo `deliveredAt` do rastreio e o
+evento de entrega da lista) e e um fato so. Dois eventos de mesmo tipo e mesmo
+instante viram um: fica a versao de origem mais autoritativa — a redacao da
+propria transportadora vale mais que a nossa parafrase —, e as evidencias das
+duas versoes sao preservadas.
+
+Marcos com **horarios diferentes** nao sao deduplicados: sao informacoes
+divergentes de fontes distintas, e some-las seria escolher uma verdade. As duas
+aparecem com sua origem.
+
+## 17. Importacao em lote nao conserta linha
+
+Valor ou data que nao pode ser interpretado com seguranca faz a linha ser
+reportada e ficar de fora, em vez de virar palpite. Motivo desconhecido vira
+`OTHER` com o texto original preservado, porque encaixar na categoria errada
+mudaria quais evidencias o sistema passa a exigir. Coluna nao reconhecida e
+listada para o operador, nunca encaixada a forca em algum campo.

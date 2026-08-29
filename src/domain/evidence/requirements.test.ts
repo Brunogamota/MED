@@ -48,7 +48,19 @@ describe('resolveRequirements', () => {
 
     const digital = resolveRequirements('DIGITAL', 'PRODUCT_NOT_RECEIVED');
     expect(digital.some((r) => r.type === 'TRACKING_EVENTS')).toBe(false);
-    expect(digital.find((r) => r.type === 'ACCESS_LOG')?.necessity).toBe('REQUIRED');
+    expect(digital.some((r) => r.type === 'ACCESS_SENT_AT')).toBe(true);
+  });
+
+  it('exige o envio do acesso, e nao a confirmacao do comprador, no digital', () => {
+    // O que o estabelecimento controla e o envio do acesso. Exigir log de acesso
+    // ou confirmacao do cliente deixaria a defesa refem de uma acao do proprio
+    // contestante, que nao tem motivo para colaborar dentro do prazo do MED.
+    const digital = resolveRequirements('DIGITAL', 'PRODUCT_NOT_RECEIVED');
+
+    expect(digital.find((r) => r.type === 'ACCESS_SENT_AT')?.necessity).toBe('REQUIRED');
+    expect(digital.find((r) => r.type === 'ACCESS_SENT_TO')?.necessity).toBe('REQUIRED');
+    expect(digital.find((r) => r.type === 'ACCESS_LOG')?.necessity).toBe('RECOMMENDED');
+    expect(digital.find((r) => r.type === 'FIRST_ACCESS_AT')?.necessity).toBe('RECOMMENDED');
   });
 
   it('never lists the same evidence type twice', () => {

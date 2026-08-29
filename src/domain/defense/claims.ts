@@ -42,6 +42,15 @@ export interface ClaimTemplate {
   render: (context: ClaimContext) => string | null;
 }
 
+/** Rotulos dos canais, usados apenas para redigir a frase da defesa. */
+const CHANNEL_LABEL: Record<string, string> = {
+  EMAIL: 'e-mail',
+  WHATSAPP: 'WhatsApp',
+  SMS: 'SMS',
+  PLATFORM: 'area de membros da plataforma',
+  OTHER: 'canal informado no pedido',
+};
+
 const PHYSICAL_TYPES: ProductType[] = ['PHYSICAL', 'MARKETPLACE'];
 const DIGITAL_TYPES: ProductType[] = [
   'DIGITAL',
@@ -184,6 +193,34 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
       const address = value('SHIPPING_ADDRESS');
       if (!address) return null;
       return `A entrega ocorreu no endereco informado no momento da compra: ${address}.`;
+    },
+  },
+  {
+    id: 'digital.access_sent',
+    category: 'DELIVERY',
+    productTypes: DIGITAL_TYPES,
+    requires: ['ACCESS_SENT_AT', 'ACCESS_SENT_TO'],
+    render: ({ value, dateTime }) => {
+      const sentTo = value('ACCESS_SENT_TO');
+      const sentAt = dateTime('ACCESS_SENT_AT');
+      if (!sentTo || !sentAt) return null;
+      const channel = value('ACCESS_DELIVERY_CHANNEL');
+      const channelLabel = channel ? CHANNEL_LABEL[channel] : null;
+      return channelLabel
+        ? `O acesso ao produto adquirido foi enviado para ${sentTo} em ${sentAt}, por ${channelLabel}.`
+        : `O acesso ao produto adquirido foi enviado para ${sentTo} em ${sentAt}.`;
+    },
+  },
+  {
+    id: 'service.delivered_access',
+    category: 'DELIVERY',
+    productTypes: SERVICE_TYPES,
+    requires: ['ACCESS_SENT_AT', 'ACCESS_SENT_TO'],
+    render: ({ value, dateTime }) => {
+      const sentTo = value('ACCESS_SENT_TO');
+      const sentAt = dateTime('ACCESS_SENT_AT');
+      if (!sentTo || !sentAt) return null;
+      return `Os dados de acesso ao servico contratado foram enviados para ${sentTo} em ${sentAt}.`;
     },
   },
   {

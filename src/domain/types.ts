@@ -194,10 +194,14 @@ export interface Order {
 
 export const SHIPMENT_STATUSES = [
   'CREATED',
+  /** Pedido em separacao/producao, antes de existir envio. */
+  'IN_PRODUCTION',
   'POSTED',
   'IN_TRANSIT',
   'OUT_FOR_DELIVERY',
   'DELIVERED',
+  /** Tentativa de entrega sem sucesso ou entrega nao concluida. */
+  'NOT_DELIVERED',
   'RETURNED',
   'UNKNOWN',
 ] as const;
@@ -218,12 +222,47 @@ export interface Tracking {
   organizationId: OrganizationId;
   medId: string;
   carrier?: string | null;
-  trackingCode: string;
+  /** Ausente enquanto o pedido esta em producao e ainda nao foi postado. */
+  trackingCode?: string | null;
   status: ShipmentStatus;
   postedAt?: IsoDateTime | null;
   deliveredAt?: IsoDateTime | null;
   receiverName?: string | null;
   events: TrackingEvent[];
+  source: EvidenceSource;
+  sourceProvider?: string | null;
+  sourceReference?: string | null;
+  createdAt: IsoDateTime;
+}
+
+// ---------------------------------------------------------------------------
+// Entrega digital
+// ---------------------------------------------------------------------------
+
+export const DELIVERY_CHANNELS = ['EMAIL', 'WHATSAPP', 'SMS', 'PLATFORM', 'OTHER'] as const;
+export type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
+
+/**
+ * Entrega de produto digital, servico ou assinatura.
+ *
+ * O equivalente do rastreio para o que nao e transportado: por onde o acesso
+ * foi enviado, para quem, quando, e — quando existir — quando foi usado.
+ * Espelha `Tracking` de proposito, para que os dois caminhos de entrega tenham
+ * a mesma estrutura de procedencia.
+ */
+export interface DigitalDelivery {
+  id: string;
+  organizationId: OrganizationId;
+  medId: string;
+  channel: DeliveryChannel;
+  /** Destino do envio: e-mail, telefone ou identificador na plataforma. */
+  sentTo?: string | null;
+  sentAt?: IsoDateTime | null;
+  /** Plataforma ou area de membros em que o produto foi liberado. */
+  platform?: string | null;
+  /** Primeiro acesso registrado, quando o sistema do cliente informa. */
+  firstAccessAt?: IsoDateTime | null;
+  accessCount?: number | null;
   source: EvidenceSource;
   sourceProvider?: string | null;
   sourceReference?: string | null;
@@ -308,6 +347,9 @@ export const EVIDENCE_TYPES = [
   'RECEIVER_NAME',
   'DELIVERY_RECEIPT_SIGNED',
   // Digital delivery
+  'ACCESS_DELIVERY_CHANNEL',
+  'ACCESS_SENT_TO',
+  'ACCESS_SENT_AT',
   'FIRST_ACCESS_AT',
   'ACCESS_LOG',
   'ACCESS_COUNT',
@@ -398,13 +440,16 @@ export const TIMELINE_EVENT_TYPES = [
   'transaction.created',
   'payment.approved',
   'order.created',
+  'order.in_production',
   'invoice.created',
   'shipment.created',
   'shipment.posted',
   'shipment.in_transit',
   'shipment.out_for_delivery',
   'shipment.delivered',
+  'shipment.not_delivered',
   'shipment.returned',
+  'access.sent',
   'customer.account_created',
   'customer.first_access',
   'customer.login',
@@ -529,6 +574,7 @@ export interface EvidencePack {
   order: Order | null;
   customer: Customer | null;
   tracking: Tracking | null;
+  digitalDelivery: DigitalDelivery | null;
   evidences: Evidence[];
   documents: StoredDocument[];
   timeline: TimelineEvent[];

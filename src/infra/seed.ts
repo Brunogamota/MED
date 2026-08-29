@@ -215,6 +215,22 @@ export async function seedDemoData(repository: Repository): Promise<void> {
   });
   await repository.createMed(incomplete);
 
+  await repository.upsertDigitalDelivery({
+    id: 'demo_dld_2',
+    organizationId: DEMO_ORGANIZATION_ID,
+    medId: incomplete.id,
+    channel: 'EMAIL',
+    sentTo: 'cliente.dois@exemplo.demo',
+    sentAt: days(-9),
+    platform: 'Area de membros Demonstracao',
+    firstAccessAt: null,
+    accessCount: null,
+    source: 'MERCHANT',
+    sourceProvider: 'demo-plataforma',
+    sourceReference: 'demo-msg-4471',
+    createdAt: days(-2),
+  });
+
   await repository.upsertCustomer({
     id: 'demo_cus_2',
     organizationId: DEMO_ORGANIZATION_ID,

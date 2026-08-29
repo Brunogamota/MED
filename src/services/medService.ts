@@ -121,14 +121,27 @@ async function refreshStatus(
   });
 }
 
+export interface CreateMedOutcome {
+  med: Med;
+  /** False when an existing MED with the same institution id was returned. */
+  created: boolean;
+}
+
 export async function createMed(auth: AuthContext, input: CreateMedInput): Promise<Med> {
+  return (await createMedWithOutcome(auth, input)).med;
+}
+
+export async function createMedWithOutcome(
+  auth: AuthContext,
+  input: CreateMedInput,
+): Promise<CreateMedOutcome> {
   assertCan(auth.role, 'med:write');
   const repository = await getRepository();
 
-  // Idempotent by the institution's own MED identifier: replaying a webhook
-  // returns the existing case instead of creating a duplicate.
+  // Idempotent by the institution's own MED identifier: replaying a webhook or
+  // re-uploading the same batch returns the existing case, never a duplicate.
   const existing = await repository.findMedByExternalId(auth.organizationId, input.medId);
-  if (existing) return existing;
+  if (existing) return { med: existing, created: false };
 
   const now = new Date().toISOString();
   const med: Med = {
@@ -168,7 +181,10 @@ export async function createMed(auth: AuthContext, input: CreateMedInput): Promi
     newValue: created.medId,
   });
   await refreshStatus(repository, auth, created.id);
-  return (await repository.getMed(auth.organizationId, created.id)) ?? created;
+  return {
+    med: (await repository.getMed(auth.organizationId, created.id)) ?? created,
+    created: true,
+  };
 }
 
 export async function listMeds(

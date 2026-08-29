@@ -34,6 +34,7 @@ import {
   formatDateTime,
 } from '@/lib/format';
 import { createSubmissionAction, generateDefenseAction } from '@/app/meds/actions';
+import { FulfillmentPanel } from '@/components/FulfillmentPanel';
 import {
   CustomerForm,
   DocumentForm,
@@ -155,7 +156,10 @@ export default async function MedDetailPage({
       </nav>
 
       {activeTab === 'overview' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
+          <FulfillmentPanel medCase={medCase} productType={resolveProductType(medCase)} />
+
+          <div className="grid gap-4 lg:grid-cols-2">
           <Panel title="MED">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <Field label="Instituicao" value={med.requestingInstitution} />
@@ -228,6 +232,7 @@ export default async function MedDetailPage({
               </ul>
             )}
           </Panel>
+          </div>
         </div>
       ) : null}
 

@@ -62,12 +62,20 @@ export default async function MedsPage() {
       <Panel
         title={`MEDs (${rows.length})`}
         actions={
-          <Link
-            href="/meds/new"
-            className="rounded bg-[var(--color-brand)] px-3 py-1 text-xs font-medium text-white hover:opacity-90"
-          >
-            Novo MED
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/meds/import"
+              className="rounded border border-[var(--color-border-subtle)] px-3 py-1 text-xs font-medium hover:bg-[var(--color-surface-muted)]"
+            >
+              Importar lote
+            </Link>
+            <Link
+              href="/meds/new"
+              className="rounded bg-[var(--color-brand)] px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+            >
+              Novo MED
+            </Link>
+          </div>
         }
       >
         {rows.length === 0 ? (

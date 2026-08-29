@@ -43,7 +43,8 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/domain/evidence/strength.ts` | Regras explicitas de forca de evidencia. |
 | `src/domain/evidence/derive.ts` | Projeta registros estruturados em evidencias, preservando origem. |
 | `src/domain/evidence/engine.ts` | Evidence Engine: disponivel / faltante / score. |
-| `src/domain/timeline/engine.ts` | Timeline Engine: une eventos de fontes distintas. |
+| `src/domain/timeline/engine.ts` | Timeline Engine: une eventos de fontes distintas e desduplica por autoridade da origem. |
+| `src/domain/import/csv.ts` | Leitura do arquivo da adquirente: cabecalhos pt-BR, datas e valores. |
 | `src/domain/defense/claims.ts` | Templates de afirmacao e suas evidencias obrigatorias. |
 | `src/domain/defense/risks.ts` | Risk flags operacionais. |
 | `src/domain/defense/narrative.ts` | Renderizador deterministico do texto da defesa. |
@@ -54,6 +55,8 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/infra/adapters/` | Portas de integracao e adapters de submissao. |
 | `src/infra/pdf/` | Geracao do MED Defense Report. |
 | `src/services/` | Casos de uso: autorizacao, auditoria, transicao de status. |
+| `src/services/fulfillmentService.ts` | Registro de entrega: status + marcos datados (fisico) e envio do acesso (digital). |
+| `src/services/importService.ts` | Importacao em lote, idempotente e com relatorio por linha. |
 | `src/app/api/` | REST. |
 | `src/app/meds/` | UI operacional. |
 
@@ -68,6 +71,8 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 - Defense e imutavel e versionada: gerar de novo cria uma nova versao, nunca
   sobrescreve.
 - Log nao carrega PII desnecessaria. Use os helpers de mascara em `src/lib/format.ts`.
+- Status de entrega sozinho nao e afirmacao: todo marco exige a data correspondente.
+  Dado digitado pelo operador e valido, desde que gravado com `source: MANUAL`.
 
 ## Ciclo de desenvolvimento
 

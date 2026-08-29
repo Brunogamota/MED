@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  DELIVERY_CHANNELS,
   DOCUMENT_KINDS,
   EVIDENCE_SOURCES,
   EVIDENCE_TYPES,
@@ -129,7 +130,7 @@ export const trackingEventSchema = z.object({
 
 export const upsertTrackingSchema = z.object({
   carrier: nonEmpty.optional(),
-  trackingCode: nonEmpty,
+  trackingCode: nonEmpty.optional(),
   status: z.enum(SHIPMENT_STATUSES),
   postedAt: isoDateTime.optional(),
   deliveredAt: isoDateTime.optional(),
@@ -140,6 +141,44 @@ export const upsertTrackingSchema = z.object({
   sourceReference: nonEmpty.optional(),
 });
 export type UpsertTrackingInput = z.infer<typeof upsertTrackingSchema>;
+
+/**
+ * Registro de entrega de produto fisico.
+ *
+ * Cada marco e um par (o que aconteceu, quando aconteceu). Status sem a data
+ * correspondente nao vira evento: seria uma afirmacao sem lastro.
+ */
+export const recordShipmentSchema = z.object({
+  status: z.enum(SHIPMENT_STATUSES),
+  trackingCode: nonEmpty.optional(),
+  carrier: nonEmpty.optional(),
+  receiverName: nonEmpty.optional(),
+  inProductionAt: isoDateTime.optional(),
+  postedAt: isoDateTime.optional(),
+  inTransitAt: isoDateTime.optional(),
+  outForDeliveryAt: isoDateTime.optional(),
+  deliveredAt: isoDateTime.optional(),
+  notDeliveredAt: isoDateTime.optional(),
+  returnedAt: isoDateTime.optional(),
+  source: z.enum(EVIDENCE_SOURCES).default('MANUAL'),
+  sourceProvider: nonEmpty.optional(),
+  sourceReference: nonEmpty.optional(),
+});
+export type RecordShipmentRequest = z.infer<typeof recordShipmentSchema>;
+
+/** Registro de entrega de produto digital, servico ou assinatura. */
+export const recordDigitalDeliverySchema = z.object({
+  channel: z.enum(DELIVERY_CHANNELS),
+  sentTo: nonEmpty.optional(),
+  sentAt: isoDateTime.optional(),
+  platform: nonEmpty.optional(),
+  firstAccessAt: isoDateTime.optional(),
+  accessCount: z.number().int().nonnegative().optional(),
+  source: z.enum(EVIDENCE_SOURCES).default('MERCHANT'),
+  sourceProvider: nonEmpty.optional(),
+  sourceReference: nonEmpty.optional(),
+});
+export type RecordDigitalDeliveryRequest = z.infer<typeof recordDigitalDeliverySchema>;
 
 const jsonValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([

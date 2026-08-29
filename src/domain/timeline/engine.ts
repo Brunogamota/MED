@@ -1,5 +1,6 @@
 import type {
   Evidence,
+  EvidenceSource,
   IsoDateTime,
   TimelineEvent,
   TimelineEventType,
@@ -71,16 +72,19 @@ function isDatedEntry(value: unknown): value is { occurredAt: string; descriptio
 
 const SHIPMENT_EVENT_TYPE: Record<string, TimelineEventType> = {
   CREATED: 'shipment.created',
+  IN_PRODUCTION: 'order.in_production',
   POSTED: 'shipment.posted',
   IN_TRANSIT: 'shipment.in_transit',
   OUT_FOR_DELIVERY: 'shipment.out_for_delivery',
   DELIVERED: 'shipment.delivered',
+  NOT_DELIVERED: 'shipment.not_delivered',
   RETURNED: 'shipment.returned',
   UNKNOWN: 'other',
 };
 
 export function buildTimeline(medCase: MedCase): TimelineEvent[] {
-  const { med, transaction, customer, order, tracking, evidences, documents } = medCase;
+  const { med, transaction, customer, order, tracking, digitalDelivery, evidences, documents } =
+    medCase;
   const events: TimelineEvent[] = [];
 
   push(events, {
@@ -133,7 +137,7 @@ export function buildTimeline(medCase: MedCase): TimelineEvent[] {
         ? `Pedido postado (${tracking.carrier})`
         : 'Pedido postado',
       source: tracking.source,
-      sourceReference: tracking.sourceReference ?? tracking.trackingCode,
+      sourceReference: tracking.sourceReference ?? tracking.trackingCode ?? null,
       evidenceIds: trackingEvidenceIds,
     });
     for (const trackingEvent of tracking.events) {
@@ -144,7 +148,7 @@ export function buildTimeline(medCase: MedCase): TimelineEvent[] {
           ? `${trackingEvent.description} - ${trackingEvent.location}`
           : trackingEvent.description,
         source: trackingEvent.source,
-        sourceReference: trackingEvent.sourceReference ?? tracking.trackingCode,
+        sourceReference: trackingEvent.sourceReference ?? tracking.trackingCode ?? null,
         evidenceIds: trackingEvidenceIds,
       });
     }
@@ -155,8 +159,34 @@ export function buildTimeline(medCase: MedCase): TimelineEvent[] {
         ? `Pedido entregue - recebido por ${tracking.receiverName}`
         : 'Pedido entregue',
       source: tracking.source,
-      sourceReference: tracking.sourceReference ?? tracking.trackingCode,
+      sourceReference: tracking.sourceReference ?? tracking.trackingCode ?? null,
       evidenceIds: trackingEvidenceIds,
+    });
+  }
+
+  if (digitalDelivery) {
+    const deliveryEvidenceIds = evidenceIdsOfTypes(evidences, [
+      'ACCESS_SENT_AT',
+      'ACCESS_SENT_TO',
+      'ACCESS_DELIVERY_CHANNEL',
+    ]);
+    push(events, {
+      type: 'access.sent',
+      at: digitalDelivery.sentAt,
+      description: digitalDelivery.sentTo
+        ? `Acesso enviado para ${digitalDelivery.sentTo}`
+        : 'Acesso enviado ao comprador',
+      source: digitalDelivery.source,
+      sourceReference: digitalDelivery.sourceReference ?? digitalDelivery.platform ?? null,
+      evidenceIds: deliveryEvidenceIds,
+    });
+    push(events, {
+      type: 'customer.first_access',
+      at: digitalDelivery.firstAccessAt,
+      description: 'Primeiro acesso do comprador ao produto',
+      source: digitalDelivery.source,
+      sourceReference: digitalDelivery.sourceReference ?? null,
+      evidenceIds: evidenceIdsOfTypes(evidences, ['FIRST_ACCESS_AT']),
     });
   }
 
@@ -223,7 +253,62 @@ export function buildTimeline(medCase: MedCase): TimelineEvent[] {
     evidenceIds: [],
   });
 
-  return sortTimeline(events);
+  return sortTimeline(dedupeTimeline(events));
+}
+
+/**
+ * Remove repeticoes do mesmo fato.
+ *
+ * O mesmo marco pode chegar por dois caminhos — o campo `deliveredAt` do
+ * rastreio e o evento de entrega da lista — e sao a mesma coisa, nao duas
+ * entregas. Dois eventos com o mesmo tipo e o mesmo instante sao um so.
+ *
+ * Quem fica e a versao de origem mais autoritativa: a redacao da propria
+ * transportadora vale mais do que a nossa parafrase, e e o que a instituicao
+ * espera ler. As evidencias das duas versoes sao preservadas, porque ambas
+ * sustentam o mesmo fato.
+ */
+const SOURCE_AUTHORITY: Record<EvidenceSource, number> = {
+  TRACKING_PROVIDER: 4,
+  PAYMENT_PROVIDER: 4,
+  ANTIFRAUD: 4,
+  SHOPIFY: 3,
+  ERP: 3,
+  API: 3,
+  WEBHOOK: 3,
+  MERCHANT: 2,
+  SYSTEM_DERIVED: 2,
+  MANUAL: 1,
+};
+
+function authorityScore(event: TimelineEvent): number {
+  return (
+    SOURCE_AUTHORITY[event.source] * 1000 +
+    event.description.length +
+    (event.sourceReference ? 1 : 0)
+  );
+}
+
+export function dedupeTimeline(events: TimelineEvent[]): TimelineEvent[] {
+  const byKey = new Map<string, TimelineEvent>();
+
+  for (const event of events) {
+    const key = `${event.type}|${event.occurredAt}`;
+    const current = byKey.get(key);
+
+    if (!current) {
+      byKey.set(key, event);
+      continue;
+    }
+
+    const winner = authorityScore(event) > authorityScore(current) ? event : current;
+    byKey.set(key, {
+      ...winner,
+      evidenceIds: [...new Set([...current.evidenceIds, ...event.evidenceIds])],
+    });
+  }
+
+  return [...byKey.values()];
 }
 
 /** Chronological, with a stable tiebreak so output is reproducible. */

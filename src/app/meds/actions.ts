@@ -26,6 +26,10 @@ import {
   upsertTransactionSchema,
 } from '@/domain/schemas';
 import { address, compact, dateTime, integer, number, text } from '@/lib/forms';
+import { importParsedMeds } from '@/services/importService';
+import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentService';
+import { recordDigitalDeliverySchema, recordShipmentSchema } from '@/domain/schemas';
+import { parseMedImport } from '@/domain/import/csv';
 
 /**
  * Server actions used by the MED screens.
@@ -251,6 +255,67 @@ export async function uploadDocumentAction(form: FormData): Promise<void> {
   revalidatePath(`/meds/${medId}`);
 }
 
+/**
+ * Registro de entrega de produto fisico.
+ *
+ * Quando o operador marca "gerar defesa", a defesa sai na mesma acao — e esse o
+ * fluxo real: definiu o status, quer o PDF. O que nao acontece e a data ser
+ * preenchida sozinha: marco sem horario nao vira evento.
+ */
+export async function recordShipmentAction(form: FormData): Promise<void> {
+  const medId = requireMedId(form);
+  const auth = serverPageContext();
+
+  const input = recordShipmentSchema.parse(
+    compact({
+      status: text(form, 'status'),
+      trackingCode: text(form, 'trackingCode'),
+      carrier: text(form, 'carrier'),
+      receiverName: text(form, 'receiverName'),
+      inProductionAt: dateTime(form, 'inProductionAt'),
+      postedAt: dateTime(form, 'postedAt'),
+      inTransitAt: dateTime(form, 'inTransitAt'),
+      outForDeliveryAt: dateTime(form, 'outForDeliveryAt'),
+      deliveredAt: dateTime(form, 'deliveredAt'),
+      notDeliveredAt: dateTime(form, 'notDeliveredAt'),
+      returnedAt: dateTime(form, 'returnedAt'),
+      source: text(form, 'source') ?? 'MANUAL',
+      sourceReference: text(form, 'sourceReference'),
+    }),
+  );
+
+  await recordShipment(auth, medId, input);
+  if (form.get('generateDefense') === 'on') {
+    await generateDefenseForMed(auth, medId, { useLlm: false });
+  }
+  revalidatePath(`/meds/${medId}`);
+}
+
+/** Registro de entrega digital, servico ou assinatura. */
+export async function recordDigitalDeliveryAction(form: FormData): Promise<void> {
+  const medId = requireMedId(form);
+  const auth = serverPageContext();
+
+  const input = recordDigitalDeliverySchema.parse(
+    compact({
+      channel: text(form, 'channel'),
+      sentTo: text(form, 'sentTo'),
+      sentAt: dateTime(form, 'sentAt'),
+      platform: text(form, 'platform'),
+      firstAccessAt: dateTime(form, 'firstAccessAt'),
+      accessCount: integer(form, 'accessCount'),
+      source: text(form, 'source') ?? 'MERCHANT',
+      sourceReference: text(form, 'sourceReference'),
+    }),
+  );
+
+  await recordDigitalDelivery(auth, medId, input);
+  if (form.get('generateDefense') === 'on') {
+    await generateDefenseForMed(auth, medId, { useLlm: false });
+  }
+  revalidatePath(`/meds/${medId}`);
+}
+
 export async function generateDefenseAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
   const auth = serverPageContext();
@@ -264,4 +329,79 @@ export async function createSubmissionAction(form: FormData): Promise<void> {
   const auth = serverPageContext();
   await createSubmission(auth, medId, { provider });
   revalidatePath(`/meds/${medId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Importacao em lote
+// ---------------------------------------------------------------------------
+
+/**
+ * Le o arquivo colado ou enviado. A analise nao grava nada: o operador confere
+ * o que foi reconhecido antes de qualquer escrita.
+ */
+async function readImportText(form: FormData): Promise<string> {
+  const file = form.get('file');
+  if (file instanceof File && file.size > 0) return file.text();
+  return text(form, 'csv') ?? '';
+}
+
+export interface ImportPreviewState {
+  csv: string;
+  defaultOpenedAt: string | null;
+  batchReference: string | null;
+  parsed: ReturnType<typeof parseMedImport> | null;
+  report: Awaited<ReturnType<typeof importParsedMeds>> | null;
+  error: string | null;
+}
+
+export async function previewImportAction(
+  _previous: ImportPreviewState | null,
+  form: FormData,
+): Promise<ImportPreviewState> {
+  const csv = await readImportText(form);
+  const defaultOpenedAt = dateTime(form, 'defaultOpenedAt') ?? null;
+  const batchReference = text(form, 'batchReference') ?? null;
+
+  if (csv.trim().length === 0) {
+    return {
+      csv: '',
+      defaultOpenedAt,
+      batchReference,
+      parsed: null,
+      report: null,
+      error: 'Cole o conteudo do arquivo ou selecione um arquivo CSV.',
+    };
+  }
+
+  return {
+    csv,
+    defaultOpenedAt,
+    batchReference,
+    parsed: parseMedImport(csv),
+    report: null,
+    error: null,
+  };
+}
+
+export async function confirmImportAction(
+  _previous: ImportPreviewState | null,
+  form: FormData,
+): Promise<ImportPreviewState> {
+  const auth = serverPageContext();
+  const csv = text(form, 'csv') ?? '';
+  const defaultOpenedAt = text(form, 'defaultOpenedAt') ?? null;
+  const batchReference = text(form, 'batchReference') ?? null;
+
+  const parsed = parseMedImport(csv);
+  if (parsed.fatalError) {
+    return { csv, defaultOpenedAt, batchReference, parsed, report: null, error: parsed.fatalError };
+  }
+
+  const report = await importParsedMeds(auth, parsed, {
+    defaultOpenedAt: defaultOpenedAt ?? undefined,
+    batchReference: batchReference ?? undefined,
+  });
+
+  revalidatePath('/meds');
+  return { csv, defaultOpenedAt, batchReference, parsed, report, error: null };
 }

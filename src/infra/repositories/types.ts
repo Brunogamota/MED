@@ -1,6 +1,7 @@
 import type {
   AuditLogEntry,
   Customer,
+  DigitalDelivery,
   Defense,
   DefenseSubmission,
   Evidence,
@@ -44,6 +45,7 @@ export interface MedRepository {
   upsertCustomer(customer: Customer): Promise<Customer>;
   upsertOrder(order: Order): Promise<Order>;
   upsertTracking(tracking: Tracking): Promise<Tracking>;
+  upsertDigitalDelivery(delivery: DigitalDelivery): Promise<DigitalDelivery>;
 
   addEvidence(evidence: Evidence): Promise<Evidence>;
   listEvidence(organizationId: string, medId: string): Promise<Evidence[]>;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildTimeline } from '@/domain/timeline/engine';
+import { deriveEvidence } from '@/domain/evidence/derive';
 import {
   makeCompleteCase,
   makeEmptyCase,
@@ -77,5 +78,73 @@ describe('buildTimeline', () => {
     expect(logins).toHaveLength(1);
     expect(logins[0]?.description).toBe('Login via app');
     expect(logins[0]?.evidenceIds).toEqual(['ev_login_log']);
+  });
+});
+
+describe('deduplicacao', () => {
+  it('nao repete a entrega quando ela chega pelo campo e pelo evento', () => {
+    const medCase = makeCompleteCase();
+    const events = buildTimeline(medCase);
+
+    const delivered = events.filter((event) => event.type === 'shipment.delivered');
+    const posted = events.filter((event) => event.type === 'shipment.posted');
+
+    expect(delivered).toHaveLength(1);
+    expect(posted).toHaveLength(1);
+  });
+
+  it('mantem a redacao da propria transportadora ao desduplicar', () => {
+    const events = buildTimeline(makeCompleteCase());
+    const delivered = events.find((event) => event.type === 'shipment.delivered');
+
+    // Entre a descricao do provedor e a nossa parafrase, fica a do provedor:
+    // e a que a instituicao espera ler e a que pode ser conferida na origem.
+    expect(delivered?.description).toBe('Objeto entregue ao destinatario - Sao Paulo/SP');
+    expect(delivered?.source).toBe('TRACKING_PROVIDER');
+  });
+
+  it('prefere o evento do provedor ao marco digitado a mao no mesmo instante', () => {
+    const medCase = makeCompleteCase();
+    const events = buildTimeline({
+      ...medCase,
+      tracking: makeTracking({
+        events: [
+          {
+            occurredAt: '2026-08-14T16:17:00.000Z',
+            status: 'DELIVERED',
+            description: 'Objeto entregue ao destinatario',
+            location: null,
+            source: 'TRACKING_PROVIDER',
+            sourceReference: 'AA123456789BR',
+          },
+          {
+            occurredAt: '2026-08-14T16:17:00.000Z',
+            status: 'DELIVERED',
+            description: 'Pedido entregue',
+            location: null,
+            source: 'MANUAL',
+            sourceReference: null,
+          },
+        ],
+      }),
+    });
+
+    const delivered = events.filter((event) => event.type === 'shipment.delivered');
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]?.source).toBe('TRACKING_PROVIDER');
+  });
+
+  it('preserva as evidencias das duas versoes do mesmo fato', () => {
+    // Como no fluxo real: a timeline e montada sobre as evidencias ja derivadas
+    // dos registros estruturados.
+    const medCase = makeCompleteCase();
+    const withEvidence = { ...medCase, evidences: deriveEvidence(medCase) };
+
+    const events = buildTimeline(withEvidence);
+    const delivered = events.find((event) => event.type === 'shipment.delivered');
+
+    expect(delivered?.evidenceIds.length).toBeGreaterThan(0);
+    // O id aparece uma unica vez, mesmo tendo vindo das duas versoes.
+    expect(new Set(delivered?.evidenceIds).size).toBe(delivered?.evidenceIds.length);
   });
 });

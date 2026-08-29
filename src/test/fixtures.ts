@@ -219,6 +219,7 @@ export function makeCompleteCase(): MedCase {
     customer: makeCustomer(),
     order: makeOrder(),
     tracking: makeTracking(),
+    digitalDelivery: null,
     evidences: [],
     documents: [makeDocument()],
   };
@@ -232,6 +233,7 @@ export function makeEmptyCase(): MedCase {
     customer: null,
     order: null,
     tracking: null,
+    digitalDelivery: null,
     evidences: [],
     documents: [],
   };
