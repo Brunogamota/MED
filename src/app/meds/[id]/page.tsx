@@ -32,11 +32,20 @@ import {
   formatDateTime,
 } from '@/lib/format';
 import { createSubmissionAction, generateDefenseAction } from '@/app/meds/actions';
+import {
+  CustomerForm,
+  DocumentForm,
+  EvidenceForm,
+  OrderForm,
+  TrackingForm,
+  TransactionForm,
+} from '@/components/medForms';
 
 export const dynamic = 'force-dynamic';
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
+  { key: 'data', label: 'Dados' },
   { key: 'evidence', label: 'Evidence' },
   { key: 'timeline', label: 'Timeline' },
   { key: 'defense', label: 'Defense' },
@@ -210,6 +219,19 @@ export default async function MedDetailPage({
         </div>
       ) : null}
 
+      {activeTab === 'data' ? (
+        <div className="space-y-4">
+          <p className="text-xs text-[var(--color-ink-muted)]">
+            Registre aqui os dados que voce ja possui. Campo em branco permanece ausente e sera
+            apontado como evidencia faltante — nada e preenchido por suposicao.
+          </p>
+          <TransactionForm medCase={medCase} />
+          <CustomerForm medCase={medCase} />
+          <OrderForm medCase={medCase} />
+          <TrackingForm medCase={medCase} />
+        </div>
+      ) : null}
+
       {activeTab === 'evidence' ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <Panel title={`Requisitos (${assessment.items.length})`}>
@@ -280,6 +302,8 @@ export default async function MedDetailPage({
               </table>
             )}
           </Panel>
+
+          <EvidenceForm medId={med.id} />
 
           <Panel title={`Evidencias faltantes (${assessment.missingEvidences.length})`}>
             {assessment.missingEvidences.length === 0 ? (
@@ -402,6 +426,7 @@ export default async function MedDetailPage({
       ) : null}
 
       {activeTab === 'documents' ? (
+        <div className="space-y-4">
         <Panel title={`Documentos (${medCase.documents.length})`}>
           {medCase.documents.length === 0 ? (
             <EmptyState>
@@ -430,6 +455,8 @@ export default async function MedDetailPage({
             </table>
           )}
         </Panel>
+        <DocumentForm medId={med.id} />
+        </div>
       ) : null}
 
       {activeTab === 'submission' ? (

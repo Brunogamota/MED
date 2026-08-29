@@ -59,7 +59,17 @@ export default async function MedsPage() {
         <Metric label="Enviados" value={submitted.length} />
       </div>
 
-      <Panel title={`MEDs (${rows.length})`}>
+      <Panel
+        title={`MEDs (${rows.length})`}
+        actions={
+          <Link
+            href="/meds/new"
+            className="rounded bg-[var(--color-brand)] px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+          >
+            Novo MED
+          </Link>
+        }
+      >
         {rows.length === 0 ? (
           <EmptyState>
             Nenhum MED registrado. Crie um via <code>POST /api/meds</code> ou receba pelo webhook{' '}
