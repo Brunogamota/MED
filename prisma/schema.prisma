@@ -1,0 +1,354 @@
+// MED defense platform — data model.
+//
+// Notes on the shape of this schema:
+//  * Every tenant-owned row carries organizationId and is indexed by it. The
+//    application filters on it in every query; the composite indexes exist so
+//    that filtering is also the fast path.
+//  * Money is stored in cents (Int). Financial values never round-trip through
+//    a float.
+//  * A Defense is an immutable, versioned artifact: new versions are appended,
+//    never updated in place, so the history of what was generated survives.
+//  * AuditLog is append-only and keeps both the previous and the new value.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: connection URLs live in prisma.config.ts (CLI) and in the driver
+// adapter passed to PrismaClient (runtime). See src/infra/repositories/prisma.ts.
+datasource db {
+  provider = "postgresql"
+}
+
+enum MedStatus {
+  RECEIVED
+  COLLECTING_DATA
+  MISSING_EVIDENCE
+  READY_TO_GENERATE
+  DEFENSE_GENERATED
+  READY_TO_SUBMIT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum MedReason {
+  UNRECOGNIZED_TRANSACTION
+  PRODUCT_NOT_RECEIVED
+  PRODUCT_NOT_AS_DESCRIBED
+  FRAUD_SCAM
+  FRAUD_COERCION
+  FRAUD_ACCOUNT_TAKEOVER
+  DUPLICATE_CHARGE
+  OPERATIONAL_ERROR
+  OTHER
+}
+
+enum ProductType {
+  PHYSICAL
+  DIGITAL
+  SERVICE
+  SUBSCRIPTION
+  TICKET
+  INFOPRODUCT
+  MARKETPLACE
+  SAAS
+  OTHER
+}
+
+enum EvidenceSource {
+  MANUAL
+  API
+  WEBHOOK
+  SHOPIFY
+  TRACKING_PROVIDER
+  PAYMENT_PROVIDER
+  ANTIFRAUD
+  ERP
+  MERCHANT
+  SYSTEM_DERIVED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  CONFLICTING
+}
+
+enum ShipmentStatus {
+  CREATED
+  POSTED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURNED
+  UNKNOWN
+}
+
+enum DocumentKind {
+  INVOICE
+  DELIVERY_RECEIPT
+  TRANSACTION_RECEIPT
+  CONTRACT
+  SCREENSHOT
+  LOG_EXPORT
+  DEFENSE_REPORT
+  OTHER
+}
+
+enum SubmissionStatus {
+  DRAFT
+  READY
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  FAILED
+}
+
+model Organization {
+  id        String   @id
+  name      String
+  createdAt DateTime @default(now())
+
+  meds Med[]
+}
+
+model Med {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  merchantId            String?
+  medId                 String
+  transactionId         String?
+  endToEndId            String?
+  pixId                 String?
+  amountCents           Int
+  currency              String       @db.VarChar(3)
+  transactionAt         DateTime?
+  openedAt              DateTime
+  responseDeadlineAt    DateTime?
+  reason                MedReason
+  reasonDescription     String?
+  requestingInstitution String?
+  productType           ProductType?
+  status                MedStatus    @default(RECEIVED)
+  payer                 Json
+  payerAddress          Json?
+  payerIp               String?
+  payerDevice           String?
+  merchantName          String?
+  additionalInformation String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  transaction MedTransaction?
+  customer    Customer?
+  order       Order?
+  tracking    Tracking?
+  evidences   Evidence[]
+  documents   Document[]
+  defenses    Defense[]
+  submissions Submission[]
+  auditLogs   AuditLog[]
+
+  @@unique([organizationId, medId])
+  @@index([organizationId, status])
+  @@index([organizationId, responseDeadlineAt])
+  @@index([organizationId, openedAt])
+}
+
+model MedTransaction {
+  id                String    @id @default(cuid())
+  organizationId    String
+  medId             String    @unique
+  externalId        String?
+  endToEndId        String?
+  amountCents       Int
+  currency          String    @db.VarChar(3)
+  method            String?
+  status            String?
+  authorizedAt      DateTime?
+  capturedAt        DateTime?
+  provider          String?
+  providerReference String?
+  createdAt         DateTime  @default(now())
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Customer {
+  id               String    @id @default(cuid())
+  organizationId   String
+  medId            String    @unique
+  identification   Json
+  address          Json?
+  accountCreatedAt DateTime?
+  externalId       String?
+  createdAt        DateTime  @default(now())
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  organizationId    String
+  medId             String      @unique
+  externalId        String?
+  productType       ProductType
+  items             Json
+  totalAmountCents  Int?
+  placedAt          DateTime?
+  checkoutIp        String?
+  deviceFingerprint String?
+  userAgent         String?
+  shippingAddress   Json?
+  provider          String?
+  providerReference String?
+  createdAt         DateTime    @default(now())
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model Tracking {
+  id                String         @id @default(cuid())
+  organizationId    String
+  medId             String         @unique
+  carrier           String?
+  trackingCode      String
+  status            ShipmentStatus
+  postedAt          DateTime?
+  deliveredAt       DateTime?
+  receiverName      String?
+  events            Json
+  source            EvidenceSource
+  sourceProvider    String?
+  sourceReference   String?
+  createdAt         DateTime       @default(now())
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([trackingCode])
+}
+
+model Evidence {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  medId              String
+  type               String
+  value              Json
+  displayValue       String?
+  source             EvidenceSource
+  sourceProvider     String?
+  sourceReference    String?
+  receivedAt         DateTime
+  verifiedAt         DateTime?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  documentId         String?
+  metadata           Json
+  createdAt          DateTime           @default(now())
+  createdBy          String?
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, medId])
+  @@index([medId, type])
+}
+
+model Document {
+  id              String         @id @default(cuid())
+  organizationId  String
+  medId           String
+  kind            DocumentKind
+  filename        String
+  contentType     String
+  byteSize        Int
+  storageKey      String
+  checksumSha256  String?
+  source          EvidenceSource
+  sourceReference String?
+  uploadedAt      DateTime       @default(now())
+  uploadedBy      String?
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, medId])
+}
+
+model Defense {
+  id             String   @id @default(cuid())
+  organizationId String
+  medId          String
+  version        Int
+  scoreTotal     Int
+  scoreMax       Int
+  claimCount     Int
+  // Full Defense JSON exactly as generated. Immutable once written.
+  payload        Json
+  generatedAt    DateTime @default(now())
+  generatedBy    String?
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@unique([medId, version])
+  @@index([organizationId, medId])
+}
+
+model Submission {
+  id                String           @id @default(cuid())
+  organizationId    String
+  medId             String
+  defenseId         String
+  provider          String
+  status            SubmissionStatus @default(DRAFT)
+  payload           Json
+  documentIds       String[]
+  submittedAt       DateTime?
+  providerReference String?
+  providerResponse  Json?
+  createdAt         DateTime         @default(now())
+
+  med Med @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, medId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  medId          String?
+  action         String
+  entityType     String
+  entityId       String
+  actor          String
+  actorRole      String?
+  source         String
+  previousValue  Json?
+  newValue       Json?
+  occurredAt     DateTime @default(now())
+
+  med Med? @relation(fields: [medId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, medId])
+  @@index([organizationId, occurredAt])
+}
+
+// Idempotency keys for writes and inbound webhooks. Scope separates endpoints.
+model IdempotencyRecord {
+  organizationId String
+  scope          String
+  key            String
+  resultId       String
+  createdAt      DateTime @default(now())
+
+  @@id([organizationId, scope, key])
+}

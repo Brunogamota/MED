@@ -1,0 +1,47 @@
+{
+  "name": "med-defense",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MED defense automation platform - evidence-driven chargeback/MED contestation",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "vercel-build": "prisma generate && next build"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "clsx": "^2.1.1",
+    "next": "^16.3.3",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.23.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.37.0",
+    "eslint-config-next": "^16.3.3",
+    "prisma": "^7.10.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

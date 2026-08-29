@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/*
+ * Operational density is the design goal: small type, tight rows, high
+ * information per screen. Colours are tokenised so the light and dark palettes
+ * stay in sync.
+ */
+@theme {
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f7f9;
+  --color-border-subtle: #e3e6ea;
+  --color-ink: #14181d;
+  --color-ink-muted: #5c6470;
+  --color-brand: #0d5a8c;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  font-feature-settings: 'tnum' 1;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
