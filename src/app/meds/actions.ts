@@ -6,6 +6,8 @@ import { serverPageContext } from '@/infra/auth/context';
 import {
   addDocument,
   addEvidence,
+  uploadDocument,
+  MAX_DOCUMENT_BYTES,
   createMed,
   createSubmission,
   generateDefenseForMed,
@@ -222,6 +224,30 @@ export async function addDocumentAction(form: FormData): Promise<void> {
   );
 
   await addDocument(auth, medId, input);
+  revalidatePath(`/meds/${medId}`);
+}
+
+export async function uploadDocumentAction(form: FormData): Promise<void> {
+  const medId = requireMedId(form);
+  const auth = serverPageContext();
+
+  const file = form.get('file');
+  if (!(file instanceof File) || file.size === 0) return;
+  if (file.size > MAX_DOCUMENT_BYTES) {
+    throw new Error(
+      `Arquivo excede o limite de ${Math.floor(MAX_DOCUMENT_BYTES / (1024 * 1024))} MB`,
+    );
+  }
+
+  await uploadDocument(auth, medId, {
+    kind: (text(form, 'kind') ?? 'OTHER') as Parameters<typeof uploadDocument>[2]['kind'],
+    filename: file.name || 'documento',
+    contentType: file.type || 'application/octet-stream',
+    bytes: new Uint8Array(await file.arrayBuffer()),
+    source: (text(form, 'source') ?? 'MERCHANT') as Parameters<typeof uploadDocument>[2]['source'],
+    sourceReference: text(form, 'sourceReference') ?? null,
+  });
+
   revalidatePath(`/meds/${medId}`);
 }
 

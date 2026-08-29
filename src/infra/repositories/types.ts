@@ -50,6 +50,7 @@ export interface MedRepository {
 
   addDocument(document: StoredDocument): Promise<StoredDocument>;
   listDocuments(organizationId: string, medId: string): Promise<StoredDocument[]>;
+  getDocument(organizationId: string, documentId: string): Promise<StoredDocument | null>;
 
   saveDefense(defense: Defense): Promise<Defense>;
   listDefenses(organizationId: string, medId: string): Promise<Defense[]>;

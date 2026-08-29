@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { InMemoryMedRepository } from '@/infra/repositories/memory';
 import { __setRepositoryForTests } from '@/infra/container';
 import { ForbiddenError } from '@/infra/auth/rbac';
-import { NotFoundError, ConflictError } from '@/services/errors';
+import { NotFoundError, ConflictError, ValidationError } from '@/services/errors';
+import { resetConfigCache } from '@/lib/env';
 import type { AuthContext } from '@/infra/auth/context';
 import {
   addEvidence,
@@ -18,6 +19,10 @@ import {
   upsertTracking,
   upsertTransaction,
   addDocument,
+  uploadDocument,
+  getDocumentDownloadPath,
+  readVerifiedDocument,
+  deriveStatus,
 } from '@/services/medService';
 import type { CreateMedInput } from '@/domain/schemas';
 
@@ -243,5 +248,121 @@ describe('audit trail', () => {
     expect(entries).toHaveLength(2);
     expect(entries[0]?.previousValue).toBeNull();
     expect(entries[1]?.previousValue).not.toBeNull();
+  });
+});
+
+describe('deadline expiry', () => {
+  it('marks a case EXPIRED once the response window closes without submission', async () => {
+    const med = await seedDeliveredCase(orgA);
+    const medCase = await getCase(orgA, med.id);
+
+    const beforeDeadline = deriveStatus(medCase, true, new Date('2026-09-04T12:00:00.000Z'));
+    const afterDeadline = deriveStatus(medCase, true, new Date('2026-09-06T12:00:00.000Z'));
+
+    expect(beforeDeadline).toBe('READY_TO_SUBMIT');
+    expect(afterDeadline).toBe('EXPIRED');
+  });
+
+  it('does not expire a case that was already submitted', async () => {
+    const med = await seedDeliveredCase(orgA);
+    const medCase = await getCase(orgA, med.id);
+    const submitted = { ...medCase, med: { ...medCase.med, status: 'SUBMITTED' as const } };
+
+    expect(deriveStatus(submitted, true, new Date('2026-09-06T12:00:00.000Z'))).toBe('SUBMITTED');
+  });
+});
+
+describe('documents', () => {
+  // The signing secret is normally absent in tests; these cases need a real one
+  // to exercise link issuing, so it is set and cleared explicitly.
+  beforeEach(() => {
+    process.env.DOCUMENT_URL_SIGNING_SECRET = 'test-signing-secret';
+    resetConfigCache();
+  });
+
+  afterEach(() => {
+    delete process.env.DOCUMENT_URL_SIGNING_SECRET;
+    resetConfigCache();
+  });
+
+  it('stores an uploaded file with its checksum and serves it back', async () => {
+    const med = await createMed(orgA, medInput());
+    const bytes = new TextEncoder().encode('%PDF-1.4 conteudo de teste');
+
+    const document = await uploadDocument(orgA, med.id, {
+      kind: 'INVOICE',
+      filename: 'nfe.pdf',
+      contentType: 'application/pdf',
+      bytes,
+      source: 'MERCHANT',
+      sourceReference: 'NFe 1',
+    });
+
+    expect(document.byteSize).toBe(bytes.byteLength);
+    expect(document.checksumSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(document.storageKey).toContain(med.id);
+
+    const read = await readVerifiedDocument('org_a', document.id);
+    expect(new TextDecoder().decode(read.blob.bytes)).toBe('%PDF-1.4 conteudo de teste');
+  });
+
+  it('refuses an empty upload', async () => {
+    const med = await createMed(orgA, medInput());
+    await expect(
+      uploadDocument(orgA, med.id, {
+        kind: 'OTHER',
+        filename: 'vazio.pdf',
+        contentType: 'application/pdf',
+        bytes: new Uint8Array(0),
+        source: 'MERCHANT',
+      }),
+    ).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it('issues a signed link scoped to the owning organization', async () => {
+    const med = await createMed(orgA, medInput());
+    const document = await uploadDocument(orgA, med.id, {
+      kind: 'INVOICE',
+      filename: 'nfe.pdf',
+      contentType: 'application/pdf',
+      bytes: new TextEncoder().encode('x'),
+      source: 'MERCHANT',
+    });
+
+    const path = await getDocumentDownloadPath(orgA, document.id);
+    expect(path).toContain(`/api/documents/${document.id}`);
+    expect(path).toContain('org=org_a');
+    expect(path).toContain('sig=');
+  });
+
+  it('never serves or links a document belonging to another organization', async () => {
+    const med = await createMed(orgA, medInput());
+    const document = await uploadDocument(orgA, med.id, {
+      kind: 'INVOICE',
+      filename: 'nfe.pdf',
+      contentType: 'application/pdf',
+      bytes: new TextEncoder().encode('x'),
+      source: 'MERCHANT',
+    });
+
+    await expect(readVerifiedDocument('org_b', document.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getDocumentDownloadPath(orgB, document.id)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('issues no link at all when the signing secret is absent', async () => {
+    delete process.env.DOCUMENT_URL_SIGNING_SECRET;
+    resetConfigCache();
+
+    const med = await createMed(orgA, medInput());
+    const document = await addDocument(orgA, med.id, {
+      kind: 'INVOICE',
+      filename: 'nfe.pdf',
+      contentType: 'application/pdf',
+      byteSize: 10,
+      storageKey: 'k',
+      source: 'MERCHANT',
+    });
+
+    expect(await getDocumentDownloadPath(orgA, document.id)).toBeNull();
   });
 });

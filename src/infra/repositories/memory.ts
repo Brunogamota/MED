@@ -164,6 +164,17 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
     return [...(this.documents.get(this.scoped(organizationId, medId)) ?? [])];
   }
 
+  async getDocument(organizationId: string, documentId: string): Promise<StoredDocument | null> {
+    for (const list of this.documents.values()) {
+      for (const document of list) {
+        if (document.id === documentId && document.organizationId === organizationId) {
+          return document;
+        }
+      }
+    }
+    return null;
+  }
+
   async saveDefense(defense: Defense): Promise<Defense> {
     return this.appendTo(
       this.defenses,

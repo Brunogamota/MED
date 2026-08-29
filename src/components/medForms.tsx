@@ -12,6 +12,7 @@ import { Field, FormGrid, Select, SubmitButton } from '@/components/form';
 import {
   addDocumentAction,
   addEvidenceAction,
+  uploadDocumentAction,
   upsertCustomerAction,
   upsertOrderAction,
   upsertTrackingAction,
@@ -322,6 +323,57 @@ export function DocumentForm({ medId }: { medId: string }) {
         </p>
         <SubmitButton>Registrar documento</SubmitButton>
       </form>
+    </Panel>
+  );
+}
+
+export function DocumentUploadForm({
+  medId,
+  storageAvailable,
+}: {
+  medId: string;
+  storageAvailable: boolean;
+}) {
+  return (
+    <Panel title="Enviar arquivo">
+      {storageAvailable ? (
+        <form action={uploadDocumentAction} className="space-y-3">
+          <input type="hidden" name="medId" value={medId} />
+          <FormGrid>
+            <Select label="Tipo" name="kind" options={DOCUMENT_KINDS} required />
+            <Select
+              label="Origem"
+              name="source"
+              options={EVIDENCE_SOURCES}
+              required
+              defaultValue="MERCHANT"
+            />
+            <Field label="Referencia da origem" name="sourceReference" />
+            <label className="block">
+              <span className="block text-[11px] font-medium uppercase tracking-wide text-[var(--color-ink-muted)]">
+                Arquivo <span className="text-red-600">*</span>
+              </span>
+              <input
+                type="file"
+                name="file"
+                required
+                className="mt-1 w-full rounded border border-[var(--color-border-subtle)] bg-white px-2 py-1 text-xs"
+              />
+            </label>
+          </FormGrid>
+          <p className="text-[11px] text-[var(--color-ink-muted)]">
+            O checksum SHA-256 do arquivo e calculado no envio e guardado junto ao documento.
+          </p>
+          <SubmitButton>Enviar arquivo</SubmitButton>
+        </form>
+      ) : (
+        <p className="text-sm text-[var(--color-ink-muted)]">
+          Storage de documentos nao configurado neste ambiente. Configure as variaveis{' '}
+          <code>S3_*</code> para habilitar o upload, ou registre abaixo apenas a referencia do
+          documento. Aceitar um upload que se perderia no proximo cold start destruiria evidencia,
+          entao o envio fica desabilitado em vez de falhar em silencio.
+        </p>
+      )}
     </Panel>
   );
 }

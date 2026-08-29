@@ -16,7 +16,11 @@ import { assertCan } from '@/infra/auth/rbac';
 import { getRepository, type Repository } from '@/infra/container';
 import type { ListMedsFilter, MedListRow } from '@/infra/repositories/types';
 import { recordAudit } from '@/services/audit';
-import { ConflictError, NotFoundError } from '@/services/errors';
+import { ConflictError, NotFoundError, ValidationError } from '@/services/errors';
+import { createHash } from 'node:crypto';
+import { getDocumentStorage } from '@/infra/storage';
+import { buildSignedDocumentPath } from '@/infra/storage/signedUrl';
+import { getConfig } from '@/lib/env';
 import { newId } from '@/lib/ids';
 import { toJson } from '@/lib/json';
 import type {
@@ -63,8 +67,22 @@ const TERMINAL_STATUSES: MedStatus[] = ['SUBMITTED', 'ACCEPTED', 'REJECTED', 'EX
  * a MED out of a terminal state and never claims readiness the evidence does
  * not support.
  */
-export function deriveStatus(medCase: MedCase, hasDefense: boolean): MedStatus {
+export function deriveStatus(
+  medCase: MedCase,
+  hasDefense: boolean,
+  now: Date = new Date(),
+): MedStatus {
   if (TERMINAL_STATUSES.includes(medCase.med.status)) return medCase.med.status;
+
+  // A response window that has closed without a submission is EXPIRED, whatever
+  // the evidence looks like. Reporting READY_TO_SUBMIT past the deadline would
+  // be telling the operator something untrue about the case.
+  const deadline = medCase.med.responseDeadlineAt
+    ? Date.parse(medCase.med.responseDeadlineAt)
+    : null;
+  if (deadline !== null && !Number.isNaN(deadline) && deadline <= now.getTime()) {
+    return 'EXPIRED';
+  }
 
   const evidences = mergeEvidence(medCase.evidences, deriveEvidence(medCase));
   const assessment = assessEvidence({
@@ -578,4 +596,137 @@ export async function listAudit(auth: AuthContext, medId: string) {
   assertCan(auth.role, 'audit:read');
   const repository = await getRepository();
   return repository.listAudit(auth.organizationId, medId);
+}
+
+// ---------------------------------------------------------------------------
+// Documents
+// ---------------------------------------------------------------------------
+
+/** Upload cap. Large evidence belongs in the merchant's own storage, referenced. */
+export const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
+
+export interface UploadDocumentInput {
+  kind: StoredDocument['kind'];
+  filename: string;
+  contentType: string;
+  bytes: Uint8Array;
+  source: Evidence['source'];
+  sourceReference?: string | null;
+}
+
+export async function uploadDocument(
+  auth: AuthContext,
+  medId: string,
+  input: UploadDocumentInput,
+): Promise<StoredDocument> {
+  assertCan(auth.role, 'evidence:write');
+
+  if (input.bytes.byteLength === 0) {
+    throw new ValidationError('Arquivo vazio');
+  }
+  if (input.bytes.byteLength > MAX_DOCUMENT_BYTES) {
+    throw new ValidationError(
+      `Arquivo excede o limite de ${Math.floor(MAX_DOCUMENT_BYTES / (1024 * 1024))} MB`,
+    );
+  }
+
+  const storage = getDocumentStorage();
+  if (!storage) {
+    throw new ConflictError(
+      'Storage de documentos nao configurado neste ambiente. Configure as variaveis S3_* ou registre a referencia do documento sem upload.',
+    );
+  }
+
+  const repository = await getRepository();
+  await loadCaseOrThrow(repository, auth, medId);
+
+  const documentId = newId('doc');
+  const storageKey = `${auth.organizationId}/${medId}/${documentId}`;
+  const checksum = createHash('sha256').update(input.bytes).digest('hex');
+
+  await storage.put(storageKey, { bytes: input.bytes, contentType: input.contentType });
+
+  const document: StoredDocument = {
+    id: documentId,
+    organizationId: auth.organizationId,
+    medId,
+    kind: input.kind,
+    filename: input.filename,
+    contentType: input.contentType,
+    byteSize: input.bytes.byteLength,
+    storageKey,
+    checksumSha256: checksum,
+    source: input.source,
+    sourceReference: input.sourceReference ?? null,
+    uploadedAt: new Date().toISOString(),
+    uploadedBy: auth.actor,
+  };
+
+  const saved = await repository.addDocument(document);
+  await recordAudit(repository, auth, {
+    action: 'DOCUMENT_UPLOADED',
+    entityType: 'Document',
+    entityId: saved.id,
+    medId,
+    source: saved.source,
+    newValue: toJson({
+      kind: saved.kind,
+      filename: saved.filename,
+      byteSize: saved.byteSize,
+      checksumSha256: saved.checksumSha256,
+    }),
+  });
+  await refreshStatus(repository, auth, medId);
+  return saved;
+}
+
+/**
+ * Issues a short-lived signed link for a document. Requires
+ * DOCUMENT_URL_SIGNING_SECRET: without it no link is issued at all, rather than
+ * falling back to an unauthenticated URL.
+ */
+export async function getDocumentDownloadPath(
+  auth: AuthContext,
+  documentId: string,
+): Promise<string | null> {
+  assertCan(auth.role, 'med:read');
+  const config = getConfig();
+  if (!config.documentUrlSigningSecret) return null;
+
+  const repository = await getRepository();
+  const document = await repository.getDocument(auth.organizationId, documentId);
+  if (!document) throw new NotFoundError('Documento nao encontrado');
+
+  return buildSignedDocumentPath(
+    { organizationId: auth.organizationId, documentId },
+    config.documentUrlSigningSecret,
+  ).path;
+}
+
+export interface DocumentContent {
+  document: StoredDocument;
+  blob: { bytes: Uint8Array; contentType: string };
+}
+
+/**
+ * Reads a document for an already-verified signed link. The organization comes
+ * from the verified signature, never from the request.
+ */
+export async function readVerifiedDocument(
+  organizationId: string,
+  documentId: string,
+): Promise<DocumentContent> {
+  const repository = await getRepository();
+  const document = await repository.getDocument(organizationId, documentId);
+  if (!document) throw new NotFoundError('Documento nao encontrado');
+
+  const storage = getDocumentStorage();
+  const blob = storage ? await storage.get(document.storageKey) : null;
+  if (!blob) {
+    throw new NotFoundError(
+      'Conteudo do documento indisponivel neste ambiente: apenas a referencia foi registrada.',
+    );
+  }
+
+  return { document, blob };
 }

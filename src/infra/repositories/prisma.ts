@@ -523,6 +523,13 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
     return rows.map(mapDocument);
   }
 
+  async getDocument(organizationId: string, documentId: string): Promise<StoredDocument | null> {
+    const row = await this.prisma.document.findFirst({
+      where: { id: documentId, organizationId },
+    });
+    return row ? mapDocument(row) : null;
+  }
+
   async saveDefense(defense: Defense): Promise<Defense> {
     const row = await this.prisma.defense.create({
       data: {

@@ -3,6 +3,7 @@ import { ZodError, type ZodType } from 'zod';
 import { UnauthorizedError, authenticate, type AuthContext } from '@/infra/auth/context';
 import { ForbiddenError } from '@/infra/auth/rbac';
 import { ConflictError, NotFoundError, ValidationError } from '@/services/errors';
+import { rateLimit } from '@/lib/rateLimit';
 
 /**
  * HTTP boundary helpers.
@@ -39,30 +40,51 @@ export function mapError(error: unknown) {
   return jsonError(500, 'Erro interno');
 }
 
+/**
+ * Guards writes against accidental hammering. In-process, therefore per
+ * instance — see `src/lib/rateLimit.ts`. Reads are not limited here.
+ */
+const WRITE_LIMIT_PER_MINUTE = 120;
+
+function enforceWriteLimit(request: Request, auth: AuthContext): NextResponse | null {
+  if (request.method === 'GET' || request.method === 'HEAD') return null;
+  const path = new URL(request.url).pathname;
+  const limit = rateLimit(
+    `${auth.organizationId}:${request.method}:${path}`,
+    WRITE_LIMIT_PER_MINUTE,
+    60_000,
+  );
+  return limit.allowed ? null : jsonError(429, 'Limite de requisicoes excedido');
+}
+
+async function respond<T>(
+  request: Request,
+  handler: (auth: AuthContext) => Promise<T>,
+  status: number,
+): Promise<NextResponse> {
+  try {
+    const auth = authenticate(request.headers);
+    const limited = enforceWriteLimit(request, auth);
+    if (limited) return limited;
+    const result = await handler(auth);
+    return NextResponse.json(result as object, { status });
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
 export async function withAuth<T>(
   request: Request,
   handler: (auth: AuthContext) => Promise<T>,
 ): Promise<NextResponse> {
-  try {
-    const auth = authenticate(request.headers);
-    const result = await handler(auth);
-    return NextResponse.json(result as object);
-  } catch (error) {
-    return mapError(error);
-  }
+  return respond(request, handler, 200);
 }
 
 export async function withAuthCreated<T>(
   request: Request,
   handler: (auth: AuthContext) => Promise<T>,
 ): Promise<NextResponse> {
-  try {
-    const auth = authenticate(request.headers);
-    const result = await handler(auth);
-    return NextResponse.json(result as object, { status: 201 });
-  } catch (error) {
-    return mapError(error);
-  }
+  return respond(request, handler, 201);
 }
 
 export async function parseBody<T>(request: Request, schema: ZodType<T>): Promise<T> {

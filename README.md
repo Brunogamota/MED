@@ -71,5 +71,6 @@ idempotencia, guard de LLM, repositorio Postgres via Prisma.
 
 Ainda nao implementado, e deliberadamente nao simulado: integracoes reais com
 transportadoras, PSPs e plataformas de e-commerce (as portas existem, sem adapters
-falsos), upload binario para storage S3-compativel, login interativo de usuario,
-envio automatico para instituicoes, e rate limiting distribuido.
+falsos), adapter de storage S3-compativel (o upload funciona em modo demo e e
+recusado explicitamente quando nao ha storage duravel), login interativo de
+usuario, envio automatico para instituicoes, e rate limiting distribuido.

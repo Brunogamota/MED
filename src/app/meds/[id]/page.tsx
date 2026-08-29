@@ -3,10 +3,12 @@ import { notFound } from 'next/navigation';
 import { serverPageContext } from '@/infra/auth/context';
 import {
   getCase,
+  getDocumentDownloadPath,
   listAudit,
   listDefenses,
   listSubmissions,
 } from '@/services/medService';
+import { getDocumentStorage } from '@/infra/storage';
 import { NotFoundError } from '@/services/errors';
 import { assessEvidence } from '@/domain/evidence/engine';
 import { deriveEvidence, mergeEvidence } from '@/domain/evidence/derive';
@@ -35,6 +37,7 @@ import { createSubmissionAction, generateDefenseAction } from '@/app/meds/action
 import {
   CustomerForm,
   DocumentForm,
+  DocumentUploadForm,
   EvidenceForm,
   OrderForm,
   TrackingForm,
@@ -88,6 +91,15 @@ export default async function MedDetailPage({
   const latestDefense = defenses[defenses.length - 1] ?? null;
   const submissions = await listSubmissions(auth, id);
   const audit = await listAudit(auth, id);
+  const storageAvailable = getDocumentStorage() !== null;
+  const documentLinks = new Map<string, string | null>(
+    await Promise.all(
+      medCase.documents.map(
+        async (document) =>
+          [document.id, await getDocumentDownloadPath(auth, document.id)] as const,
+      ),
+    ),
+  );
 
   const { med } = medCase;
   const remaining = daysUntil(med.responseDeadlineAt);
@@ -440,21 +452,45 @@ export default async function MedDetailPage({
                   <Th>Tipo</Th>
                   <Th>Origem</Th>
                   <Th>Enviado em</Th>
+                  <Th>Arquivo</Th>
                 </tr>
               </thead>
               <tbody>
-                {medCase.documents.map((document) => (
-                  <tr key={document.id}>
-                    <Td>{document.filename}</Td>
-                    <Td>{document.kind}</Td>
-                    <Td>{document.source}</Td>
-                    <Td>{formatDateTime(document.uploadedAt)}</Td>
-                  </tr>
-                ))}
+                {medCase.documents.map((document) => {
+                  const link = documentLinks.get(document.id) ?? null;
+                  return (
+                    <tr key={document.id}>
+                      <Td>{document.filename}</Td>
+                      <Td>{document.kind}</Td>
+                      <Td>{document.source}</Td>
+                      <Td>{formatDateTime(document.uploadedAt)}</Td>
+                      <Td>
+                        {link ? (
+                          <a
+                            href={link}
+                            className="text-[var(--color-brand)] hover:underline"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            abrir
+                          </a>
+                        ) : (
+                          <span
+                            className="text-[11px] text-[var(--color-ink-muted)]"
+                            title="Configure DOCUMENT_URL_SIGNING_SECRET para gerar links assinados"
+                          >
+                            sem link assinado
+                          </span>
+                        )}
+                      </Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
         </Panel>
+        <DocumentUploadForm medId={med.id} storageAvailable={storageAvailable} />
         <DocumentForm medId={med.id} />
         </div>
       ) : null}

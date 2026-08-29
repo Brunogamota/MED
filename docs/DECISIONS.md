@@ -83,3 +83,17 @@ Nao ha sessao interativa ainda. A API autentica por API key
 (`API_KEYS="<key>:<org>:<role>"`) com RBAC em `src/infra/auth/rbac.ts`. Em
 producao, ausencia de key **falha fechado**. A UI hoje opera sobre a organizacao
 da primeira credencial configurada; login de usuario e o proximo item de backlog.
+
+## 12. Upload recusado quando nao ha storage duravel
+
+Com banco configurado e sem bucket S3, o upload falha explicitamente em vez de
+usar o store em memoria. Aceitar o arquivo e perde-lo no proximo cold start
+destruiria evidencia — exatamente o que este produto existe para evitar. Recusar
+com mensagem clara e a opcao correta.
+
+## 13. Prazo vencido vira EXPIRED
+
+Um MED cuja janela de resposta fechou sem envio passa a `EXPIRED`, qualquer que
+seja a qualidade das evidencias. Continuar exibindo `READY_TO_SUBMIT` depois do
+prazo informaria ao operador algo que nao e verdade. Casos ja submetidos ou
+decididos nao sao afetados: status terminal nao e sobrescrito.
