@@ -6,6 +6,7 @@ import {
   REQUIREMENT_STATUS_LABEL,
   STRENGTH_LABEL,
 } from '@/lib/labels';
+import { ORIGIN_TONE, originTooltip, type FieldOrigin } from '@/lib/origin';
 
 /**
  * Primitivos do padrao console: branco, hairline, sem sombra em card,
@@ -76,9 +77,19 @@ export function PanelLink({ href, children }: { href: string; children: ReactNod
 // Faixa de metricas — um card, celulas divididas por hairline vertical
 // ---------------------------------------------------------------------------
 
-export function MetricStrip({ children }: { children: ReactNode }) {
+export function MetricStrip({
+  children,
+  columns = 4,
+}: {
+  children: ReactNode;
+  /** Celulas dividem a largura igualmente, com divisores de 1px. */
+  columns?: 4 | 5;
+}) {
+  const cols = columns === 5 ? 'md:grid-cols-5' : 'md:grid-cols-4';
   return (
-    <section className="grid grid-cols-2 divide-x divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] md:grid-cols-4 lg:grid-cols-5 max-md:divide-y">
+    <section
+      className={`grid grid-cols-2 divide-x divide-[var(--color-border)] rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] ${cols} max-md:divide-y`}
+    >
       {children}
     </section>
   );
@@ -89,12 +100,21 @@ export function MetricCell({
   value,
   unit,
   tone = 'neutral',
+  cellTone,
+  badge,
+  bar,
 }: {
   label: string;
   value: string | number;
   /** Denominador ou unidade, em 14px muted grudado ao valor. */
   unit?: string;
   tone?: 'neutral' | 'warning' | 'danger' | 'success';
+  /** Fundo da celula inteira — prazo critico ganha danger-subtle. */
+  cellTone?: 'danger';
+  /** Badge ao lado do rotulo (ex.: "urgente"). */
+  badge?: ReactNode;
+  /** Barra de 4px sob o numero, na cor da faixa (score). */
+  bar?: { value: number; max: number };
 }) {
   const valueColor = {
     neutral: 'text-[var(--color-text)]',
@@ -102,10 +122,18 @@ export function MetricCell({
     warning: 'text-[var(--color-warning)]',
     danger: 'text-[var(--color-danger)]',
   }[tone];
+  const ratio = bar && bar.max > 0 ? Math.min(1, bar.value / bar.max) : null;
 
   return (
-    <div className="min-w-0 px-4 py-3">
-      <div className="text-xs text-[var(--color-text-muted)]">{label}</div>
+    <div
+      className={`min-w-0 px-4 py-3 ${
+        cellTone === 'danger' ? 'bg-[var(--color-danger-subtle)]' : ''
+      }`}
+    >
+      <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+        {label}
+        {badge}
+      </div>
       <div className={`tabular mt-1 truncate text-[28px] font-medium leading-none ${valueColor}`}>
         {value}
         {unit ? (
@@ -114,6 +142,14 @@ export function MetricCell({
           </span>
         ) : null}
       </div>
+      {ratio !== null ? (
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--color-border)]">
+          <div
+            className={`h-full rounded-full ${scoreColor(ratio)}`}
+            style={{ width: `${ratio * 100}%` }}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -140,20 +176,54 @@ export function KeyValueList({ children }: { children: ReactNode }) {
   return <dl className="divide-y divide-[var(--color-border)]">{children}</dl>;
 }
 
+const ORIGIN_MARK_COLOR: Record<'success' | 'neutral' | 'warning' | 'danger', string> = {
+  success: 'bg-[var(--color-success)]',
+  neutral: 'bg-[var(--color-border-strong)]',
+  warning: 'bg-[var(--color-warning)]',
+  danger: 'bg-[var(--color-danger)]',
+};
+
+/**
+ * Marcador de origem: 4px a esquerda do rotulo, tooltip com a cadeia.
+ * Cor nunca e o unico portador: o tooltip e o texto acessivel dizem a origem.
+ */
+export function SourceMark({ origin }: { origin: FieldOrigin }) {
+  const tooltip = originTooltip(origin);
+  return (
+    <span
+      className={`inline-block h-3 w-1 shrink-0 rounded-full ${ORIGIN_MARK_COLOR[ORIGIN_TONE[origin.kind]]}`}
+      title={tooltip}
+    >
+      <span className="sr-only">{tooltip}</span>
+    </span>
+  );
+}
+
 export function KeyValueRow({
   label,
   value,
   mono = false,
+  origin,
 }: {
   label: string;
   value?: string | null;
   /** Ids tecnicos em mono 12px. */
   mono?: boolean;
+  /** Cadeia de origem do dado — marcador de 4px + tooltip. */
+  origin?: FieldOrigin;
 }) {
   const missing = value === null || value === undefined || value.length === 0;
+  const shownOrigin: FieldOrigin | undefined = origin
+    ? missing
+      ? { kind: 'missing' }
+      : origin
+    : undefined;
   return (
     <div className="flex min-h-9 items-center justify-between gap-4 py-1.5">
-      <dt className="shrink-0 text-[13px] text-[var(--color-text-muted)]">{label}</dt>
+      <dt className="flex shrink-0 items-center gap-2 text-[13px] text-[var(--color-text-muted)]">
+        {shownOrigin ? <SourceMark origin={shownOrigin} /> : null}
+        {label}
+      </dt>
       <dd
         className={
           missing

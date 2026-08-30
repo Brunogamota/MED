@@ -38,6 +38,24 @@ export function formatDateTime(value: IsoDateTime | null | undefined): string | 
   }).format(date);
 }
 
+/**
+ * Data e hora sem hora inventada: quando o timestamp cai exatamente em
+ * meia-noite local, a hora quase sempre não existia no dado de origem (data
+ * pura importada). Nesse caso mostramos só a data — nunca um "00:00" falso.
+ */
+export function formatDateTimeSmart(value: IsoDateTime | null | undefined): string | null {
+  const date = parseIso(value);
+  if (!date) return null;
+  const time = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date);
+  if (time === '00:00:00') return formatDate(value);
+  return formatDateTime(value);
+}
+
 export function formatAmount(amount: number, currency = 'BRL'): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
 }
@@ -63,6 +81,22 @@ export function daysUntil(value: IsoDateTime | null | undefined, now = new Date(
   if (!date) return null;
   const millisecondsPerDay = 24 * 60 * 60 * 1000;
   return Math.ceil((date.getTime() - now.getTime()) / millisecondsPerDay);
+}
+
+/** Horas até o prazo, com sinal. Base da urgência da fila e do "vence em Nh". */
+export function hoursUntil(value: IsoDateTime | null | undefined, now = new Date()): number | null {
+  const date = parseIso(value);
+  if (!date) return null;
+  return (date.getTime() - now.getTime()) / (60 * 60 * 1000);
+}
+
+/** Contagem regressiva humana: "vence em 6 h", "vence em 3 dias", "vencido". */
+export function countdownText(hoursRemaining: number | null): string {
+  if (hoursRemaining === null) return 'sem prazo';
+  if (hoursRemaining < 0) return 'vencido';
+  if (hoursRemaining < 1) return 'vence em menos de 1 h';
+  if (hoursRemaining < 48) return `vence em ${Math.floor(hoursRemaining)} h`;
+  return `vence em ${Math.floor(hoursRemaining / 24)} dias`;
 }
 
 // ---------------------------------------------------------------------------
