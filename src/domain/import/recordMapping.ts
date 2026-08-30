@@ -63,19 +63,22 @@ export function buildCustomerInput(row: ImportedMedRow): UpsertCustomerInput | n
 }
 
 /**
+ * Pedido: criado quando o arquivo traz algo que o identifique — numero do
+ * pedido ou tipo de produto. So data e valor nao viram Pedido: seriam uma
+ * copia da Transacao, sem identidade propria.
+ *
  * `productType` e obrigatorio no dominio (define a matriz de evidencias
- * exigidas) e o CSV atual nao traz essa coluna. Sem ele o Pedido nao pode ser
- * criado — inventar "produto fisico" por chute violaria a regra de nao
- * preencher o que nao veio no arquivo. Quando a coluna existir (o parser ja
- * reconhece 'tipoproduto', 'tipo', 'segmento'...), o Pedido passa a nascer
- * completo sozinho, sem mudanca de codigo.
+ * exigidas). Quando o arquivo nao diz qual e, usamos `OTHER` — o mesmo valor
+ * que `resolveProductType` ja devolve para um caso sem tipo declarado. Nao e
+ * chute: e o "nao classificado" explicito do proprio dominio, e o operador
+ * troca pelo tipo certo no formulario quando souber.
  */
 export function buildOrderInput(row: ImportedMedRow): UpsertOrderInput | null {
-  if (!row.productType) return null;
+  if (!row.productType && !row.orderReference) return null;
 
   const candidate = {
     externalId: row.orderReference ?? undefined,
-    productType: row.productType,
+    productType: row.productType ?? 'OTHER',
     totalAmount: row.amount ?? undefined,
     placedAt: row.transactionAt ?? undefined,
   };

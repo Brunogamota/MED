@@ -84,24 +84,37 @@ describe('importacao em lote', () => {
     ).toHaveLength(0);
   });
 
-  it('sem coluna de tipo de produto, o pedido fica em branco e a referência vira evidência manual', async () => {
+  it('sem coluna de tipo de produto, o pedido nasce como "Outro" — não fica em branco', async () => {
     const csv = [
       'MED ID;Valor;Data da compra;Data abertura;Pedido',
       'MED-030;R$ 199,00;10/08/2026 10:00;20/08/2026;PED-30',
     ].join('\n');
 
-    const { report } = await importMedsFromText(auth, csv, { batchReference: 'lote-29-08' });
-    const result = report?.results[0];
-    const medCase = await getCase(auth, result!.id!);
+    const { report } = await importMedsFromText(auth, csv);
+    const medCase = await getCase(auth, report!.results[0]!.id!);
 
-    expect(medCase.order).toBeNull();
-    const orderEvidence = medCase.evidences.find((evidence) => evidence.type === 'ORDER_RECORD');
-    expect(orderEvidence?.value).toBe('PED-30');
-    expect(orderEvidence?.sourceReference).toBe('lote-29-08');
-    expect(result?.messages.join(' ')).toContain('Tipo de produto');
-
-    // Transação e Cliente não dependem de tipo de produto: continuam nascendo.
+    expect(medCase.order?.externalId).toBe('PED-30');
+    expect(medCase.order?.productType).toBe('OTHER');
+    expect(medCase.order?.totalAmount).toBe(199);
     expect(medCase.transaction?.amount).toBe(199);
+  });
+
+  it('sem número de pedido nem tipo de produto, não cria Pedido vazio', async () => {
+    // O CSV do dia a dia do operador: nada que identifique um pedido.
+    const csv = [
+      'MED ID;Valor;Data da compra;Data abertura;Prazo;Motivo;Nome do cliente;CPF',
+      'MED-031;R$ 219,90;12/08/2026 15:20;25/08/2026;10/09/2026;Produto não recebido;Carlos Andrade;32165498700',
+    ].join('\n');
+
+    const { report } = await importMedsFromText(auth, csv);
+    const medCase = await getCase(auth, report!.results[0]!.id!);
+
+    // Pedido sem identidade seria só uma cópia da transação.
+    expect(medCase.order).toBeNull();
+    // O que o arquivo tem de verdade, entra:
+    expect(medCase.transaction?.amount).toBe(219.9);
+    expect(medCase.customer?.identification.name).toBe('Carlos Andrade');
+    expect(medCase.customer?.identification.document).toBe('32165498700');
   });
 
   it('reimportar o mesmo arquivo não sobrescreve uma correção manual', async () => {

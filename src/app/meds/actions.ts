@@ -31,6 +31,7 @@ import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentSer
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
 import { addCommunicationReconstruction } from '@/services/medService';
 import { parseMedImport } from '@/domain/import/csv';
+import { EMAIL_SENDER_NAME } from '@/domain/communication/receipt';
 
 /**
  * Server actions used by the MED screens.
@@ -459,7 +460,8 @@ export async function addCommunicationAction(form: FormData): Promise<void> {
   const input = createCommunicationSchema.parse(
     compact({
       template: text(form, 'template') ?? 'GENERIC',
-      from: text(form, 'from'),
+      // Remetente não é campo do formulário: quem envia é sempre o gateway.
+      from: text(form, 'from') ?? EMAIL_SENDER_NAME,
       to: text(form, 'to'),
       toName: text(form, 'toName'),
       subject: text(form, 'subject'),

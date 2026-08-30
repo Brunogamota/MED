@@ -2,7 +2,6 @@ import type { AuthContext } from '@/infra/auth/context';
 import type { CreateMedInput } from '@/domain/schemas';
 import { createMedSchema } from '@/domain/schemas';
 import {
-  addEvidence,
   createMedWithOutcome,
   upsertCustomer,
   upsertOrder,
@@ -131,24 +130,7 @@ async function importRow(
       if (customerInput) await upsertCustomer(auth, med.id, customerInput);
 
       const orderInput = buildOrderInput(row);
-      if (orderInput) {
-        await upsertOrder(auth, med.id, orderInput);
-      } else if (row.orderReference) {
-        // Sem coluna de tipo de produto, o Pedido nao pode ser criado (campo
-        // obrigatorio do dominio) — a referencia ainda entra como evidencia
-        // suplementar, e o operador sabe exatamente o que falta no arquivo.
-        await addEvidence(auth, med.id, {
-          type: 'ORDER_RECORD',
-          value: row.orderReference,
-          source: 'MANUAL',
-          sourceReference: options.batchReference ?? 'importação em lote',
-          verificationStatus: 'UNVERIFIED',
-          metadata: { importedFromLine: row.line },
-        });
-        messages.push(
-          'Pedido não preenchido automaticamente: adicione a coluna "Tipo de produto" ao arquivo.',
-        );
-      }
+      if (orderInput) await upsertOrder(auth, med.id, orderInput);
     } else {
       messages.push('MED já existia e foi mantido como estava.');
     }

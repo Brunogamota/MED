@@ -5,6 +5,7 @@ import {
   COMMUNICATION_TEMPLATES,
   COMMUNICATION_TEMPLATE_LABEL,
   COMMUNICATION_SOURCES,
+  REFERENCE_FIELD,
   draftCommunication,
   parseCommunicationReceipt,
   type CommunicationTemplate,
@@ -39,6 +40,7 @@ export function CommunicationPanel({
   reconstructions: Evidence[];
 }) {
   const draft = draftCommunication(medCase, template);
+  const referenceField = REFERENCE_FIELD[template];
   const medId = medCase.med.id;
 
   return (
@@ -83,64 +85,83 @@ export function CommunicationPanel({
           ))}
         </div>
 
-        <form action={addCommunicationAction} className="space-y-4">
+        {/*
+          `key` no formulário: trocar de modelo precisa recarregar os campos.
+          Sem ele o React reaproveita os inputs e o `defaultValue` novo é
+          ignorado — o operador trocava o modelo e via o texto anterior (ou um
+          campo vazio), sem entender por quê.
+        */}
+        <form key={template} action={addCommunicationAction} className="space-y-4">
           <input type="hidden" name="medId" value={medId} />
           <input type="hidden" name="template" value={template} />
+
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
-            <Field label="Remetente" name="from" required defaultValue={draft.from} />
             <Field
-              label="Nome do destinatário"
+              label="Nome do cliente"
               name="toName"
               defaultValue={draft.toName ?? undefined}
-              hint="Quem recebeu — aparece no painel de envios"
             />
             <Field
-              label="Destinatário"
+              label="E-mail do cliente"
               name="to"
               required
               defaultValue={draft.to}
-              hint="E-mail ou contato que recebeu a mensagem"
             />
             <Field label="Assunto" name="subject" required defaultValue={draft.subject} />
             <DateTimeField label="Enviado em" name="sentAt" defaultValue={draft.sentAt} />
           </div>
+
           <div>
             <label
               htmlFor="comm-body"
               className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)]"
             >
-              Conteúdo enviado <span className="text-[var(--color-danger)]">*</span>
+              Mensagem enviada <span className="text-[var(--color-danger)]">*</span>
             </label>
             <textarea
               id="comm-body"
               name="body"
               required
-              rows={7}
+              rows={6}
               defaultValue={draft.body}
               className="w-full rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 py-2 text-[13px] leading-relaxed"
             />
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Transcreva o que foi realmente enviado ao cliente. Não preencha com conteúdo que não
-              foi enviado.
+              Escreva o que foi realmente enviado. Não invente conteúdo que o cliente não recebeu.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-3">
-            <Field
-              label="Referência do conteúdo"
-              name="reference"
-              defaultValue={draft.reference ?? undefined}
-              hint="Link de acesso, código, rastreio"
-            />
-            <Select
-              label="Origem"
-              name="source"
-              options={COMMUNICATION_SOURCES}
-              labels={EVIDENCE_SOURCE_LABEL}
-              required
-              defaultValue="MERCHANT"
-            />
-            <Field label="Referência da origem" name="sourceReference" hint="ID da mensagem no provedor" />
-          </div>
+
+          <Field
+            label={referenceField.label}
+            name="reference"
+            defaultValue={draft.reference ?? undefined}
+            placeholder={referenceField.placeholder}
+            hint={referenceField.hint}
+            className="md:max-w-[420px]"
+          />
+
+          {/* Procedência: importa para a defesa, mas não para quem só preenche. */}
+          <details className="rounded-md border border-[var(--color-border)] px-3 py-2">
+            <summary className="cursor-pointer text-xs text-[var(--color-text-muted)]">
+              Opções avançadas
+            </summary>
+            <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+              <Select
+                label="Origem do registro"
+                name="source"
+                options={COMMUNICATION_SOURCES}
+                labels={EVIDENCE_SOURCE_LABEL}
+                required
+                defaultValue="MERCHANT"
+              />
+              <Field
+                label="ID da mensagem"
+                name="sourceReference"
+                hint="Identificador no provedor de e-mail, se você tiver"
+              />
+            </div>
+          </details>
+
           <SubmitButton>Gerar comprovante</SubmitButton>
         </form>
       </Panel>

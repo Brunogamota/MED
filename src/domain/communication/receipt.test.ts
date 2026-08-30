@@ -50,6 +50,62 @@ describe('buildClientEmailView', () => {
   });
 });
 
+describe('botão da mensagem', () => {
+  const receiptWith = (
+    template: Parameters<typeof buildClientEmailView>[0]['template'],
+    reference: string | null,
+  ) =>
+    buildClientEmailView({
+      template,
+      from: 'IronPay',
+      to: 'c@e.com',
+      subject: 'Assunto',
+      sentAt: null,
+      body: 'corpo',
+      reference,
+    });
+
+  it('entrega de acesso vira botão "Acessar agora", com ou sem URL', () => {
+    const comLink = receiptWith('ACCESS_DELIVERY', 'https://membros.exemplo.com/x');
+    expect(comLink.action).toEqual({
+      kind: 'BUTTON',
+      label: 'Acessar agora',
+      valueLabel: 'Link de acesso',
+      value: 'https://membros.exemplo.com/x',
+      href: 'https://membros.exemplo.com/x',
+    });
+
+    // Sem URL o botão continua aparecendo — era o botão que o cliente via —,
+    // mas não é clicável: não temos o destino para inventar.
+    const semLink = receiptWith('ACCESS_DELIVERY', 'Área de membros');
+    expect(semLink.action?.kind).toBe('BUTTON');
+    expect(semLink.action).toMatchObject({ label: 'Acessar agora', href: null });
+  });
+
+  it('cada modelo tem seu próprio call-to-action', () => {
+    expect(receiptWith('DELIVERY_CONFIRMATION', 'AA123BR').action).toMatchObject({
+      label: 'Rastrear pedido',
+      valueLabel: 'Código de rastreio',
+    });
+    expect(receiptWith('PURCHASE_CONFIRMATION', 'PED-1').action).toMatchObject({
+      label: 'Ver pedido',
+      valueLabel: 'Número do pedido',
+    });
+  });
+
+  it('mensagem genérica só vira botão quando há link de verdade', () => {
+    expect(receiptWith('GENERIC', 'https://x.com').action).toMatchObject({
+      kind: 'BUTTON',
+      label: 'Abrir link',
+    });
+    expect(receiptWith('GENERIC', 'texto solto').action?.kind).toBe('NOTE');
+  });
+
+  it('sem referência, não há botão — botão sem destino não representa nada', () => {
+    expect(receiptWith('ACCESS_DELIVERY', null).action).toBeNull();
+  });
+});
+
 describe('parseCommunicationReceipt', () => {
   it('rejeita valor que não é uma reconstrução válida', () => {
     expect(parseCommunicationReceipt('x')).toBeNull();

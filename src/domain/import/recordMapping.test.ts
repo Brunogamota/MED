@@ -74,8 +74,14 @@ describe('buildCustomerInput', () => {
 });
 
 describe('buildOrderInput', () => {
-  it('sem tipo de produto no arquivo, o pedido fica de fora — campo obrigatorio, nao se inventa', () => {
+  it('sem nada que identifique um pedido, nao cria Pedido — seria copia da transacao', () => {
     expect(buildOrderInput(row())).toBeNull();
+  });
+
+  it('com numero do pedido mas sem tipo, usa OTHER — o "nao classificado" do dominio', () => {
+    const input = buildOrderInput(row({ orderReference: 'PED-30' }));
+    expect(input?.externalId).toBe('PED-30');
+    expect(input?.productType).toBe('OTHER');
   });
 
   it('com tipo de produto, o pedido nasce completo com o que o arquivo tem', () => {

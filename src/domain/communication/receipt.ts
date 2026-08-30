@@ -66,11 +66,57 @@ export interface CommunicationReceipt {
   reference?: string | null;
 }
 
-/** Ação em destaque derivada da referência (link de acesso, código, rastreio). */
-export interface ClientEmailAction {
-  kind: 'LINK' | 'CODE' | 'TRACKING' | 'TEXT';
-  label: string;
-  value: string;
+/**
+ * Ação em destaque da mensagem — o botão que o cliente viu.
+ *
+ * `BUTTON` é o caso normal: toda mensagem transacional tem um call-to-action
+ * ("Acessar agora", "Rastrear pedido", "Ver pedido"), e é ele que a
+ * reconstrução mostra. `href` só existe quando a referência é uma URL de
+ * verdade; sem URL o botão aparece igual, mas não é clicável — representar o
+ * botão que existia não é inventar destino que não temos.
+ */
+export type ClientEmailAction =
+  | { kind: 'BUTTON'; label: string; valueLabel: string; value: string; href: string | null }
+  | { kind: 'NOTE'; valueLabel: string; value: string };
+
+/**
+ * Como a referência se chama em cada modelo — para o rótulo do campo no
+ * formulário e para a legenda abaixo do botão. Um nome concreto ("Link de
+ * acesso") faz o operador entender o que preencher; "Referência do conteúdo"
+ * não faz.
+ */
+export const REFERENCE_FIELD: Record<
+  CommunicationTemplate,
+  { label: string; hint: string; placeholder: string; buttonLabel: string | null }
+> = {
+  ACCESS_DELIVERY: {
+    label: 'Link de acesso',
+    hint: 'Vira o botão "Acessar agora" no comprovante.',
+    placeholder: 'https://... ou nome da área de membros',
+    buttonLabel: 'Acessar agora',
+  },
+  DELIVERY_CONFIRMATION: {
+    label: 'Código de rastreio',
+    hint: 'Vira o botão "Rastrear pedido" no comprovante.',
+    placeholder: 'AA123456789BR',
+    buttonLabel: 'Rastrear pedido',
+  },
+  PURCHASE_CONFIRMATION: {
+    label: 'Número do pedido',
+    hint: 'Vira o botão "Ver pedido" no comprovante.',
+    placeholder: 'PED-1234',
+    buttonLabel: 'Ver pedido',
+  },
+  GENERIC: {
+    label: 'Link ou código (opcional)',
+    hint: 'Se preencher, aparece em destaque no comprovante.',
+    placeholder: 'https://... ou um código',
+    buttonLabel: null,
+  },
+};
+
+function isUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value);
 }
 
 /** Modelo de visão do cliente, pronto para renderizar (UI e PDF). */
@@ -96,20 +142,26 @@ function deriveAction(
 ): ClientEmailAction | null {
   const value = reference?.trim();
   if (!value) return null;
-  if (/^https?:\/\//i.test(value)) {
+
+  const field = REFERENCE_FIELD[template];
+  const href = isUrl(value) ? value : null;
+
+  // Modelo com call-to-action próprio: sempre botão, clicável ou não.
+  if (field.buttonLabel) {
     return {
-      kind: 'LINK',
-      label: template === 'ACCESS_DELIVERY' ? 'Acessar agora' : 'Abrir link',
+      kind: 'BUTTON',
+      label: field.buttonLabel,
+      valueLabel: field.label,
       value,
+      href,
     };
   }
-  if (template === 'DELIVERY_CONFIRMATION') {
-    return { kind: 'TRACKING', label: 'Código de rastreio', value };
+
+  // Mensagem genérica: só vira botão quando há um link de verdade para abrir.
+  if (href) {
+    return { kind: 'BUTTON', label: 'Abrir link', valueLabel: 'Link', value, href };
   }
-  if (template === 'ACCESS_DELIVERY') {
-    return { kind: 'CODE', label: 'Acessar agora', value };
-  }
-  return { kind: 'TEXT', label: 'Referência', value };
+  return { kind: 'NOTE', valueLabel: 'Referência', value };
 }
 
 export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmailView {

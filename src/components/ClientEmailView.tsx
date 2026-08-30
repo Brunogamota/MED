@@ -36,8 +36,9 @@ function TemplateIcon({ template }: { template: CommunicationTemplate }) {
     case 'ACCESS_DELIVERY':
       return (
         <svg {...common} aria-hidden>
-          <path d="M15.5 7.5a4 4 0 1 0-4.9 3.9L4 18v3h3l1-1v-2h2v-2h2l1.4-1.4a4 4 0 0 0 2.1-7.1Z" />
-          <circle cx="16.5" cy="7.5" r="0.6" fill="currentColor" stroke="none" />
+          <circle cx="7.5" cy="15.5" r="5.5" />
+          <path d="m21 2-9.6 9.6" />
+          <path d="m15.5 7.5 3 3L22 7l-3-3" />
         </svg>
       );
     case 'DELIVERY_CONFIRMATION':
@@ -64,40 +65,42 @@ function TemplateIcon({ template }: { template: CommunicationTemplate }) {
   }
 }
 
-/** Botão sempre preto: seja a peça um link real, seja um código de acesso. */
+/**
+ * Call-to-action da mensagem: botão preto, clicável quando há uma URL real.
+ * Sem URL o botão aparece igual — era o botão que o cliente via —, com o
+ * valor logo abaixo para quem confere a peça saber para onde ele levava.
+ */
 function ActionButton({ action }: { action: ClientEmailAction }) {
-  const buttonClass =
-    'inline-flex h-11 items-center justify-center rounded-lg bg-[var(--color-primary)] px-6 text-[14px] font-semibold text-white no-underline';
-
-  if (action.kind === 'LINK') {
+  if (action.kind === 'NOTE') {
     return (
-      <div className="mt-5">
-        <a href={action.value} className={buttonClass}>
-          {action.label}
-        </a>
-        <p className="mt-2 break-all font-mono text-[11px] text-[var(--color-text-muted)]">
+      <div className="mt-5 rounded-xl border border-[var(--color-border)] bg-white px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+          {action.valueLabel}
+        </p>
+        <p className="mt-1 break-all font-mono text-[14px] text-[var(--color-text)]">
           {action.value}
         </p>
       </div>
     );
   }
 
-  if (action.kind === 'CODE') {
-    return (
-      <div className="mt-5">
-        <span className={buttonClass}>{action.label}</span>
-        <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">{action.value}</p>
-      </div>
-    );
-  }
+  const buttonClass =
+    'inline-flex h-11 items-center justify-center rounded-lg bg-[var(--color-primary)] px-6 text-[14px] font-semibold text-white no-underline';
 
   return (
-    <div className="mt-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-        {action.label}
-      </p>
-      <p className="mt-1 break-all font-mono text-[15px] text-[var(--color-text)]">
-        {action.value}
+    <div className="mt-5">
+      {action.href ? (
+        <a href={action.href} className={buttonClass}>
+          {action.label}
+        </a>
+      ) : (
+        <span className={buttonClass}>{action.label}</span>
+      )}
+      <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
+        {action.valueLabel}:{' '}
+        <span className="break-all font-mono text-[var(--color-text-secondary)]">
+          {action.value}
+        </span>
       </p>
     </div>
   );
