@@ -6,7 +6,7 @@ import type { Med } from '@/domain/types';
  * Demo data, loaded only in DEMO mode (no DATABASE_URL).
  *
  * These records are fictional and labelled as such — every MED id starts with
- * `DEMO-` and the payer names are obviously synthetic — so demo content can
+ * `DEMO-` and the payer names are obviously synthetic — só demo content can
  * never be mistaken for a real case. Nothing here is seeded when a database is
  * configured.
  */
@@ -35,7 +35,7 @@ function baseMed(overrides: Partial<Med> & Pick<Med, 'id' | 'medId'>): Med {
     payerAddress: null,
     payerIp: null,
     payerDevice: null,
-    merchantName: 'Loja Demonstracao',
+    merchantName: 'Loja Demonstração',
     additionalInformation: null,
     createdAt: days(-5),
     updatedAt: days(-5),
@@ -55,12 +55,12 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     openedAt: days(-5),
     responseDeadlineAt: days(4),
     reason: 'PRODUCT_NOT_RECEIVED',
-    requestingInstitution: 'Banco Demonstracao S.A.',
+    requestingInstitution: 'Banco Demonstração S.A.',
     productType: 'PHYSICAL',
     status: 'COLLECTING_DATA',
     payer: {
       document: '11122233344',
-      name: 'Cliente Demonstracao Um',
+      name: 'Cliente Demonstração Um',
       email: 'cliente.um@exemplo.demo',
       phone: '11900000001',
     },
@@ -90,15 +90,15 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     medId: delivered.id,
     identification: {
       document: '11122233344',
-      name: 'Cliente Demonstracao Um',
+      name: 'Cliente Demonstração Um',
       email: 'cliente.um@exemplo.demo',
       phone: '11900000001',
     },
     address: {
-      street: 'Rua Demonstracao',
+      street: 'Rua Demonstração',
       number: '100',
       district: 'Centro',
-      city: 'Sao Paulo',
+      city: 'São Paulo',
       state: 'SP',
       postalCode: '01001000',
       country: 'BR',
@@ -114,17 +114,17 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     medId: delivered.id,
     externalId: 'DEMO-PED-1001',
     productType: 'PHYSICAL',
-    items: [{ name: 'Produto Demonstracao', sku: 'DEMO-SKU-1', quantity: 1, unitAmount: 349.9 }],
+    items: [{ name: 'Produto Demonstração', sku: 'DEMO-SKU-1', quantity: 1, unitAmount: 349.9 }],
     totalAmount: 349.9,
     placedAt: days(-19),
     checkoutIp: '203.0.113.10',
     deviceFingerprint: 'demo_df_0001',
     userAgent: 'Mozilla/5.0 (demo)',
     shippingAddress: {
-      street: 'Rua Demonstracao',
+      street: 'Rua Demonstração',
       number: '100',
       district: 'Centro',
-      city: 'Sao Paulo',
+      city: 'São Paulo',
       state: 'SP',
       postalCode: '01001000',
       country: 'BR',
@@ -138,18 +138,18 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     id: 'demo_trk_1',
     organizationId: DEMO_ORGANIZATION_ID,
     medId: delivered.id,
-    carrier: 'Transportadora Demonstracao',
+    carrier: 'Transportadora Demonstração',
     trackingCode: 'DM123456789BR',
     status: 'DELIVERED',
     postedAt: days(-18),
     deliveredAt: days(-15),
-    receiverName: 'Cliente Demonstracao Um',
+    receiverName: 'Cliente Demonstração Um',
     events: [
       {
         occurredAt: days(-18),
         status: 'POSTED',
         description: 'Objeto postado',
-        location: 'Sao Paulo/SP',
+        location: 'São Paulo/SP',
         source: 'TRACKING_PROVIDER',
         sourceReference: 'DM123456789BR',
       },
@@ -157,15 +157,15 @@ export async function seedDemoData(repository: Repository): Promise<void> {
         occurredAt: days(-16),
         status: 'OUT_FOR_DELIVERY',
         description: 'Objeto saiu para entrega',
-        location: 'Sao Paulo/SP',
+        location: 'São Paulo/SP',
         source: 'TRACKING_PROVIDER',
         sourceReference: 'DM123456789BR',
       },
       {
         occurredAt: days(-15),
         status: 'DELIVERED',
-        description: 'Objeto entregue ao destinatario',
-        location: 'Sao Paulo/SP',
+        description: 'Objeto entregue ao destinatário',
+        location: 'São Paulo/SP',
         source: 'TRACKING_PROVIDER',
         sourceReference: 'DM123456789BR',
       },
@@ -192,7 +192,7 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     uploadedBy: 'demo',
   });
 
-  // Case 2 — digital product, deliberately incomplete so the "missing
+  // Case 2 — digital product, deliberately incomplete só the "missing
   // evidence" path is visible in the UI.
   const incomplete = baseMed({
     id: 'demo_med_incomplete',
@@ -204,12 +204,12 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     openedAt: days(-2),
     responseDeadlineAt: days(1),
     reason: 'UNRECOGNIZED_TRANSACTION',
-    requestingInstitution: 'Banco Demonstracao S.A.',
+    requestingInstitution: 'Banco Demonstração S.A.',
     productType: 'DIGITAL',
     status: 'MISSING_EVIDENCE',
     payer: {
       document: '55566677788',
-      name: 'Cliente Demonstracao Dois',
+      name: 'Cliente Demonstração Dois',
       email: 'cliente.dois@exemplo.demo',
     },
   });
@@ -222,7 +222,7 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     channel: 'EMAIL',
     sentTo: 'cliente.dois@exemplo.demo',
     sentAt: days(-9),
-    platform: 'Area de membros Demonstracao',
+    platform: 'Área de membros Demonstração',
     firstAccessAt: null,
     accessCount: null,
     source: 'MERCHANT',
@@ -237,7 +237,7 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     medId: incomplete.id,
     identification: {
       document: '55566677788',
-      name: 'Cliente Demonstracao Dois',
+      name: 'Cliente Demonstração Dois',
       email: 'cliente.dois@exemplo.demo',
     },
     address: null,

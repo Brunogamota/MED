@@ -47,7 +47,7 @@ const CHANNEL_LABEL: Record<string, string> = {
   EMAIL: 'e-mail',
   WHATSAPP: 'WhatsApp',
   SMS: 'SMS',
-  PLATFORM: 'area de membros da plataforma',
+  PLATFORM: 'área de membros da plataforma',
   OTHER: 'canal informado no pedido',
 };
 
@@ -70,7 +70,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
       const endToEnd = value('END_TO_END_ID');
       if (!endToEnd) return null;
       const amount = formatAmount(medCase.med.amount, medCase.med.currency);
-      return `A transacao contestada, no valor de ${amount}, esta registrada sob o end-to-end ID ${endToEnd}.`;
+      return `A transação contestada, no valor de ${amount}, está registrada sob o end-to-end ID ${endToEnd}.`;
     },
   },
   {
@@ -80,7 +80,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const authorization = value('PAYMENT_AUTHORIZATION');
       if (!authorization) return null;
-      return `O pagamento foi autorizado pelo provedor sob a referencia ${authorization}.`;
+      return `O pagamento foi autorizado pelo provedor sob a referência ${authorization}.`;
     },
   },
   {
@@ -158,8 +158,8 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
       if (!code || !postedAt) return null;
       const carrier = value('CARRIER');
       return carrier
-        ? `O pedido foi postado em ${postedAt} pela transportadora ${carrier}, sob o codigo de rastreio ${code}.`
-        : `O pedido foi postado em ${postedAt} sob o codigo de rastreio ${code}.`;
+        ? `O pedido foi postado em ${postedAt} pela transportadora ${carrier}, sob o código de rastreio ${code}.`
+        : `O pedido foi postado em ${postedAt} sob o código de rastreio ${code}.`;
     },
   },
   {
@@ -192,7 +192,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const address = value('SHIPPING_ADDRESS');
       if (!address) return null;
-      return `A entrega ocorreu no endereco informado no momento da compra: ${address}.`;
+      return `A entrega ocorreu no endereço informado no momento da compra: ${address}.`;
     },
   },
   {
@@ -220,7 +220,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
       const sentTo = value('ACCESS_SENT_TO');
       const sentAt = dateTime('ACCESS_SENT_AT');
       if (!sentTo || !sentAt) return null;
-      return `Os dados de acesso ao servico contratado foram enviados para ${sentTo} em ${sentAt}.`;
+      return `Os dados de acesso ao serviço contratado foram enviados para ${sentTo} em ${sentAt}.`;
     },
   },
   {
@@ -242,7 +242,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const count = value('ACCESS_COUNT');
       if (!count) return null;
-      return `O sistema registra ${count} acessos do titular ao conteudo adquirido.`;
+      return `O sistema registra ${count} acessos do titular ao conteúdo adquirido.`;
     },
   },
   {
@@ -253,7 +253,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const log = value('DOWNLOAD_LOG');
       if (!log) return null;
-      return `Ha registro de download do material entregue (referencia ${log}).`;
+      return `Há registro de download do material entregue (referência ${log}).`;
     },
   },
   {
@@ -264,7 +264,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const acceptance = value('SERVICE_ACCEPTANCE');
       if (!acceptance) return null;
-      return `A contratacao do servico foi aceita pelo contratante (registro ${acceptance}).`;
+      return `A contratacao do serviço foi aceita pelo contratante (registro ${acceptance}).`;
     },
   },
   {
@@ -275,7 +275,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const execution = value('SERVICE_EXECUTION');
       if (!execution) return null;
-      return `A execucao do servico esta registrada sob a referencia ${execution}.`;
+      return `A execucao do serviço está registrada sob a referência ${execution}.`;
     },
   },
   {
@@ -285,7 +285,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const invoice = value('INVOICE');
       if (!invoice) return null;
-      return `Foi emitida nota fiscal para a operacao (${invoice}).`;
+      return `Foi emitida nota fiscal para a operação (${invoice}).`;
     },
   },
   {
@@ -295,7 +295,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const history = value('COMMUNICATION_HISTORY');
       if (!history) return null;
-      return `Ha historico de comunicacao com o cliente referente a esta compra (${history}).`;
+      return `Há histórico de comunicacao com o cliente referente a esta compra (${history}).`;
     },
   },
 ];

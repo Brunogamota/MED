@@ -1,7 +1,7 @@
 /** Errors that map onto HTTP status codes at the API boundary. */
 
 export class NotFoundError extends Error {
-  constructor(message = 'Recurso nao encontrado') {
+  constructor(message = 'Recurso não encontrado') {
     super(message);
     this.name = 'NotFoundError';
   }

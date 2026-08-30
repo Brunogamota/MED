@@ -26,17 +26,17 @@ import {
  *
  * Renders an Evidence Pack as the document sent to the requesting institution.
  * It is a projection: it shows what the pack contains and nothing else. Sections
- * with no data are rendered as explicitly empty rather than omitted, so a reader
+ * with no data are rendered as explicitly empty rather than omitted, só a reader
  * can tell "we have nothing here" apart from "this was left out".
  */
 
 const REASON_LABEL: Record<string, string> = {
-  UNRECOGNIZED_TRANSACTION: 'Nao reconhecimento da transacao',
-  PRODUCT_NOT_RECEIVED: 'Produto ou servico nao recebido',
-  PRODUCT_NOT_AS_DESCRIBED: 'Produto ou servico diferente do anunciado',
+  UNRECOGNIZED_TRANSACTION: 'Não reconhecimento da transação',
+  PRODUCT_NOT_RECEIVED: 'Produto ou serviço não recebido',
+  PRODUCT_NOT_AS_DESCRIBED: 'Produto ou serviço diferente do anunciado',
   FRAUD_SCAM: 'Suspeita de golpe',
-  FRAUD_COERCION: 'Transacao sob coacao',
-  FRAUD_ACCOUNT_TAKEOVER: 'Suspeita de invasao de conta',
+  FRAUD_COERCION: 'Transação sob coação',
+  FRAUD_ACCOUNT_TAKEOVER: 'Suspeita de invasão de conta',
   DUPLICATE_CHARGE: 'Cobranca em duplicidade',
   OPERATIONAL_ERROR: 'Erro operacional',
   OTHER: 'Outro',
@@ -86,16 +86,16 @@ function drawCover(context: DocumentContext, pack: EvidencePack): void {
     context,
     [
       { label: 'MED ID', value: med.medId },
-      { label: 'TRANSACTION ID', value: med.transactionId ?? 'Nao informado' },
-      { label: 'END-TO-END ID', value: med.endToEndId ?? 'Nao informado' },
+      { label: 'TRANSACTION ID', value: med.transactionId ?? 'Não informado' },
+      { label: 'END-TO-END ID', value: med.endToEndId ?? 'Não informado' },
       { label: 'VALOR', value: formatAmount(med.amount, med.currency) },
-      { label: 'DATA DA TRANSACAO', value: formatDateTime(med.transactionAt) ?? 'Nao informada' },
-      { label: 'ABERTURA DO MED', value: formatDateTime(med.openedAt) ?? 'Nao informada' },
+      { label: 'DATA DA TRANSAÇÃO', value: formatDateTime(med.transactionAt) ?? 'Não informada' },
+      { label: 'ABERTURA DO MED', value: formatDateTime(med.openedAt) ?? 'Não informada' },
       {
         label: 'PRAZO DE RESPOSTA',
-        value: formatDateTime(med.responseDeadlineAt) ?? 'Nao informado',
+        value: formatDateTime(med.responseDeadlineAt) ?? 'Não informado',
       },
-      { label: 'INSTITUICAO SOLICITANTE', value: med.requestingInstitution ?? 'Nao informada' },
+      { label: 'INSTITUIÇÃO SOLICITANTE', value: med.requestingInstitution ?? 'Não informada' },
       { label: 'MOTIVO', value: REASON_LABEL[med.reason] ?? med.reason },
       { label: 'STATUS', value: med.status },
     ],
@@ -167,16 +167,16 @@ function drawScorePanel(context: DocumentContext, pack: EvidencePack): void {
   context.y = panelTop - panelHeight - 8;
   drawParagraph(
     context,
-    'Este indicador mede exclusivamente a completude e a forca documental do conjunto de evidencias segundo as regras internas do sistema. Nao representa probabilidade de exito na contestacao.',
+    'Este indicador mede exclusivamente a completude e a força documental do conjunto de evidências segundo as regras internas do sistema. Não representa probabilidade de exito na contestação.',
     { size: 7.5, color: COLORS.muted },
   );
 }
 
 function drawTimeline(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Timeline da transacao');
+  drawSectionTitle(context, 'Linha do tempo da transação');
 
   if (pack.timeline.length === 0) {
-    drawParagraph(context, 'Nenhum evento datado foi registrado para esta transacao.', {
+    drawParagraph(context, 'Nenhum evento datado foi registrado para esta transação.', {
       color: COLORS.muted,
     });
     return;
@@ -236,21 +236,21 @@ function drawTimeline(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawEvidences(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Evidencias apresentadas');
+  drawSectionTitle(context, 'Evidências apresentadas');
 
   if (pack.evidences.length === 0) {
-    drawParagraph(context, 'Nenhuma evidencia registrada.', { color: COLORS.muted });
+    drawParagraph(context, 'Nenhuma evidência registrada.', { color: COLORS.muted });
     return;
   }
 
   drawTable(
     context,
     [
-      { header: 'Evidencia', width: 130 },
+      { header: 'Evidência', width: 130 },
       { header: 'Valor', width: 165 },
       { header: 'Origem', width: 110 },
-      { header: 'Verificacao', width: 55 },
-      { header: 'Forca', width: 39 },
+      { header: 'Verificação', width: 55 },
+      { header: 'Força', width: 39 },
     ],
     pack.evidences.map((evidence) => {
       const definition = getEvidenceDefinition(evidence.type);
@@ -274,10 +274,10 @@ function drawEvidences(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawMissing(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Evidencias nao disponiveis');
+  drawSectionTitle(context, 'Evidências não disponíveis');
 
   if (pack.defense.missingEvidences.length === 0) {
-    drawParagraph(context, 'Todas as evidencias previstas para este caso estao disponiveis.', {
+    drawParagraph(context, 'Todas as evidências previstas para este caso estao disponíveis.', {
       color: COLORS.success,
     });
     return;
@@ -285,16 +285,16 @@ function drawMissing(context: DocumentContext, pack: EvidencePack): void {
 
   drawParagraph(
     context,
-    'Os itens abaixo nao constam nos registros e, por isso, nao sao afirmados em nenhum ponto desta defesa.',
+    'Os itens abaixo não constam nos registros e, por isso, não são afirmados em nenhum ponto desta defesa.',
     { size: 9, color: COLORS.muted },
   );
 
   drawTable(
     context,
     [
-      { header: 'Evidencia', width: 170 },
-      { header: 'Situacao', width: 90 },
-      { header: 'Relevancia', width: 90 },
+      { header: 'Evidência', width: 170 },
+      { header: 'Situação', width: 90 },
+      { header: 'Relevância', width: 90 },
       { header: 'Motivo', width: 149 },
     ],
     pack.defense.missingEvidences.map((missing) => [
@@ -311,36 +311,36 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
 
   drawSectionTitle(context, 'Dados do cliente');
   drawKeyValueGrid(context, [
-    { label: 'NOME', value: customer?.identification.name ?? med.payer.name ?? 'Nao informado' },
+    { label: 'NOME', value: customer?.identification.name ?? med.payer.name ?? 'Não informado' },
     {
       label: 'CPF/CNPJ',
-      value: customer?.identification.document ?? med.payer.document ?? 'Nao informado',
+      value: customer?.identification.document ?? med.payer.document ?? 'Não informado',
     },
-    { label: 'E-MAIL', value: customer?.identification.email ?? med.payer.email ?? 'Nao informado' },
+    { label: 'E-MAIL', value: customer?.identification.email ?? med.payer.email ?? 'Não informado' },
     {
       label: 'TELEFONE',
-      value: customer?.identification.phone ?? med.payer.phone ?? 'Nao informado',
+      value: customer?.identification.phone ?? med.payer.phone ?? 'Não informado',
     },
     {
-      label: 'ENDERECO',
-      value: formatAddress(customer?.address ?? med.payerAddress) ?? 'Nao informado',
+      label: 'ENDEREÇO',
+      value: formatAddress(customer?.address ?? med.payerAddress) ?? 'Não informado',
     },
     {
       label: 'CLIENTE DESDE',
-      value: formatDate(customer?.accountCreatedAt) ?? 'Nao informado',
+      value: formatDate(customer?.accountCreatedAt) ?? 'Não informado',
     },
   ]);
 
   drawSectionTitle(context, 'Dados da compra');
   drawKeyValueGrid(context, [
-    { label: 'PEDIDO', value: order?.externalId ?? order?.id ?? 'Nao informado' },
-    { label: 'TIPO DE PRODUTO', value: order?.productType ?? med.productType ?? 'Nao informado' },
-    { label: 'DATA DA COMPRA', value: formatDateTime(order?.placedAt) ?? 'Nao informada' },
+    { label: 'PEDIDO', value: order?.externalId ?? order?.id ?? 'Não informado' },
+    { label: 'TIPO DE PRODUTO', value: order?.productType ?? med.productType ?? 'Não informado' },
+    { label: 'DATA DA COMPRA', value: formatDateTime(order?.placedAt) ?? 'Não informada' },
     {
       label: 'VALOR DO PEDIDO',
       value:
         order?.totalAmount === null || order?.totalAmount === undefined
-          ? 'Nao informado'
+          ? 'Não informado'
           : formatAmount(order.totalAmount, med.currency),
     },
   ]);
@@ -352,7 +352,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
         { header: 'Item', width: 240 },
         { header: 'SKU', width: 110 },
         { header: 'Qtd.', width: 49 },
-        { header: 'Valor unitario', width: 100 },
+        { header: 'Valor unitário', width: 100 },
       ],
       order.items.map((item) => [
         item.name,
@@ -367,20 +367,20 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
 
   drawSectionTitle(context, 'Dados do pagamento');
   drawKeyValueGrid(context, [
-    { label: 'METODO', value: transaction?.method ?? 'Nao informado' },
-    { label: 'STATUS', value: transaction?.status ?? 'Nao informado' },
-    { label: 'AUTORIZADO EM', value: formatDateTime(transaction?.authorizedAt) ?? 'Nao informado' },
-    { label: 'PROVEDOR', value: transaction?.provider ?? 'Nao informado' },
-    { label: 'REFERENCIA', value: transaction?.providerReference ?? 'Nao informada' },
-    { label: 'END-TO-END ID', value: transaction?.endToEndId ?? med.endToEndId ?? 'Nao informado' },
+    { label: 'MÉTODO', value: transaction?.method ?? 'Não informado' },
+    { label: 'STATUS', value: transaction?.status ?? 'Não informado' },
+    { label: 'AUTORIZADO EM', value: formatDateTime(transaction?.authorizedAt) ?? 'Não informado' },
+    { label: 'PROVEDOR', value: transaction?.provider ?? 'Não informado' },
+    { label: 'REFERÊNCIA', value: transaction?.providerReference ?? 'Não informada' },
+    { label: 'END-TO-END ID', value: transaction?.endToEndId ?? med.endToEndId ?? 'Não informado' },
   ]);
 
-  drawSectionTitle(context, 'Dados tecnicos da compra');
+  drawSectionTitle(context, 'Dados técnicos da compra');
   drawKeyValueGrid(context, [
-    { label: 'IP DO CHECKOUT', value: order?.checkoutIp ?? 'Nao informado' },
-    { label: 'DEVICE', value: order?.deviceFingerprint ?? 'Nao informado' },
-    { label: 'USER AGENT', value: order?.userAgent ?? 'Nao informado' },
-    { label: 'IP INFORMADO NO MED', value: med.payerIp ?? 'Nao informado' },
+    { label: 'IP DO CHECKOUT', value: order?.checkoutIp ?? 'Não informado' },
+    { label: 'DEVICE', value: order?.deviceFingerprint ?? 'Não informado' },
+    { label: 'USER AGENT', value: order?.userAgent ?? 'Não informado' },
+    { label: 'IP INFORMADO NO MED', value: med.payerIp ?? 'Não informado' },
   ]);
 
   const digitalDelivery = pack.digitalDelivery;
@@ -388,7 +388,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
   drawSectionTitle(context, 'Dados de entrega');
 
   if (!tracking && !digitalDelivery) {
-    drawParagraph(context, 'Nao ha dados de entrega registrados para este caso.', {
+    drawParagraph(context, 'Não ha dados de entrega registrados para este caso.', {
       color: COLORS.muted,
     });
     return;
@@ -396,15 +396,15 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
 
   if (tracking) {
     drawKeyValueGrid(context, [
-      { label: 'TRANSPORTADORA', value: tracking.carrier ?? 'Nao informada' },
-      { label: 'CODIGO DE RASTREIO', value: tracking.trackingCode ?? 'Nao informado' },
+      { label: 'TRANSPORTADORA', value: tracking.carrier ?? 'Não informada' },
+      { label: 'CÓDIGO DE RASTREIO', value: tracking.trackingCode ?? 'Não informado' },
       { label: 'STATUS', value: SHIPMENT_STATUS_LABEL[tracking.status] },
-      { label: 'POSTAGEM', value: formatDateTime(tracking.postedAt) ?? 'Nao informada' },
-      { label: 'ENTREGA', value: formatDateTime(tracking.deliveredAt) ?? 'Nao registrada' },
-      { label: 'RECEBIDO POR', value: tracking.receiverName ?? 'Nao informado' },
+      { label: 'POSTAGEM', value: formatDateTime(tracking.postedAt) ?? 'Não informada' },
+      { label: 'ENTREGA', value: formatDateTime(tracking.deliveredAt) ?? 'Não registrada' },
+      { label: 'RECEBIDO POR', value: tracking.receiverName ?? 'Não informado' },
       {
-        label: 'ENDERECO DE ENTREGA',
-        value: formatAddress(order?.shippingAddress) ?? 'Nao informado',
+        label: 'ENDEREÇO DE ENTREGA',
+        value: formatAddress(order?.shippingAddress) ?? 'Não informado',
       },
     ]);
 
@@ -414,7 +414,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
         [
           { header: 'Data e hora', width: 120 },
           { header: 'Etapa', width: 120 },
-          { header: 'Descricao', width: 150 },
+          { header: 'Descrição', width: 150 },
           { header: 'Origem', width: 109 },
         ],
         tracking.events.map((event) => [
@@ -432,18 +432,18 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
   if (digitalDelivery) {
     drawKeyValueGrid(context, [
       { label: 'CANAL DE ENTREGA', value: DELIVERY_CHANNEL_LABEL[digitalDelivery.channel] },
-      { label: 'ENVIADO PARA', value: digitalDelivery.sentTo ?? 'Nao informado' },
-      { label: 'ENVIADO EM', value: formatDateTime(digitalDelivery.sentAt) ?? 'Nao informado' },
-      { label: 'PLATAFORMA', value: digitalDelivery.platform ?? 'Nao informada' },
+      { label: 'ENVIADO PARA', value: digitalDelivery.sentTo ?? 'Não informado' },
+      { label: 'ENVIADO EM', value: formatDateTime(digitalDelivery.sentAt) ?? 'Não informado' },
+      { label: 'PLATAFORMA', value: digitalDelivery.platform ?? 'Não informada' },
       {
         label: 'PRIMEIRO ACESSO',
-        value: formatDateTime(digitalDelivery.firstAccessAt) ?? 'Nao registrado',
+        value: formatDateTime(digitalDelivery.firstAccessAt) ?? 'Não registrado',
       },
       {
-        label: 'NUMERO DE ACESSOS',
+        label: 'NÚMERO DE ACESSOS',
         value:
           digitalDelivery.accessCount === null || digitalDelivery.accessCount === undefined
-            ? 'Nao registrado'
+            ? 'Não registrado'
             : String(digitalDelivery.accessCount),
       },
       {
@@ -482,12 +482,12 @@ function drawDocuments(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawClaims(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Afirmacoes e evidencias que as sustentam');
+  drawSectionTitle(context, 'Afirmações e evidências que as sustentam');
 
   if (pack.defense.claims.length === 0) {
     drawParagraph(
       context,
-      'Nenhuma afirmacao factual pode ser sustentada com as evidencias atualmente disponiveis.',
+      'Nenhuma afirmação factual pode ser sustentada com as evidências atualmente disponíveis.',
       { color: COLORS.danger },
     );
     return;
@@ -508,7 +508,7 @@ function drawClaims(context: DocumentContext, pack: EvidencePack): void {
         })`;
       })
       .join('; ');
-    drawParagraph(context, `Evidencias: ${references}`, { size: 8, color: COLORS.muted });
+    drawParagraph(context, `Evidências: ${references}`, { size: 8, color: COLORS.muted });
     context.y -= 4;
   }
 }
@@ -534,15 +534,15 @@ export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Arra
   drawMissing(context, pack);
   drawDocuments(context, pack);
 
-  drawSectionTitle(context, 'Conclusao');
+  drawSectionTitle(context, 'Conclusão');
   drawParagraph(
     context,
-    'Todas as afirmacoes desta defesa estao vinculadas a evidencias registradas, com identificacao da origem de cada dado. Informacoes nao disponiveis foram declaradas como indisponiveis e nao foram objeto de afirmacao.',
+    'Todas as afirmações desta defesa estao vinculadas a evidências registradas, com identificação da origem de cada dado. Informacoes não disponíveis foram declaradas como indisponiveis e não foram objeto de afirmação.',
     { size: 9.5 },
   );
   drawParagraph(
     context,
-    `Documento gerado automaticamente em ${formatDateTime(pack.generatedAt)} a partir do Evidence Pack ${pack.packVersion}, defesa versao ${pack.defense.version}.`,
+    `Documento gerado automaticamente em ${formatDateTime(pack.generatedAt)} a partir do Evidence Pack ${pack.packVersion}, defesa versão ${pack.defense.version}.`,
     { size: 8, color: COLORS.muted },
   );
 

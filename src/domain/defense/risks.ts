@@ -39,7 +39,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
     flags.push({
       code: 'CONFLICTING_EVIDENCE',
       severity: 'HIGH',
-      message: `${conflicting.length} evidencia(s) marcada(s) como conflitante(s) nao serao utilizadas na defesa.`,
+      message: `${conflicting.length} evidência(s) marcada(s) como conflitante(s) não serão utilizadas na defesa.`,
       evidenceIds: conflicting.map((evidence) => evidence.id),
     });
   }
@@ -54,7 +54,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
         code: 'NO_DELIVERY_PROOF',
         severity: med.reason === 'PRODUCT_NOT_RECEIVED' ? 'HIGH' : 'MEDIUM',
         message:
-          'Nao ha confirmacao de entrega registrada. Para produto fisico esta e a evidencia central da defesa.',
+          'Não ha confirmação de entrega registrada. Para produto físico esta é a evidência central da defesa.',
         evidenceIds: [],
       });
     }
@@ -79,7 +79,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
       code: 'ADDRESS_MISMATCH',
       severity: 'MEDIUM',
       message:
-        'O CEP de entrega difere do CEP cadastrado do cliente. Explique a divergencia na defesa.',
+        'O CEP de entrega difere do CEP cadastrado do cliente. Explique a divergência na defesa.',
       evidenceIds: evidenceIdsOfTypes(evidences, ['SHIPPING_ADDRESS', 'CUSTOMER_ADDRESS']),
     });
   }
@@ -111,7 +111,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
     flags.push({
       code: 'AMOUNT_MISMATCH',
       severity: 'MEDIUM',
-      message: `O valor da transacao (${formatAmount(transaction.amount, transaction.currency)}) difere do valor contestado (${formatAmount(med.amount, med.currency)}).`,
+      message: `O valor da transação (${formatAmount(transaction.amount, transaction.currency)}) difere do valor contestado (${formatAmount(med.amount, med.currency)}).`,
       evidenceIds: evidenceIdsOfTypes(evidences, ['TRANSACTION_RECEIPT']),
     });
   }
@@ -123,7 +123,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
     flags.push({
       code: 'NO_TECHNICAL_EVIDENCE',
       severity: 'MEDIUM',
-      message: 'Nenhum dado tecnico da sessao de compra foi coletado (IP, device, logs).',
+      message: 'Nenhum dado técnico da sessão de compra foi coletado (IP, device, logs).',
       evidenceIds: [],
     });
   }
@@ -132,7 +132,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
     flags.push({
       code: 'NO_IDENTITY_EVIDENCE',
       severity: 'HIGH',
-      message: 'Nenhuma evidencia de identidade do comprador foi coletada.',
+      message: 'Nenhuma evidência de identidade do comprador foi coletada.',
       evidenceIds: [],
     });
   }
@@ -144,7 +144,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
     flags.push({
       code: 'UNVERIFIED_CRITICAL_EVIDENCE',
       severity: 'MEDIUM',
-      message: `Evidencias obrigatorias com forca baixa: ${weakRequired.map((item) => item.label).join(', ')}.`,
+      message: `Evidências obrigatórias com força baixa: ${weakRequired.map((item) => item.label).join(', ')}.`,
       evidenceIds: weakRequired.flatMap((item) => item.evidenceIds),
     });
   }
@@ -155,7 +155,7 @@ export function detectRisks(input: DetectRisksInput): RiskFlag[] {
       flags.push({
         code: 'DEADLINE_PASSED',
         severity: 'HIGH',
-        message: 'O prazo de resposta informado no MED ja passou.',
+        message: 'O prazo de resposta informado no MED já passou.',
         evidenceIds: [],
       });
     } else if (remaining <= 2) {

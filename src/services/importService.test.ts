@@ -73,7 +73,7 @@ describe('importacao em lote', () => {
     expect(report?.skipped).toBe(1);
     const skipped = report?.results.find((result) => result.outcome === 'SKIPPED');
     expect(skipped?.line).toBe(3);
-    expect(skipped?.messages.join(' ')).toContain('nao pode ser interpretado');
+    expect(skipped?.messages.join(' ')).toContain('não pode ser interpretado');
 
     expect((await listMeds(auth, {})).map((row) => row.med.medId).sort()).toEqual([
       'MED-010',

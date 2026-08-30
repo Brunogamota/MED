@@ -18,7 +18,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const config = getConfig();
 
   if (!config.documentUrlSigningSecret) {
-    return jsonError(503, 'Download de documentos indisponivel: DOCUMENT_URL_SIGNING_SECRET ausente');
+    return jsonError(503, 'Download de documentos indisponível: DOCUMENT_URL_SIGNING_SECRET ausente');
   }
 
   const url = new URL(request.url);
@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!verification.ok) {
     const status = verification.reason === 'EXPIRED' ? 410 : 403;
     const message =
-      verification.reason === 'EXPIRED' ? 'Link expirado' : 'Link invalido';
+      verification.reason === 'EXPIRED' ? 'Link expirado' : 'Link inválido';
     return jsonError(status, message);
   }
 

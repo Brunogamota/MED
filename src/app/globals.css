@@ -1,17 +1,73 @@
 @import 'tailwindcss';
 
 /*
- * Operational density is the design goal: small type, tight rows, high
- * information per screen. Colours are tokenised so the light and dark palettes
- * stay in sync.
+ * Direcao estetica: padrao console (referencia Neon Console).
+ * O branco e a interface; separacao e hairline; a acao primaria e preta;
+ * cor saturada aparece apenas em pontos de status de 6px.
+ * Valores exatos da direcao — nenhum valor solto em componente.
  */
 @theme {
-  --color-surface: #ffffff;
-  --color-surface-muted: #f6f7f9;
-  --color-border-subtle: #e3e6ea;
-  --color-ink: #14181d;
-  --color-ink-muted: #5c6470;
-  --color-brand: #0d5a8c;
+  /* superficies */
+  --color-bg:             #ffffff;
+  --color-bg-subtle:      #f7f7f7;
+  --color-surface:        #ffffff;
+  --color-surface-hover:  #fafafa;
+  --color-surface-active: #f0f0f0;
+
+  /* bordas — hairline, dois pesos */
+  --color-border:         #eaeaea;
+  --color-border-strong:  #d4d4d4;
+
+  /* texto — tres niveis */
+  --color-text:           #1f1f1f;
+  --color-text-secondary: #5c5c5c;
+  --color-text-muted:     #8a8a8a;
+
+  /* acao — preta */
+  --color-primary:        #1f1f1f;
+  --color-primary-hover:  #333333;
+  --color-primary-fg:     #ffffff;
+
+  /* accent — ponto de status e nada mais */
+  --color-accent:         #00a86b;
+  --color-accent-subtle:  #e8f7f0;
+
+  /* estados semanticos — apenas para status real */
+  --color-success:        #17803d;
+  --color-success-subtle: #edf7ee;
+  --color-warning:        #a16207;
+  --color-warning-subtle: #fdf6e3;
+  --color-danger:         #b42318;
+  --color-danger-subtle:  #fdf0ef;
+  --color-info:           #35597c;
+  --color-info-subtle:    #f0f4f8;
+
+  --color-ring:           #1f1f1f;
+
+  /* tipografia */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-2xs: 11px;
+  --text-xs:  12px;
+  --text-sm:  13px;
+  --text-base: 14px;
+  --text-md:  16px;
+  --text-lg:  20px;
+  --text-xl:  28px;
+
+  /* forma */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  /* sombra — apenas o que flutua */
+  --shadow-popover: 0 8px 24px -8px rgb(0 0 0 / 0.12), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+
+  /* movimento */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root {
@@ -19,11 +75,45 @@
 }
 
 body {
-  background: var(--color-surface-muted);
-  color: var(--color-ink);
-  font-feature-settings: 'tnum' 1;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
 }
 
-table {
+/* Numeros tabulares onde ha dado numerico alinhado */
+table,
+.tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Campo: foco sem glow azul */
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-text);
+  box-shadow: 0 0 0 3px rgb(31 31 31 / 0.08);
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

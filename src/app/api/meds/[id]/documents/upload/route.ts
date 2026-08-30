@@ -30,11 +30,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
     const kind = String(form.get('kind') ?? 'OTHER');
     if (!DOCUMENT_KINDS.includes(kind as DocumentKind)) {
-      throw new ValidationError('Tipo de documento invalido');
+      throw new ValidationError('Tipo de documento inválido');
     }
     const source = String(form.get('source') ?? 'MERCHANT');
     if (!EVIDENCE_SOURCES.includes(source as EvidenceSource)) {
-      throw new ValidationError('Origem invalida');
+      throw new ValidationError('Origem inválida');
     }
 
     const document = await uploadDocument(auth, id, {

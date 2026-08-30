@@ -35,7 +35,7 @@ describe('generateDefense', () => {
     expect(defense.claims).toEqual([]);
     expect(defense.evidenceIds).toEqual([]);
     expect(defense.score.total).toBe(0);
-    expect(defense.narrative.body).toContain('nao ha, na base do estabelecimento');
+    expect(defense.narrative.body).toContain('não há, na base do estabelecimento');
   });
 
   it('builds delivery claims from a delivered physical order', () => {

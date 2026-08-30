@@ -6,7 +6,7 @@ import { DEMO_ORGANIZATION_ID, getConfig } from '@/lib/env';
  *
  * Production (DATABASE_URL set) requires an API key: with no key configured the
  * app fails closed rather than falling back to an open demo tenant.
- * Demo mode (no DATABASE_URL) grants a fixed demo organization so a preview
+ * Demo mode (no DATABASE_URL) grants a fixed demo organization só a preview
  * deployment is explorable before any credential exists.
  */
 
@@ -17,7 +17,7 @@ export interface AuthContext {
 }
 
 export class UnauthorizedError extends Error {
-  constructor(message = 'Credencial ausente ou invalida') {
+  constructor(message = 'Credencial ausente ou inválida') {
     super(message);
     this.name = 'UnauthorizedError';
   }
@@ -63,7 +63,7 @@ export function authenticate(headers: Headers): AuthContext {
 }
 
 /**
- * Context for server-rendered pages. The UI has no session layer yet, so it
+ * Context for server-rendered pages. The UI has no session layer yet, só it
  * runs against the demo tenant in demo mode and against the single configured
  * organization otherwise. Interactive auth is a documented follow-up.
  */

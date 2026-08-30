@@ -46,8 +46,8 @@ const EVIDENCE_EVENT_MAP: Partial<Record<Evidence['type'], {
 }>> = {
   FIRST_ACCESS_AT: { type: 'customer.first_access', description: 'Primeiro acesso do cliente' },
   PASSWORD_CHANGE: { type: 'customer.password_change', description: 'Alteracao de senha' },
-  SERVICE_ACCEPTANCE: { type: 'service.accepted', description: 'Aceite da contratacao do servico' },
-  SERVICE_EXECUTION: { type: 'service.executed', description: 'Execucao do servico registrada' },
+  SERVICE_ACCEPTANCE: { type: 'service.accepted', description: 'Aceite da contratacao do serviço' },
+  SERVICE_EXECUTION: { type: 'service.executed', description: 'Execucao do serviço registrada' },
   ACCOUNT_CREATED_AT: { type: 'customer.account_created', description: 'Conta do cliente criada' },
 };
 
@@ -90,7 +90,7 @@ export function buildTimeline(medCase: MedCase): TimelineEvent[] {
   push(events, {
     type: 'transaction.created',
     at: med.transactionAt ?? transaction?.createdAt,
-    description: 'Transacao realizada',
+    description: 'Transação realizada',
     source: transaction?.provider ? 'PAYMENT_PROVIDER' : 'MANUAL',
     sourceReference: transaction?.providerReference ?? med.endToEndId ?? null,
     evidenceIds: evidenceIdsOfTypes(evidences, ['END_TO_END_ID', 'TRANSACTION_RECEIPT']),
@@ -260,12 +260,12 @@ export function buildTimeline(medCase: MedCase): TimelineEvent[] {
  * Remove repeticoes do mesmo fato.
  *
  * O mesmo marco pode chegar por dois caminhos — o campo `deliveredAt` do
- * rastreio e o evento de entrega da lista — e sao a mesma coisa, nao duas
- * entregas. Dois eventos com o mesmo tipo e o mesmo instante sao um so.
+ * rastreio e o evento de entrega da lista — e são a mesma coisa, não duas
+ * entregas. Dois eventos com o mesmo tipo e o mesmo instante são um só.
  *
- * Quem fica e a versao de origem mais autoritativa: a redacao da propria
- * transportadora vale mais do que a nossa parafrase, e e o que a instituicao
- * espera ler. As evidencias das duas versoes sao preservadas, porque ambas
+ * Quem fica e a versão de origem mais autoritativa: a redacao da própria
+ * transportadora vale mais do que a nossa parafrase, e e o que a instituição
+ * espera ler. As evidências das duas versoes são preservadas, porque ambas
  * sustentam o mesmo fato.
  */
 const SOURCE_AUTHORITY: Record<EvidenceSource, number> = {
@@ -311,7 +311,7 @@ export function dedupeTimeline(events: TimelineEvent[]): TimelineEvent[] {
   return [...byKey.values()];
 }
 
-/** Chronological, with a stable tiebreak so output is reproducible. */
+/** Chronological, with a stable tiebreak só output is reproducible. */
 export function sortTimeline(events: TimelineEvent[]): TimelineEvent[] {
   return [...events].sort((a, b) => {
     const delta = Date.parse(a.occurredAt) - Date.parse(b.occurredAt);

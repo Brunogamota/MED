@@ -405,7 +405,7 @@ export function parseMedImport(text: string): ParsedImport {
       recognized: [],
       ignored: [],
       rows: [],
-      fatalError: 'O arquivo precisa ter uma linha de cabecalho e ao menos uma linha de dados.',
+      fatalError: 'O arquivo precisa ter uma linha de cabeçalho e ao menos uma linha de dados.',
     };
   }
 
@@ -454,20 +454,20 @@ export function parseMedImport(text: string): ParsedImport {
     if (rawAmount.length === 0) {
       errors.push('Valor ausente.');
     } else if (amount === null || amount <= 0) {
-      errors.push(`Valor "${rawAmount}" nao pode ser interpretado.`);
+      errors.push(`Valor "${rawAmount}" não pode ser interpretado.`);
     }
 
     const rawOpenedAt = cell(values, 'openedAt');
     const openedAt = rawOpenedAt.length > 0 ? parseDateTimeBr(rawOpenedAt) : null;
     if (rawOpenedAt.length > 0 && openedAt === null) {
-      errors.push(`Data de abertura "${rawOpenedAt}" nao pode ser interpretada.`);
+      errors.push(`Data de abertura "${rawOpenedAt}" não pode ser interpretada.`);
     }
 
     const parseOptionalDate = (field: ImportField, label: string): string | null => {
       const raw = cell(values, field);
       if (raw.length === 0) return null;
       const parsed = parseDateTimeBr(raw);
-      if (parsed === null) errors.push(`${label} "${raw}" nao pode ser interpretada.`);
+      if (parsed === null) errors.push(`${label} "${raw}" não pode ser interpretada.`);
       return parsed;
     };
 

@@ -55,7 +55,7 @@ async function loadCaseOrThrow(
   medId: string,
 ): Promise<MedCase> {
   const medCase = await repository.loadCase(auth.organizationId, medId);
-  if (!medCase) throw new NotFoundError(`MED ${medId} nao encontrado`);
+  if (!medCase) throw new NotFoundError(`MED ${medId} não encontrado`);
   return medCase;
 }
 
@@ -210,7 +210,7 @@ export async function updateMed(
   assertCan(auth.role, 'med:write');
   const repository = await getRepository();
   const current = await repository.getMed(auth.organizationId, medId);
-  if (!current) throw new NotFoundError(`MED ${medId} nao encontrado`);
+  if (!current) throw new NotFoundError(`MED ${medId} não encontrado`);
 
   const updated = await repository.updateMed(auth.organizationId, medId, input);
   await recordAudit(repository, auth, {
@@ -336,7 +336,7 @@ export async function upsertOrder(
     newValue: toJson(saved),
   });
 
-  // The product type declared on the order drives the evidence matrix, so the
+  // The product type declared on the order drives the evidence matrix, só the
   // MED adopts it when it has none of its own.
   if (!medCase.med.productType) {
     await repository.updateMed(auth.organizationId, medId, { productType: input.productType });
@@ -649,7 +649,7 @@ export async function uploadDocument(
   const storage = getDocumentStorage();
   if (!storage) {
     throw new ConflictError(
-      'Storage de documentos nao configurado neste ambiente. Configure as variaveis S3_* ou registre a referencia do documento sem upload.',
+      'Storage de documentos não configurado neste ambiente. Configure as variáveis S3_* ou registre a referência do documento sem upload.',
     );
   }
 
@@ -711,7 +711,7 @@ export async function getDocumentDownloadPath(
 
   const repository = await getRepository();
   const document = await repository.getDocument(auth.organizationId, documentId);
-  if (!document) throw new NotFoundError('Documento nao encontrado');
+  if (!document) throw new NotFoundError('Documento não encontrado');
 
   return buildSignedDocumentPath(
     { organizationId: auth.organizationId, documentId },
@@ -734,13 +734,13 @@ export async function readVerifiedDocument(
 ): Promise<DocumentContent> {
   const repository = await getRepository();
   const document = await repository.getDocument(organizationId, documentId);
-  if (!document) throw new NotFoundError('Documento nao encontrado');
+  if (!document) throw new NotFoundError('Documento não encontrado');
 
   const storage = getDocumentStorage();
   const blob = storage ? await storage.get(document.storageKey) : null;
   if (!blob) {
     throw new NotFoundError(
-      'Conteudo do documento indisponivel neste ambiente: apenas a referencia foi registrada.',
+      'Conteúdo do documento indisponível neste ambiente: apenas a referência foi registrada.',
     );
   }
 

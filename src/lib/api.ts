@@ -8,7 +8,7 @@ import { rateLimit } from '@/lib/rateLimit';
 /**
  * HTTP boundary helpers.
  *
- * Responsibilities kept here so route handlers stay thin: authenticate, parse
+ * Responsibilities kept here só route handlers stay thin: authenticate, parse
  * and validate the body, map domain errors onto status codes, and make sure no
  * internal detail (stack traces, connection strings, key material) leaves the
  * process in an error body.
@@ -54,7 +54,7 @@ function enforceWriteLimit(request: Request, auth: AuthContext): NextResponse | 
     WRITE_LIMIT_PER_MINUTE,
     60_000,
   );
-  return limit.allowed ? null : jsonError(429, 'Limite de requisicoes excedido');
+  return limit.allowed ? null : jsonError(429, 'Limite de requisições excedido');
 }
 
 async function respond<T>(
@@ -92,7 +92,7 @@ export async function parseBody<T>(request: Request, schema: ZodType<T>): Promis
   try {
     raw = await request.json();
   } catch {
-    throw new ValidationError('Corpo da requisicao nao e um JSON valido');
+    throw new ValidationError('Corpo da requisição não é um JSON válido');
   }
   return schema.parse(raw);
 }

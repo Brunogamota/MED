@@ -30,7 +30,7 @@ export function can(role: Role, permission: Permission): boolean {
 
 export class ForbiddenError extends Error {
   constructor(permission: Permission) {
-    super(`Permissao insuficiente para "${permission}"`);
+    super(`Permissão insuficiente para "${permission}"`);
     this.name = 'ForbiddenError';
   }
 }

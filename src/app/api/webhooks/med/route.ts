@@ -36,24 +36,24 @@ export async function POST(request: Request) {
   if (config.webhookSigningSecret) {
     const signature = request.headers.get('x-signature') ?? request.headers.get('x-hub-signature-256');
     if (!verifySignature(config.webhookSigningSecret, rawBody, signature)) {
-      return jsonError(401, 'Assinatura invalida');
+      return jsonError(401, 'Assinatura inválida');
     }
   } else if (config.appEnv === 'production') {
     // Refuse unauthenticated ingestion in production rather than trusting the caller.
-    return jsonError(503, 'Webhook nao configurado (WEBHOOK_SIGNING_SECRET ausente)');
+    return jsonError(503, 'Webhook não configurado (WEBHOOK_SIGNING_SECRET ausente)');
   }
 
   try {
     const auth = authenticate(request.headers);
 
     const limit = rateLimit(`webhook:${auth.organizationId}`, 120, 60_000);
-    if (!limit.allowed) return jsonError(429, 'Limite de requisicoes excedido');
+    if (!limit.allowed) return jsonError(429, 'Limite de requisições excedido');
 
     let payload: unknown;
     try {
       payload = JSON.parse(rawBody);
     } catch {
-      return jsonError(422, 'Corpo da requisicao nao e um JSON valido');
+      return jsonError(422, 'Corpo da requisição não é um JSON válido');
     }
 
     const input = createMedSchema.parse(payload);

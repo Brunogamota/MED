@@ -16,7 +16,7 @@ import { formatAddress } from '@/lib/format';
  * tracking, documents) contain facts that the Evidence Engine needs to see as
  * evidence. Projecting them is not invention: the value is copied verbatim and
  * keeps the provenance of the record it came from, with `metadata.derivedFrom`
- * naming the exact origin so the chain stays auditable.
+ * naming the exact origin só the chain stays auditable.
  *
  * Comparison results (payer vs. buyer) are the one case where this system is
  * itself the source; those are marked SYSTEM_DERIVED and carry both inputs.
@@ -184,8 +184,8 @@ export function deriveEvidence(medCase: MedCase, now: Date = new Date()): Eviden
         displayValue: `${tracking.events.length} evento(s) de rastreamento`,
       });
     }
-    // Confirmacao de entrega so existe quando o status e entregue E ha data.
-    // Status sem data nao vira comprovacao de entrega.
+    // Confirmação de entrega só existe quando o status e entregue E ha data.
+    // Status sem data não vira comprovacao de entrega.
     if (tracking.status === 'DELIVERED' && tracking.deliveredAt) {
       add({
         ...base,
@@ -339,7 +339,7 @@ export function deriveEvidence(medCase: MedCase, now: Date = new Date()): Eviden
 
 /**
  * Explicitly recorded evidence always wins over a derived projection of the
- * same fact, so an analyst correction is never silently overwritten.
+ * same fact, só an analyst correction is never silently overwritten.
  */
 export function mergeEvidence(stored: Evidence[], derived: Evidence[]): Evidence[] {
   const storedTypes = new Set(stored.map((evidence) => evidence.type));

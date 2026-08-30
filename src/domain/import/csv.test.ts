@@ -127,7 +127,7 @@ describe('parseMedImport', () => {
     const parsed = parseMedImport(
       'MED ID;Valor\nMED-003;a combinar',
     );
-    expect(parsed.rows[0]?.errors.some((error) => error.includes('nao pode ser interpretado'))).toBe(
+    expect(parsed.rows[0]?.errors.some((error) => error.includes('não pode ser interpretado'))).toBe(
       true,
     );
   });

@@ -17,17 +17,17 @@ import { toJson } from '@/lib/json';
 
 /**
  * Registro de entrega — o passo em que o operador informa o que aconteceu com
- * o pedido e o sistema transforma isso em evidencia datada.
+ * o pedido e o sistema transforma isso em evidência datada.
  *
  * Duas regras governam este arquivo:
  *
- *  1. Status sozinho nao prova nada. Cada marco so vira evento da timeline se
+ *  1. Status sozinho não prova nada. Cada marco só vira evento da timeline se
  *     vier com a data e a hora correspondentes. Marcar "entregue" sem informar
- *     quando nao gera afirmacao de entrega — geraria uma data inventada.
- *  2. Marco informado a mao e evidencia de origem MANUAL, e fica registrado
+ *     quando não gera afirmação de entrega — geraria uma data inventada.
+ *  2. Marco informado a mao e evidência de origem MANUAL, e fica registrado
  *     como tal. O operador esta transcrevendo o que o ERP ou a transportadora
- *     dizem, e a defesa mostra essa procedencia com honestidade, o que reduz a
- *     forca da evidencia em comparacao com o dado vindo direto do provedor.
+ *     dizem, e a defesa mostra essa procedência com honestidade, o que reduz a
+ *     força da evidência em comparacao com o dado vindo direto do provedor.
  */
 
 export interface FulfillmentMilestones {
@@ -55,9 +55,9 @@ const MILESTONE_EVENTS: {
   status: ShipmentStatus;
   description: string;
 }[] = [
-  { key: 'inProductionAt', status: 'IN_PRODUCTION', description: 'Pedido em producao/separacao' },
+  { key: 'inProductionAt', status: 'IN_PRODUCTION', description: 'Pedido em produção/separação' },
   { key: 'postedAt', status: 'POSTED', description: 'Pedido postado' },
-  { key: 'inTransitAt', status: 'IN_TRANSIT', description: 'Pedido em transito' },
+  { key: 'inTransitAt', status: 'IN_TRANSIT', description: 'Pedido em trânsito' },
   { key: 'outForDeliveryAt', status: 'OUT_FOR_DELIVERY', description: 'Pedido saiu para entrega' },
   { key: 'deliveredAt', status: 'DELIVERED', description: 'Pedido entregue' },
   {
@@ -68,7 +68,7 @@ const MILESTONE_EVENTS: {
   { key: 'returnedAt', status: 'RETURNED', description: 'Pedido devolvido ao remetente' },
 ];
 
-/** Chave de identidade de um evento, usada para nao duplicar na remontagem. */
+/** Chave de identidade de um evento, usada para não duplicar na remontagem. */
 function eventKey(event: TrackingEvent): string {
   return `${event.status}|${event.occurredAt}`;
 }
@@ -101,9 +101,9 @@ export function buildMilestoneEvents(
 }
 
 /**
- * Grava o status de entrega de um produto fisico.
+ * Grava o status de entrega de um produto físico.
  *
- * Eventos vindos de integracao (qualquer origem que nao seja MANUAL) sao
+ * Eventos vindos de integracao (qualquer origem que não seja MANUAL) são
  * preservados: o registro manual complementa o que a transportadora informou,
  * nunca apaga.
  */
@@ -116,13 +116,13 @@ export async function recordShipment(
 
   if (input.status === 'DELIVERED' && !input.deliveredAt) {
     throw new ValidationError(
-      'Para marcar como entregue e preciso informar a data e a hora da entrega. Sem isso a defesa nao pode afirmar que houve entrega.',
+      'Para marcar como entregue é preciso informar a data e a hora da entrega. Sem isso a defesa não pode afirmar que houve entrega.',
     );
   }
 
   const repository = await getRepository();
   const medCase = await repository.loadCase(auth.organizationId, medId);
-  if (!medCase) throw new NotFoundError(`MED ${medId} nao encontrado`);
+  if (!medCase) throw new NotFoundError(`MED ${medId} não encontrado`);
 
   const existing = medCase.tracking;
   const receiverName = input.receiverName ?? existing?.receiverName ?? null;
@@ -181,11 +181,11 @@ export interface RecordDigitalDeliveryInput {
 }
 
 /**
- * Grava a entrega de produto digital, servico ou assinatura.
+ * Grava a entrega de produto digital, serviço ou assinatura.
  *
  * O que sustenta a defesa aqui e o envio do acesso — data, canal e destino —,
- * nao a confirmacao do comprador. Depender do contestante confirmar que
- * recebeu deixaria a defesa refem de alguem que nao tem incentivo para
+ * não a confirmação do comprador. Depender do contestante confirmar que
+ * recebeu deixaria a defesa refem de alguem que não tem incentivo para
  * responder dentro do prazo do MED.
  */
 export async function recordDigitalDelivery(
@@ -197,13 +197,13 @@ export async function recordDigitalDelivery(
 
   if (input.sentTo && !input.sentAt) {
     throw new ValidationError(
-      'Informe a data e a hora do envio do acesso. Um destino sem data nao comprova entrega.',
+      'Informe a data e a hora do envio do acesso. Um destino sem data não comprova entrega.',
     );
   }
 
   const repository = await getRepository();
   const medCase = await repository.loadCase(auth.organizationId, medId);
-  if (!medCase) throw new NotFoundError(`MED ${medId} nao encontrado`);
+  if (!medCase) throw new NotFoundError(`MED ${medId} não encontrado`);
 
   const existing = medCase.digitalDelivery;
   const delivery: DigitalDelivery = {

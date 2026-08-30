@@ -6,14 +6,14 @@ import { parseMedImport, type ImportedMedRow, type ParsedImport } from '@/domain
 import { assertCan } from '@/infra/auth/rbac';
 
 /**
- * Importacao de MEDs em lote.
+ * Importação de MEDs em lote.
  *
  * O arquivo da adquirente chega, e cada linha vira um MED. Duas garantias
  * importam aqui:
- *  - idempotencia: reimportar o mesmo arquivo nao duplica nada, porque o MED e
- *    unico por identificador da instituicao dentro da organizacao;
- *  - nenhuma linha e "consertada" em silencio. Linha com dado ilegivel e
- *    reportada e nao entra, para que o operador corrija a origem.
+ *  - idempotência: reimportar o mesmo arquivo não duplica nada, porque o MED e
+ *    único por identificador da instituição dentro da organizacao;
+ *  - nenhuma linha e "consertada" em silencio. Linha com dado ilegível e
+ *    reportada e não entra, para que o operador corrija a origem.
  */
 
 export type ImportOutcome = 'CREATED' | 'DUPLICATE' | 'SKIPPED' | 'FAILED';
@@ -22,7 +22,7 @@ export interface ImportRowResult {
   line: number;
   medId: string | null;
   outcome: ImportOutcome;
-  /** Id interno, presente quando a linha virou (ou ja era) um MED. */
+  /** Id interno, presente quando a linha virou (ou já era) um MED. */
   id: string | null;
   messages: string[];
 }
@@ -38,12 +38,12 @@ export interface ImportReport {
 
 export interface ImportOptions {
   /**
-   * Data de abertura usada apenas nas linhas em que o arquivo nao traz essa
-   * informacao. E o operador quem declara esse valor: o sistema nao arbitra uma
-   * data de abertura por conta propria.
+   * Data de abertura usada apenas nas linhas em que o arquivo não traz essa
+   * informação. E o operador quem declara esse valor: o sistema não arbitra uma
+   * data de abertura por conta própria.
    */
   defaultOpenedAt?: string;
-  /** Referencia da origem gravada na procedencia das evidencias importadas. */
+  /** Referência da origem gravada na procedência das evidências importadas. */
   batchReference?: string;
 }
 
@@ -107,15 +107,15 @@ async function importRow(
   try {
     const { med, created } = await createMedWithOutcome(auth, built.input);
 
-    // O numero do pedido informado pela adquirente e um dado real do arquivo,
-    // entao entra como evidencia com a procedencia da importacao — nunca como
+    // O número do pedido informado pela adquirente e um dado real do arquivo,
+    // entao entra como evidência com a procedência da importação — nunca como
     // um pedido completo, que o operador ainda precisa preencher.
     if (created && row.orderReference) {
       await addEvidence(auth, med.id, {
         type: 'ORDER_RECORD',
         value: row.orderReference,
         source: 'MANUAL',
-        sourceReference: options.batchReference ?? 'importacao em lote',
+        sourceReference: options.batchReference ?? 'importação em lote',
         verificationStatus: 'UNVERIFIED',
         metadata: { importedFromLine: row.line },
       });
@@ -126,7 +126,7 @@ async function importRow(
       medId: med.medId,
       outcome: created ? 'CREATED' : 'DUPLICATE',
       id: med.id,
-      messages: created ? [] : ['MED ja existia e foi mantido como estava.'],
+      messages: created ? [] : ['MED já existia e foi mantido como estava.'],
     };
   } catch (error) {
     return {
@@ -148,7 +148,7 @@ export async function importParsedMeds(
 
   const results: ImportRowResult[] = [];
   // Sequencial de proposito: o volume diario e de dezenas de linhas, e a ordem
-  // preservada torna o relatorio conferivel contra o arquivo original.
+  // preservada torna o relatório conferivel contra o arquivo original.
   for (const row of parsed.rows) {
     results.push(await importRow(auth, row, options));
   }
