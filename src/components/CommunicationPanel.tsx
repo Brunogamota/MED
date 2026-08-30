@@ -13,6 +13,7 @@ import { EVIDENCE_SOURCE_LABEL } from '@/lib/labels';
 import { Panel, EmptyState } from '@/components/ui';
 import { Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
+import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
 import { addCommunicationAction } from '@/app/meds/actions';
 
 /**
@@ -48,6 +49,25 @@ export function CommunicationPanel({
 
   return (
     <div className="space-y-4">
+      <Panel
+        title="Comprovante de pagamento"
+        footer="Reprodução do comprovante Pix na visão do cliente, montada a partir dos dados da transação registrados no caso. Sai com selo de reconstrução — não é captura do aplicativo ou banco do pagador."
+      >
+        <div className="mb-3 flex justify-end">
+          <a
+            href={`/meds/${medId}/comprovante/pagamento`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-[13px] font-medium text-[var(--color-text)] hover:underline"
+          >
+            Abrir para imprimir / anexar
+          </a>
+        </div>
+        <div className="mx-auto max-w-[420px]">
+          <PaymentReceiptCard medCase={medCase} />
+        </div>
+      </Panel>
+
       <Panel
         title="Reconstruir comprovante de comunicação"
         footer="A peça é a representação do que o estabelecimento enviou ao cliente, gerada a partir dos registros do caso. Sai com selo de reconstrução e origem — não é captura da caixa de entrada do destinatário."
