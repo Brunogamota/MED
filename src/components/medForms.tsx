@@ -10,6 +10,7 @@ import type { MedCase } from '@/domain/case';
 import { listEvidenceDefinitions } from '@/domain/evidence/catalog';
 import { Panel } from '@/components/ui';
 import { Field, FormGrid, Select, SubmitButton } from '@/components/form';
+import { AutoSaveForm } from '@/components/AutoSaveForm';
 import {
   addDocumentAction,
   addEvidenceAction,
@@ -48,8 +49,8 @@ function localDateTime(value: string | null | undefined): string | undefined {
 export function TransactionForm({ medCase }: { medCase: MedCase }) {
   const transaction = medCase.transaction;
   return (
-    <Panel title="Transação">
-      <form action={upsertTransactionAction} className="space-y-4">
+    <Panel title="Transação" id="registro-transacao">
+      <AutoSaveForm action={upsertTransactionAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
         <FormGrid>
           <Field
@@ -91,8 +92,7 @@ export function TransactionForm({ medCase }: { medCase: MedCase }) {
             defaultValue={transaction?.endToEndId ?? medCase.med.endToEndId ?? undefined}
           />
         </FormGrid>
-        <SubmitButton>Salvar transação</SubmitButton>
-      </form>
+      </AutoSaveForm>
     </Panel>
   );
 }
@@ -101,8 +101,8 @@ export function CustomerForm({ medCase }: { medCase: MedCase }) {
   const customer = medCase.customer;
   const address = customer?.address;
   return (
-    <Panel title="Cliente">
-      <form action={upsertCustomerAction} className="space-y-4">
+    <Panel title="Cliente" id="registro-cliente">
+      <AutoSaveForm action={upsertCustomerAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
         <FormGrid>
           <Field label="Nome" name="name" defaultValue={customer?.identification.name ?? undefined} />
@@ -138,8 +138,7 @@ export function CustomerForm({ medCase }: { medCase: MedCase }) {
           <Field label="UF" name="addressState" defaultValue={address?.state ?? undefined} />
           <Field label="CEP" name="addressPostalCode" defaultValue={address?.postalCode ?? undefined} />
         </FormGrid>
-        <SubmitButton>Salvar cliente</SubmitButton>
-      </form>
+      </AutoSaveForm>
     </Panel>
   );
 }
@@ -149,8 +148,8 @@ export function OrderForm({ medCase }: { medCase: MedCase }) {
   const item = order?.items[0];
   const shipping = order?.shippingAddress;
   return (
-    <Panel title="Pedido">
-      <form action={upsertOrderAction} className="space-y-4">
+    <Panel title="Pedido" id="registro-pedido">
+      <AutoSaveForm action={upsertOrderAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
         <FormGrid>
           <Select
@@ -220,8 +219,7 @@ export function OrderForm({ medCase }: { medCase: MedCase }) {
           <Field label="Entrega: UF" name="shippingState" defaultValue={shipping?.state ?? undefined} />
           <Field label="Entrega: CEP" name="shippingPostalCode" defaultValue={shipping?.postalCode ?? undefined} />
         </FormGrid>
-        <SubmitButton>Salvar pedido</SubmitButton>
-      </form>
+      </AutoSaveForm>
     </Panel>
   );
 }
@@ -231,9 +229,10 @@ export function TrackingForm({ medCase }: { medCase: MedCase }) {
   return (
     <Panel
       title="Rastreio"
+      id="registro-entrega"
       footer={`Eventos de rastreamento não são digitados aqui: chegam pela integração com a transportadora ou pela API, preservando a origem de cada evento.${tracking ? ` Eventos registrados: ${tracking.events.length}.` : ''}`}
     >
-      <form action={upsertTrackingAction} className="space-y-4">
+      <AutoSaveForm action={upsertTrackingAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
         <FormGrid>
           <Field
@@ -277,8 +276,7 @@ export function TrackingForm({ medCase }: { medCase: MedCase }) {
             defaultValue={tracking?.sourceReference ?? undefined}
           />
         </FormGrid>
-        <SubmitButton>Salvar rastreio</SubmitButton>
-      </form>
+      </AutoSaveForm>
     </Panel>
   );
 }

@@ -35,6 +35,7 @@ export function Panel({
   footer,
   children,
   flush = false,
+  id,
 }: {
   title?: string;
   actions?: ReactNode;
@@ -42,9 +43,14 @@ export function Panel({
   children: ReactNode;
   /** Sem padding no corpo — para tabela colada na borda do card. */
   flush?: boolean;
+  /** Âncora para ação direta ("leve o operador até o campo"). */
+  id?: string;
 }) {
   return (
-    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+    <section
+      id={id}
+      className="scroll-mt-16 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]"
+    >
       {title ? (
         <header className="flex h-11 items-center justify-between border-b border-[var(--color-border)] px-4">
           <h2 className="text-[13px] font-semibold text-[var(--color-text)]">{title}</h2>
