@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { InMemoryMedRepository } from '@/infra/repositories/memory';
 import { __setRepositoryForTests } from '@/infra/container';
 import { ForbiddenError } from '@/infra/auth/rbac';
-import { NotFoundError, ConflictError, ValidationError } from '@/services/errors';
+import { NotFoundError, ValidationError } from '@/services/errors';
 import { resetConfigCache } from '@/lib/env';
 import type { AuthContext } from '@/infra/auth/context';
 import {
@@ -177,16 +177,25 @@ describe('status lifecycle', () => {
     expect(reloaded.status).toBe('MISSING_EVIDENCE');
   });
 
-  it('reaches READY_TO_SUBMIT once the case is documented and the defense exists', async () => {
+  it('a defesa nasce junto com o MED: v1 existe sem nenhum clique', async () => {
+    const med = await createMed(orgA, medInput());
+    const defenses = await listDefenses(orgA, med.id);
+    expect(defenses).toHaveLength(1);
+    expect(defenses[0]?.version).toBe(1);
+  });
+
+  it('reaches READY_TO_SUBMIT once the case is documented (defense already born)', async () => {
     const med = await seedDeliveredCase(orgA);
 
-    const beforeDefense = await getCase(orgA, med.id);
-    expect(beforeDefense.med.status).toBe('READY_TO_GENERATE');
+    // A minuta v1 nasceu na criação; com o caso documentado o status vai
+    // direto a pronto-para-envio, sem passar por um botão de gerar.
+    const documented = await getCase(orgA, med.id);
+    expect(documented.med.status).toBe('READY_TO_SUBMIT');
 
     await generateDefenseForMed(orgA, med.id);
-
-    const afterDefense = await getCase(orgA, med.id);
-    expect(afterDefense.med.status).toBe('READY_TO_SUBMIT');
+    const regenerated = await listDefenses(orgA, med.id);
+    expect(regenerated).toHaveLength(2);
+    expect((await getCase(orgA, med.id)).med.status).toBe('READY_TO_SUBMIT');
   });
 });
 
@@ -194,20 +203,22 @@ describe('defense versioning', () => {
   it('appends immutable versions instead of overwriting', async () => {
     const med = await seedDeliveredCase(orgA);
 
-    const first = await generateDefenseForMed(orgA, med.id);
+    // v1 nasceu com o MED; regenerar acrescenta versões, nunca sobrescreve.
     const second = await generateDefenseForMed(orgA, med.id);
+    const third = await generateDefenseForMed(orgA, med.id);
 
-    expect(first.version).toBe(1);
     expect(second.version).toBe(2);
-    expect(first.id).not.toBe(second.id);
+    expect(third.version).toBe(3);
+    expect(second.id).not.toBe(third.id);
 
     const all = await listDefenses(orgA, med.id);
-    expect(all.map((defense) => defense.version)).toEqual([1, 2]);
+    expect(all.map((defense) => defense.version)).toEqual([1, 2, 3]);
   });
 
-  it('refuses to export an evidence pack before a defense exists', async () => {
+  it('exports the evidence pack of the defense born with the MED', async () => {
     const med = await createMed(orgA, medInput());
-    await expect(getEvidencePack(orgA, med.id)).rejects.toBeInstanceOf(ConflictError);
+    const pack = await getEvidencePack(orgA, med.id);
+    expect(pack.defense.version).toBe(1);
   });
 });
 

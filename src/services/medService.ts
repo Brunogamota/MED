@@ -96,8 +96,11 @@ export function deriveStatus(
     (missing) => missing.necessity === 'REQUIRED',
   );
 
-  if (hasDefense) return missingRequired ? 'DEFENSE_GENERATED' : 'READY_TO_SUBMIT';
+  // A minuta nasce junto com o MED, então "defesa existe" deixou de ser um
+  // marco: a pergunta operacional é "falta evidência obrigatória?" e depois
+  // "está pronto para envio?". Evidência faltante domina o status.
   if (missingRequired) return 'MISSING_EVIDENCE';
+  if (hasDefense) return 'READY_TO_SUBMIT';
   return 'READY_TO_GENERATE';
 }
 
@@ -181,6 +184,19 @@ export async function createMedWithOutcome(
     medId: created.id,
     newValue: created.medId,
   });
+
+  // A defesa nasce junto com o MED: a minuta determinística v1 é gerada na
+  // chegada (webhook, lote ou formulário), com o que o caso já tem. O caso
+  // entra na fila como "faltam evidências" ou "pronto para envio", nunca como
+  // um formulário em branco. Falha aqui não bloqueia a criação do MED — a
+  // minuta pode ser gerada depois pela aba Defesa.
+  try {
+    const bornCase = await loadCaseOrThrow(repository, auth, created.id);
+    await persistGeneratedDefense(repository, auth, bornCase, { useLlm: false });
+  } catch {
+    // Sem minuta na chegada; o caso segue e o operador gera pela interface.
+  }
+
   await refreshStatus(repository, auth, created.id);
   return {
     med: (await repository.getMed(auth.organizationId, created.id)) ?? created,
@@ -548,15 +564,18 @@ export interface GenerateDefenseOptions {
   useLlm?: boolean;
 }
 
-export async function generateDefenseForMed(
+/**
+ * Gera e persiste uma nova versão da defesa para um caso já carregado.
+ * Passo interno, sem checagem de papel: é usado tanto pela ação explícita do
+ * operador quanto pelo nascimento automático da minuta na criação do MED.
+ */
+async function persistGeneratedDefense(
+  repository: Repository,
   auth: AuthContext,
-  medId: string,
-  options: GenerateDefenseOptions = {},
+  medCase: MedCase,
+  options: GenerateDefenseOptions,
 ): Promise<Defense> {
-  assertCan(auth.role, 'defense:generate');
-  const repository = await getRepository();
-  const medCase = await loadCaseOrThrow(repository, auth, medId);
-
+  const medId = medCase.med.id;
   const previous = await repository.listDefenses(auth.organizationId, medId);
   const version = previous.length + 1;
 
@@ -594,6 +613,18 @@ export async function generateDefenseForMed(
       renderer: saved.narrative.renderer,
     }),
   });
+  return saved;
+}
+
+export async function generateDefenseForMed(
+  auth: AuthContext,
+  medId: string,
+  options: GenerateDefenseOptions = {},
+): Promise<Defense> {
+  assertCan(auth.role, 'defense:generate');
+  const repository = await getRepository();
+  const medCase = await loadCaseOrThrow(repository, auth, medId);
+  const saved = await persistGeneratedDefense(repository, auth, medCase, options);
   await refreshStatus(repository, auth, medId);
   return saved;
 }
