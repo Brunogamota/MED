@@ -3,6 +3,7 @@ import type { Repository } from '@/infra/container';
 import { DEMO_ORGANIZATION_ID } from '@/lib/env';
 import type { Med } from '@/domain/types';
 import { generateDefense } from '@/domain/defense/engine';
+import { EMAIL_SENDER_NAME } from '@/domain/communication/receipt';
 
 /**
  * Demo data, loaded only in DEMO mode (no DATABASE_URL).
@@ -445,7 +446,7 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     type: 'DELIVERY_COMMUNICATION',
     value: {
       template: 'DELIVERY_CONFIRMATION',
-      from: 'Loja Demonstração',
+      from: EMAIL_SENDER_NAME,
       to: 'cliente.tres@exemplo.demo',
       subject: 'Seu pedido foi entregue',
       sentAt: days(-20),

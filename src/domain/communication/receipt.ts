@@ -42,8 +42,15 @@ export const COMMUNICATION_TEMPLATE_LABEL: Record<CommunicationTemplate, string>
 
 /** Texto do selo. Vai na tela, na rota de impressão e no PDF, sem exceção. */
 export const RECONSTRUCTION_STAMP =
-  'RECONSTRUÇÃO — Representação da mensagem enviada ao cliente pelo estabelecimento, ' +
-  'gerada a partir dos registros do caso. Não é uma captura da caixa de entrada do destinatário.';
+  'RECONSTRUÇÃO — Representação do painel de envios, gerada a partir dos registros do caso. ' +
+  'Não é uma captura real do painel administrativo.';
+
+/**
+ * Quem efetivamente envia as comunicações transacionais desta operação — o
+ * gateway, não a loja. A peça representa o painel de envios dele, então o
+ * remetente é sempre este, independente do estabelecimento do caso.
+ */
+export const EMAIL_SENDER_NAME = 'IronPay';
 
 /** Conteúdo estruturado da reconstrução, guardado no `value` da evidência. */
 export interface CommunicationReceipt {
@@ -97,7 +104,7 @@ function deriveAction(
     return { kind: 'TRACKING', label: 'Código de rastreio', value };
   }
   if (template === 'ACCESS_DELIVERY') {
-    return { kind: 'CODE', label: 'Acesso', value };
+    return { kind: 'CODE', label: 'Acessar agora', value };
   }
   return { kind: 'TEXT', label: 'Referência', value };
 }
@@ -131,8 +138,7 @@ export function draftCommunication(
   medCase: MedCase,
   template: CommunicationTemplate,
 ): CommunicationReceipt {
-  const { med, customer, order, digitalDelivery, tracking } = medCase;
-  const merchant = med.merchantName ?? 'Estabelecimento';
+  const { customer, order, digitalDelivery, tracking, med } = medCase;
   const to =
     digitalDelivery?.sentTo ??
     customer?.identification.email ??
@@ -141,7 +147,7 @@ export function draftCommunication(
   const productName = order?.items[0]?.name ?? '';
   const sentAt = digitalDelivery?.sentAt ?? order?.placedAt ?? med.transactionAt ?? null;
 
-  const base = { from: merchant, to, sentAt };
+  const base = { from: EMAIL_SENDER_NAME, to, sentAt };
 
   switch (template) {
     case 'PURCHASE_CONFIRMATION':

@@ -9,9 +9,9 @@ import { ClientEmailView } from '@/components/ClientEmailView';
 export const dynamic = 'force-dynamic';
 
 /**
- * Página de impressão do comprovante: a visão do cliente em tela cheia, pronta
- * para imprimir (salvar em PDF pelo navegador) ou capturar como print. O selo
- * de reconstrução vai junto no ClientEmailView e não pode ser removido.
+ * Página de impressão do comprovante: o painel de envios em tela cheia,
+ * pronto para imprimir (salvar em PDF pelo navegador) ou capturar como print.
+ * O selo de reconstrução vai junto no ClientEmailView e não pode ser removido.
  */
 export default async function ComprovantePage({
   params,
@@ -33,7 +33,7 @@ export default async function ComprovantePage({
     (item) => item.id === evidenceId && item.type === 'DELIVERY_COMMUNICATION',
   );
   const receipt = evidence ? parseCommunicationReceipt(evidence.value) : null;
-  if (!receipt) notFound();
+  if (!evidence || !receipt) notFound();
 
   return (
     <div className="mx-auto max-w-[680px] py-4">
@@ -48,7 +48,7 @@ export default async function ComprovantePage({
           Use Imprimir (Ctrl/Cmd+P) para salvar em PDF, ou capture a tela.
         </span>
       </div>
-      <ClientEmailView receipt={receipt} />
+      <ClientEmailView receipt={receipt} sourceReference={evidence.sourceReference} />
     </div>
   );
 }

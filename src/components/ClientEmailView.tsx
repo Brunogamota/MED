@@ -1,18 +1,24 @@
 import {
   buildClientEmailView,
+  COMMUNICATION_TEMPLATE_LABEL,
   type ClientEmailAction,
   type CommunicationReceipt,
   type CommunicationTemplate,
 } from '@/domain/communication/receipt';
 
 /**
- * Visão do cliente: renderiza a comunicação como um e-mail transacional, do
- * jeito que o destinatário o recebe — cabeçalho de marca, título, corpo e a
- * ação em destaque (link de acesso, código, rastreio).
+ * Painel de envios: reconstrói a comunicação como o painel administrativo do
+ * gateway (IronPay) que efetivamente enviou — status, destinatário, canal,
+ * tipo e, abaixo, a prévia do que foi mandado.
+ *
+ * Essa é uma evidência mais defensável do que fingir a caixa de entrada do
+ * cliente: o estabelecimento não tem acesso ao e-mail do comprador, mas o
+ * IronPay tem acesso ao próprio registro de envio. É esse registro que a peça
+ * representa.
  *
  * O selo de reconstrução é parte inseparável da peça — fica no topo, visível,
- * e é o que separa "representação honesta do que enviamos" de "captura forjada
- * da caixa de entrada do cliente". Nunca remova o selo.
+ * e é o que separa "representação honesta do envio" de "captura forjada do
+ * painel administrativo real". Nunca remova o selo.
  */
 
 function TemplateIcon({ template }: { template: CommunicationTemplate }) {
@@ -58,14 +64,15 @@ function TemplateIcon({ template }: { template: CommunicationTemplate }) {
   }
 }
 
-function ActionBlock({ action }: { action: ClientEmailAction }) {
+/** Botão sempre preto: seja a peça um link real, seja um código de acesso. */
+function ActionButton({ action }: { action: ClientEmailAction }) {
+  const buttonClass =
+    'inline-flex h-11 items-center justify-center rounded-lg bg-[var(--color-primary)] px-6 text-[14px] font-semibold text-white no-underline';
+
   if (action.kind === 'LINK') {
     return (
       <div className="mt-5">
-        <a
-          href={action.value}
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-[var(--color-accent)] px-6 text-[14px] font-semibold text-white no-underline"
-        >
+        <a href={action.value} className={buttonClass}>
           {action.label}
         </a>
         <p className="mt-2 break-all font-mono text-[11px] text-[var(--color-text-muted)]">
@@ -75,23 +82,48 @@ function ActionBlock({ action }: { action: ClientEmailAction }) {
     );
   }
 
+  if (action.kind === 'CODE') {
+    return (
+      <div className="mt-5">
+        <span className={buttonClass}>{action.label}</span>
+        <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">{action.value}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-4 py-3">
       <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
         {action.label}
       </p>
-      <p
-        className={`mt-1 text-[15px] text-[var(--color-text)] ${
-          action.kind === 'TEXT' ? '' : 'font-mono'
-        } break-all`}
-      >
+      <p className="mt-1 break-all font-mono text-[15px] text-[var(--color-text)]">
         {action.value}
       </p>
     </div>
   );
 }
 
-export function ClientEmailView({ receipt }: { receipt: CommunicationReceipt }) {
+function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] text-[var(--color-text-muted)]">{label}</dt>
+      <dd
+        className={`mt-0.5 truncate text-[13px] text-[var(--color-text)] ${mono ? 'font-mono text-xs' : ''}`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+export function ClientEmailView({
+  receipt,
+  sourceReference,
+}: {
+  receipt: CommunicationReceipt;
+  /** Id da mensagem no painel do gateway, quando registrado na evidência. */
+  sourceReference?: string | null;
+}) {
   const view = buildClientEmailView(receipt);
 
   return (
@@ -113,80 +145,68 @@ export function ClientEmailView({ receipt }: { receipt: CommunicationReceipt }) 
         <span>{view.stamp}</span>
       </div>
 
-      {/* Barra do cliente de e-mail (remetente / destinatário / data) */}
-      <div className="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-3.5">
-        <span
-          aria-hidden
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent-subtle)] text-[14px] font-semibold text-[var(--color-accent)]"
-        >
-          {view.fromInitial}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="truncate text-[14px] font-semibold text-[var(--color-text)]">
+      {/* Barra do painel — identidade do gateway + status do envio */}
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-5 py-3.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--color-primary)] text-[13px] font-bold text-white"
+          >
+            {view.fromInitial}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-semibold text-[var(--color-text)]">
               {view.from}
             </p>
-            {view.sentAtLabel ? (
-              <span className="shrink-0 text-[11px] text-[var(--color-text-muted)]">
-                {view.sentAtLabel}
-              </span>
-            ) : null}
+            <p className="truncate text-[11px] text-[var(--color-text-muted)]">Painel de envios</p>
           </div>
-          <p className="truncate text-[12px] text-[var(--color-text-muted)]">
-            para {view.to || '—'}
-          </p>
         </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-success-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-success)]">
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
+          Enviado
+        </span>
       </div>
 
-      {/* Corpo do e-mail desenhado, sobre um canvas suave */}
-      <div className="bg-[var(--color-bg-subtle)] px-4 py-5 sm:px-6 sm:py-7">
-        <div className="mx-auto max-w-[520px] overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
-          {/* Cabeçalho de marca */}
-          <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] px-6 py-4">
-            <span
-              aria-hidden
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--color-primary)] text-[13px] font-bold text-white"
-            >
-              {view.fromInitial}
-            </span>
-            <span className="text-[14px] font-semibold text-[var(--color-text)]">{view.from}</span>
+      {/* Grade de metadados do registro de envio */}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-[var(--color-border)] px-5 py-4 sm:grid-cols-4">
+        <Field label="Destinatário" value={view.to || 'não informado'} />
+        <Field label="Canal" value="E-mail" />
+        <Field label="Tipo" value={COMMUNICATION_TEMPLATE_LABEL[view.template]} />
+        <Field label="Enviado em" value={view.sentAtLabel ?? 'não informado'} />
+        {sourceReference ? (
+          <div className="col-span-2 min-w-0 sm:col-span-4">
+            <Field label="ID da mensagem" value={sourceReference} mono />
           </div>
+        ) : null}
+      </dl>
 
-          {/* Conteúdo */}
-          <div className="px-6 py-7">
-            <span
-              className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--color-accent-subtle)] text-[var(--color-accent)]"
-              aria-hidden
-            >
-              <TemplateIcon template={view.template} />
-            </span>
-
-            <h2 className="text-[20px] font-semibold leading-snug text-[var(--color-text)]">
-              {view.subject || 'Sem assunto'}
-            </h2>
-
-            <div className="mt-4 space-y-3.5 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">
-              {view.paragraphs.length > 0 ? (
-                view.paragraphs.map((paragraph, index) => (
-                  <p key={index} className="whitespace-pre-line">
-                    {paragraph}
-                  </p>
-                ))
-              ) : (
-                <p className="text-[var(--color-text-muted)]">Sem conteúdo.</p>
-              )}
-            </div>
-
-            {view.action ? <ActionBlock action={view.action} /> : null}
+      {/* Prévia da mensagem enviada */}
+      <div className="px-5 py-5">
+        <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+          Prévia da mensagem
+        </p>
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5">
+          <span
+            className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--color-text-secondary)]"
+            aria-hidden
+          >
+            <TemplateIcon template={view.template} />
+          </span>
+          <h2 className="text-[16px] font-semibold leading-snug text-[var(--color-text)]">
+            {view.subject || 'Sem assunto'}
+          </h2>
+          <div className="mt-3 space-y-3 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+            {view.paragraphs.length > 0 ? (
+              view.paragraphs.map((paragraph, index) => (
+                <p key={index} className="whitespace-pre-line">
+                  {paragraph}
+                </p>
+              ))
+            ) : (
+              <p className="text-[var(--color-text-muted)]">Sem conteúdo.</p>
+            )}
           </div>
-
-          {/* Rodapé do e-mail */}
-          <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-6 py-4">
-            <p className="text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-              Este e-mail foi enviado por {view.from}
-              {view.to ? ` para ${view.to}` : ''}.
-            </p>
-          </div>
+          {view.action ? <ActionButton action={view.action} /> : null}
         </div>
       </div>
     </div>

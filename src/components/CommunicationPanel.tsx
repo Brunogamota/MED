@@ -18,13 +18,14 @@ import { addCommunicationAction } from '@/app/meds/actions';
 
 /**
  * Painel "Comprovantes": o operador reconstrói a comunicação enviada ao cliente
- * e vê, na hora, como ela aparece na visão do destinatário — pronta para
+ * e vê, na hora, como ela aparece no painel de envios do gateway — pronta para
  * imprimir ou anexar como print.
  *
- * O modelo escolhido pré-preenche remetente, destinatário e data a partir dos
- * dados que o caso já tem; nada é inventado. Toda peça sai com selo de
- * reconstrução e origem gravada — é a representação honesta do que foi enviado,
- * nunca uma captura da caixa de entrada do cliente.
+ * O modelo escolhido pré-preenche destinatário e data a partir dos dados que o
+ * caso já tem; nada é inventado. O remetente é sempre o gateway que envia de
+ * fato. Toda peça sai com selo de reconstrução e origem gravada — é a
+ * representação honesta do que foi enviado, nunca uma captura do painel
+ * administrativo real.
  */
 
 
@@ -63,7 +64,7 @@ export function CommunicationPanel({
 
       <Panel
         title="Reconstruir comprovante de comunicação"
-        footer="A peça é a representação do que o estabelecimento enviou ao cliente, gerada a partir dos registros do caso. Sai com selo de reconstrução e origem — não é captura da caixa de entrada do destinatário."
+        footer="A peça é a representação do painel de envios do gateway, gerada a partir dos registros do caso. Sai com selo de reconstrução e origem — não é captura do painel administrativo real."
       >
         {/* Escolha do modelo: recarrega o formulário com o rascunho do caso */}
         <div className="mb-4 flex flex-wrap gap-1.5">
@@ -141,7 +142,7 @@ export function CommunicationPanel({
       <Panel title={`Comprovantes gerados (${reconstructions.length})`}>
         {reconstructions.length === 0 ? (
           <EmptyState title="Nenhum comprovante gerado">
-            Escolha um modelo acima, confira o conteúdo e gere a visão do cliente para anexar à
+            Escolha um modelo acima, confira o conteúdo e gere o painel de envios para anexar à
             defesa.
           </EmptyState>
         ) : (
@@ -164,7 +165,7 @@ export function CommunicationPanel({
                       Abrir para imprimir / anexar
                     </a>
                   </div>
-                  <ClientEmailView receipt={receipt} />
+                  <ClientEmailView receipt={receipt} sourceReference={evidence.sourceReference} />
                 </li>
               );
             })}

@@ -9,9 +9,10 @@ import { assessEvidence } from '@/domain/evidence/engine';
 import { makeCompleteCase, makeEvidence } from '@/test/fixtures';
 
 describe('draftCommunication', () => {
-  it('pré-preenche destinatário e remetente a partir do caso, sem inventar', () => {
+  it('pré-preenche destinatário a partir do caso; remetente é sempre o gateway', () => {
     const draft = draftCommunication(makeCompleteCase(), 'DELIVERY_CONFIRMATION');
-    expect(draft.from).toBe('Loja Exemplo');
+    // O remetente é sempre o gateway que efetivamente envia — não a loja.
+    expect(draft.from).toBe('IronPay');
     expect(draft.to).toBe('maria@example.com');
     expect(draft.reference).toBe('AA123456789BR');
   });
