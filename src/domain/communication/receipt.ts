@@ -1,6 +1,6 @@
 import type { EvidenceSource, IsoDateTime, JsonValue } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTimeSmart } from '@/lib/format';
 
 /**
  * Comprovante de comunicação — reconstrução da mensagem que o estabelecimento
@@ -109,7 +109,7 @@ export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmail
     fromInitial: (receipt.from.trim()[0] ?? '?').toUpperCase(),
     to: receipt.to,
     subject: receipt.subject,
-    sentAtLabel: formatDateTime(receipt.sentAt),
+    sentAtLabel: formatDateTimeSmart(receipt.sentAt),
     paragraphs: receipt.body
       .split(/\n{2,}/)
       .map((paragraph) => paragraph.trim())

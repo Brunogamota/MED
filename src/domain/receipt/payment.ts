@@ -1,5 +1,5 @@
 import type { MedCase } from '@/domain/case';
-import { formatAmount, formatDateTime, maskDocument } from '@/lib/format';
+import { formatAmount, formatDateTimeSmart, maskDocument } from '@/lib/format';
 
 /**
  * Comprovante de pagamento Pix — representação, na visão do cliente, do
@@ -80,7 +80,7 @@ export function buildPaymentReceiptView(medCase: MedCase): PaymentReceiptView {
     med.transactionId ?? transaction?.externalId ?? transaction?.providerReference ?? null;
 
   const rows: PaymentReceiptRow[] = [
-    { label: 'Data e hora', value: formatDateTime(paidAt) },
+    { label: 'Data e hora', value: formatDateTimeSmart(paidAt) },
     { label: 'End-to-end', value: endToEnd, mono: true },
     { label: 'Tipo', value: 'Pix' },
     { label: 'Recebedor', value: med.merchantName ?? null },

@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getConfig } from '@/lib/env';
-import { Sidebar } from '@/components/Sidebar';
+import { Sidebar, type SidebarCounts } from '@/components/Sidebar';
 import { CommandPalette } from '@/components/CommandPalette';
+import { serverPageContext } from '@/infra/auth/context';
+import { listMeds } from '@/services/medService';
+import { hoursUntil } from '@/lib/format';
+import type { MedStatus } from '@/domain/types';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -10,12 +14,39 @@ export const metadata: Metadata = {
   description: 'Automação de defesa de MED com rastreabilidade de evidências',
 };
 
+const OPEN_STATUSES: MedStatus[] = [
+  'RECEIVED',
+  'COLLECTING_DATA',
+  'MISSING_EVIDENCE',
+  'READY_TO_GENERATE',
+  'DEFENSE_GENERATED',
+  'READY_TO_SUBMIT',
+];
+
+/** Contadores da sidebar. Falha de leitura não derruba o shell. */
+async function sidebarCounts(): Promise<SidebarCounts> {
+  try {
+    const rows = await listMeds(serverPageContext(), { limit: 200 });
+    const open = rows.filter((row) => OPEN_STATUSES.includes(row.med.status));
+    const withHours = open.map((row) => hoursUntil(row.med.responseDeadlineAt));
+    const dueSoon = withHours.filter((hours) => hours !== null && hours <= 72).length;
+    const hasUrgent = withHours.some((hours) => hours !== null && hours >= 0 && hours < 24);
+    const submitted = rows.filter((row) =>
+      ['SUBMITTED', 'ACCEPTED', 'REJECTED'].includes(row.med.status),
+    ).length;
+    return { open: open.length, dueSoon, hasUrgent, submitted };
+  } catch {
+    return { open: 0, dueSoon: 0, hasUrgent: false, submitted: 0 };
+  }
+}
+
 /**
- * Shell de console: topbar de 52px + sidebar fixa de 280px.
+ * Shell de console: topbar de 52px + sidebar fixa de 280px (recolhível).
  * O aviso de modo demo e um badge discreto na topbar, nao uma faixa.
  */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const config = getConfig();
+  const counts = await sidebarCounts();
 
   return (
     <html lang="pt-BR">
@@ -58,9 +89,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
 
-        <Sidebar />
+        <Sidebar counts={counts} />
 
-        <main className="pt-[52px] lg:pl-[280px]">
+        <main className="pt-[52px] lg:pl-[var(--sidebar-width)]">
           <div className="mx-auto max-w-[1440px] px-8 py-6 max-md:px-4">{children}</div>
         </main>
 
