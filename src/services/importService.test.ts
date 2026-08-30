@@ -4,6 +4,7 @@ import { __setRepositoryForTests } from '@/infra/container';
 import { ForbiddenError } from '@/infra/auth/rbac';
 import type { AuthContext } from '@/infra/auth/context';
 import { importMedsFromText } from '@/services/importService';
+import { deriveEvidence } from '@/domain/evidence/derive';
 import { getCase, listMeds } from '@/services/medService';
 
 const auth: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'test:a' };
@@ -47,16 +48,74 @@ describe('importacao em lote', () => {
     expect(await listMeds(auth, {})).toHaveLength(2);
   });
 
-  it('guarda o numero do pedido como evidencia com a procedencia da importacao', async () => {
+  it('preenche Transação, Cliente e Pedido sozinho, sem passo manual depois', async () => {
     const { report } = await importMedsFromText(auth, CSV, { batchReference: 'lote-29-08' });
     const created = report?.results.find((result) => result.medId === 'MED-001');
 
     const medCase = await getCase(auth, created!.id!);
-    const orderEvidence = medCase.evidences.find((evidence) => evidence.type === 'ORDER_RECORD');
 
-    expect(orderEvidence?.value).toBe('PED-1');
-    expect(orderEvidence?.source).toBe('MANUAL');
+    expect(medCase.transaction?.amount).toBe(349.9);
+    expect(medCase.transaction?.authorizedAt).toBe('2026-08-10T17:32:00.000Z');
+    expect(medCase.transaction?.capturedAt).toBe('2026-08-10T17:32:00.000Z');
+    expect(medCase.transaction?.currency).toBe('BRL');
+
+    expect(medCase.customer?.identification.name).toBe('Maria Souza');
+    expect(medCase.customer?.identification.document).toBe('12345678909');
+    expect(medCase.customer?.identification.email).toBe('maria@example.com');
+
+    expect(medCase.order?.productType).toBe('PHYSICAL');
+    expect(medCase.order?.externalId).toBe('PED-1');
+    expect(medCase.order?.totalAmount).toBe(349.9);
+    expect(medCase.order?.placedAt).toBe('2026-08-10T17:32:00.000Z');
+  });
+
+  it('o pedido criado vira evidência ORDER_RECORD sozinho (nada de evidência manual duplicada)', async () => {
+    const { report } = await importMedsFromText(auth, CSV, { batchReference: 'lote-29-08' });
+    const created = report?.results.find((result) => result.medId === 'MED-001');
+
+    const medCase = await getCase(auth, created!.id!);
+    const derived = deriveEvidence(medCase);
+    const orderEvidences = derived.filter((evidence) => evidence.type === 'ORDER_RECORD');
+
+    expect(orderEvidences).toHaveLength(1);
+    expect(orderEvidences[0]?.value).toBe('PED-1');
+    expect(
+      medCase.evidences.filter((evidence) => evidence.type === 'ORDER_RECORD'),
+    ).toHaveLength(0);
+  });
+
+  it('sem coluna de tipo de produto, o pedido fica em branco e a referência vira evidência manual', async () => {
+    const csv = [
+      'MED ID;Valor;Data da compra;Data abertura;Pedido',
+      'MED-030;R$ 199,00;10/08/2026 10:00;20/08/2026;PED-30',
+    ].join('\n');
+
+    const { report } = await importMedsFromText(auth, csv, { batchReference: 'lote-29-08' });
+    const result = report?.results[0];
+    const medCase = await getCase(auth, result!.id!);
+
+    expect(medCase.order).toBeNull();
+    const orderEvidence = medCase.evidences.find((evidence) => evidence.type === 'ORDER_RECORD');
+    expect(orderEvidence?.value).toBe('PED-30');
     expect(orderEvidence?.sourceReference).toBe('lote-29-08');
+    expect(result?.messages.join(' ')).toContain('Tipo de produto');
+
+    // Transação e Cliente não dependem de tipo de produto: continuam nascendo.
+    expect(medCase.transaction?.amount).toBe(199);
+  });
+
+  it('reimportar o mesmo arquivo não sobrescreve uma correção manual', async () => {
+    const first = await importMedsFromText(auth, CSV);
+    const created = first.report?.results.find((result) => result.medId === 'MED-001');
+
+    const { upsertCustomer } = await import('@/services/medService');
+    await upsertCustomer(auth, created!.id!, {
+      identification: { name: 'Nome Corrigido Manualmente' },
+    });
+
+    await importMedsFromText(auth, CSV);
+    const medCase = await getCase(auth, created!.id!);
+    expect(medCase.customer?.identification.name).toBe('Nome Corrigido Manualmente');
   });
 
   it('pula a linha ilegivel e importa o resto', async () => {

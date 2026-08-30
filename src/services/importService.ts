@@ -1,18 +1,33 @@
 import type { AuthContext } from '@/infra/auth/context';
 import type { CreateMedInput } from '@/domain/schemas';
 import { createMedSchema } from '@/domain/schemas';
-import { addEvidence, createMedWithOutcome } from '@/services/medService';
+import {
+  addEvidence,
+  createMedWithOutcome,
+  upsertCustomer,
+  upsertOrder,
+  upsertTransaction,
+} from '@/services/medService';
 import { parseMedImport, type ImportedMedRow, type ParsedImport } from '@/domain/import/csv';
+import { buildCustomerInput, buildOrderInput, buildTransactionInput } from '@/domain/import/recordMapping';
 import { assertCan } from '@/infra/auth/rbac';
 
 /**
  * Importação de MEDs em lote.
  *
- * O arquivo da adquirente chega, e cada linha vira um MED. Duas garantias
- * importam aqui:
+ * O arquivo da adquirente chega, e cada linha vira um MED — e, quando o
+ * arquivo traz o suficiente, também a Transação, o Cliente e o Pedido do
+ * caso, pelo mesmo mapeamento que a tela usaria se o operador preenchesse os
+ * formulários à mão (ver `domain/import/recordMapping.ts`). O que não vem no
+ * arquivo continua ausente e reportado como evidência faltante — nada é
+ * inventado para fechar uma seção.
+ *
+ * Duas garantias importam aqui:
  *  - idempotência: reimportar o mesmo arquivo não duplica nada, porque o MED e
- *    único por identificador da instituição dentro da organizacao;
- *  - nenhuma linha e "consertada" em silencio. Linha com dado ilegível e
+ *    único por identificador da instituição dentro da organizacao — e por
+ *    isso o enriquecimento (Transação/Cliente/Pedido) só roda na criação:
+ *    reimportar nunca sobrescreve uma correção que o operador já fez à mão;
+ *  - nenhuma linha e "consertada" em silencio. Linha com dado ilegível é
  *    reportada e não entra, para que o operador corrija a origem.
  */
 
@@ -106,19 +121,36 @@ async function importRow(
 
   try {
     const { med, created } = await createMedWithOutcome(auth, built.input);
+    const messages: string[] = [];
 
-    // O número do pedido informado pela adquirente e um dado real do arquivo,
-    // entao entra como evidência com a procedência da importação — nunca como
-    // um pedido completo, que o operador ainda precisa preencher.
-    if (created && row.orderReference) {
-      await addEvidence(auth, med.id, {
-        type: 'ORDER_RECORD',
-        value: row.orderReference,
-        source: 'MANUAL',
-        sourceReference: options.batchReference ?? 'importação em lote',
-        verificationStatus: 'UNVERIFIED',
-        metadata: { importedFromLine: row.line },
-      });
+    if (created) {
+      const transactionInput = buildTransactionInput(row);
+      if (transactionInput) await upsertTransaction(auth, med.id, transactionInput);
+
+      const customerInput = buildCustomerInput(row);
+      if (customerInput) await upsertCustomer(auth, med.id, customerInput);
+
+      const orderInput = buildOrderInput(row);
+      if (orderInput) {
+        await upsertOrder(auth, med.id, orderInput);
+      } else if (row.orderReference) {
+        // Sem coluna de tipo de produto, o Pedido nao pode ser criado (campo
+        // obrigatorio do dominio) — a referencia ainda entra como evidencia
+        // suplementar, e o operador sabe exatamente o que falta no arquivo.
+        await addEvidence(auth, med.id, {
+          type: 'ORDER_RECORD',
+          value: row.orderReference,
+          source: 'MANUAL',
+          sourceReference: options.batchReference ?? 'importação em lote',
+          verificationStatus: 'UNVERIFIED',
+          metadata: { importedFromLine: row.line },
+        });
+        messages.push(
+          'Pedido não preenchido automaticamente: adicione a coluna "Tipo de produto" ao arquivo.',
+        );
+      }
+    } else {
+      messages.push('MED já existia e foi mantido como estava.');
     }
 
     return {
@@ -126,7 +158,7 @@ async function importRow(
       medId: med.medId,
       outcome: created ? 'CREATED' : 'DUPLICATE',
       id: med.id,
-      messages: created ? [] : ['MED já existia e foi mantido como estava.'],
+      messages,
     };
   } catch (error) {
     return {
