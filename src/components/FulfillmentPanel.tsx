@@ -2,7 +2,8 @@ import { DELIVERY_CHANNELS, EVIDENCE_SOURCES } from '@/domain/types';
 import type { ProductType } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import { Panel } from '@/components/ui';
-import { DateTimeField, Field, FormGrid, Select, SubmitButton } from '@/components/form';
+import { DateTimeField, Field, FormGrid, Select } from '@/components/form';
+import { AutoSaveForm } from '@/components/AutoSaveForm';
 import { recordDigitalDeliveryAction, recordShipmentAction } from '@/app/meds/actions';
 import {
   DELIVERY_CHANNEL_LABEL,
@@ -26,15 +27,6 @@ import {
 function milestoneValue(medCase: MedCase, status: string): string | undefined {
   const event = medCase.tracking?.events.find((entry) => entry.status === status);
   return event?.occurredAt;
-}
-
-function GenerateToggle() {
-  return (
-    <label className="flex cursor-pointer items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-      <input type="checkbox" name="generateDefense" defaultChecked className="h-3.5 w-3.5 accent-[var(--color-primary)]" />
-      Gerar a defesa ao salvar
-    </label>
-  );
 }
 
 function SourceFields({ defaultSource }: { defaultSource: string }) {
@@ -65,7 +57,7 @@ export function ShipmentPanel({ medCase }: { medCase: MedCase }) {
       title="Entrega do pedido"
       footer="Preencha só as etapas que você consegue comprovar. Etapa sem horário não entra na linha do tempo nem no PDF — o sistema não arbitra uma data. Dado digitado fica registrado como manual, e a defesa mostra isso."
     >
-      <form action={recordShipmentAction} className="space-y-4">
+      <AutoSaveForm action={recordShipmentAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
 
         <FormGrid>
@@ -138,11 +130,7 @@ export function ShipmentPanel({ medCase }: { medCase: MedCase }) {
           <SourceFields defaultSource={tracking?.source ?? 'MANUAL'} />
         </FormGrid>
 
-        <div className="flex items-center gap-4">
-          <SubmitButton>Salvar entrega</SubmitButton>
-          <GenerateToggle />
-        </div>
-      </form>
+      </AutoSaveForm>
     </Panel>
   );
 }
@@ -155,7 +143,7 @@ export function DigitalDeliveryPanel({ medCase }: { medCase: MedCase }) {
       title="Entrega do acesso"
       footer="A defesa se sustenta no envio do acesso — data, canal e destino —, sem depender de o comprador confirmar que recebeu."
     >
-      <form action={recordDigitalDeliveryAction} className="space-y-4">
+      <AutoSaveForm action={recordDigitalDeliveryAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
 
         <FormGrid>
@@ -213,11 +201,7 @@ export function DigitalDeliveryPanel({ medCase }: { medCase: MedCase }) {
           <SourceFields defaultSource={delivery?.source ?? 'MERCHANT'} />
         </FormGrid>
 
-        <div className="flex items-center gap-4">
-          <SubmitButton>Salvar entrega</SubmitButton>
-          <GenerateToggle />
-        </div>
-      </form>
+      </AutoSaveForm>
     </Panel>
   );
 }

@@ -267,15 +267,14 @@ export function StatusBadge({ status }: { status: MedStatus }) {
 /** Badge neutro: fundo cinza, sem caixa alta. Para versao, tipo, valor tecnico. */
 export function NeutralBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-5 items-center rounded px-1.5 text-[11px] font-medium"
-      style={{ background: '#f4f4f5', color: '#3f3f46' }}>
+    <span className="inline-flex h-5 items-center rounded bg-[var(--color-surface-active)] px-1.5 text-[11px] font-medium text-[var(--color-text-secondary)]">
       {children}
     </span>
   );
 }
 
 const SUBTLE: Record<Tone, string> = {
-  neutral: 'bg-[#f4f4f5] text-[#3f3f46]',
+  neutral: 'bg-[var(--color-surface-active)] text-[var(--color-text-secondary)]',
   accent: 'bg-[var(--color-accent-subtle)] text-[var(--color-success)]',
   success: 'bg-[var(--color-success-subtle)] text-[var(--color-success)]',
   warning: 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)]',

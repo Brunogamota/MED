@@ -484,4 +484,21 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     generatedBy: 'demo',
   });
   await repository.saveDefense(defense);
+
+  // A defesa nasce junto com o MED: os outros casos demo também carregam a
+  // minuta v1, como aconteceria com um caso chegando pelo webhook ou pelo lote.
+  for (const [medId, defenseId] of [
+    ['demo_med_delivered', 'demo_def_1'],
+    ['demo_med_incomplete', 'demo_def_2'],
+  ] as const) {
+    const bornCase = await repository.loadCase(DEMO_ORGANIZATION_ID, medId);
+    if (!bornCase) continue;
+    const born = generateDefense({
+      medCase: bornCase,
+      version: 1,
+      defenseId,
+      generatedBy: 'demo',
+    });
+    await repository.saveDefense(born.defense);
+  }
 }

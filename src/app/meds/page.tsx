@@ -60,6 +60,7 @@ function toQueueRow(row: MedListRow, now: Date): QueueRow {
     amountLabel: formatAmount(row.med.amount, row.med.currency),
     scoreTotal: row.latestDefense?.score.total ?? 0,
     scoreMax: row.latestDefense?.score.max ?? 100,
+    hasDefense: row.latestDefense !== null,
     deadlineLabel: countdownText(hours),
     deadlineDanger: hours !== null && hours < 48,
     statusLabel: MED_STATUS_LABEL[row.med.status],

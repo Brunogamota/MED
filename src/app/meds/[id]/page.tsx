@@ -322,7 +322,7 @@ export default async function MedDetailPage({
                 ? 'vencido'
                 : hoursRemaining < 48
                   ? Math.floor(hoursRemaining)
-                  : Math.floor(hoursRemaining / 24)
+                  : Math.ceil(hoursRemaining / 24)
           }
           unit={
             hoursRemaining === null || hoursRemaining < 0

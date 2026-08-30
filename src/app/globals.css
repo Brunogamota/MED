@@ -125,6 +125,26 @@ a:focus-visible,
   outline-offset: 2px;
 }
 
+/*
+ * Skeleton: forma do conteudo, sem brilho deslizante. Fica invisivel nos
+ * primeiros 300ms — carregamento rapido nao pisca skeleton nenhum.
+ */
+@keyframes skeleton-appear {
+  to {
+    opacity: 1;
+  }
+}
+
+.skeleton-defer {
+  opacity: 0;
+  animation: skeleton-appear 0s 300ms forwards;
+}
+
+.skeleton-block {
+  border-radius: var(--radius-md);
+  background: var(--color-surface-active);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

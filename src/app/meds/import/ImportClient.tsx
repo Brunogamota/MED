@@ -26,7 +26,7 @@ const OUTCOME_LABEL: Record<string, string> = {
 
 const OUTCOME_TONE: Record<string, string> = {
   CREATED: 'bg-[var(--color-success-subtle)] text-[var(--color-success)]',
-  DUPLICATE: 'bg-[#f4f4f5] text-[#3f3f46]',
+  DUPLICATE: 'bg-[var(--color-surface-active)] text-[var(--color-text-secondary)]',
   SKIPPED: 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)]',
   FAILED: 'bg-[var(--color-danger-subtle)] text-[var(--color-danger)]',
 };
@@ -144,7 +144,7 @@ export function ImportClient() {
                 {parsed.ignored.map((header) => (
                   <span
                     key={header}
-                    className="mr-1 inline-block rounded bg-[#f4f4f5] px-1.5 py-0.5 text-[11px] text-[#3f3f46]"
+                    className="mr-1 inline-block rounded bg-[var(--color-surface-active)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-secondary)]"
                   >
                     {header}
                   </span>

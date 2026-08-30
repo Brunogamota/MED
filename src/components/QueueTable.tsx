@@ -20,6 +20,7 @@ export interface QueueRow {
   amountLabel: string;
   scoreTotal: number;
   scoreMax: number;
+  hasDefense: boolean;
   deadlineLabel: string;
   deadlineDanger: boolean;
   statusLabel: string;
@@ -228,20 +229,24 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
                         {row.amountLabel}
                       </td>
                       <td className="px-3">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="h-1 w-14 overflow-hidden rounded-full bg-[var(--color-border)]">
-                            <span
-                              className={`block h-full rounded-full ${scoreColor(ratio)}`}
-                              style={{ width: `${ratio * 100}%` }}
-                            />
+                        {row.hasDefense ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="h-1 w-14 overflow-hidden rounded-full bg-[var(--color-border)]">
+                              <span
+                                className={`block h-full rounded-full ${scoreColor(ratio)}`}
+                                style={{ width: `${ratio * 100}%` }}
+                              />
+                            </span>
+                            <span className="tabular text-xs text-[var(--color-text-secondary)]">
+                              {row.scoreTotal}
+                            </span>
                           </span>
-                          <span className="tabular text-xs text-[var(--color-text-secondary)]">
-                            {row.scoreTotal}
-                          </span>
-                        </span>
+                        ) : (
+                          <span className="text-xs text-[var(--color-text-muted)]">sem minuta</span>
+                        )}
                       </td>
                       <td
-                        className={`tabular px-3 text-[13px] ${
+                        className={`tabular whitespace-nowrap px-3 text-[13px] ${
                           row.deadlineDanger
                             ? 'font-medium text-[var(--color-danger)]'
                             : 'text-[var(--color-text-secondary)]'

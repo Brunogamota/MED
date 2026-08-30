@@ -96,7 +96,7 @@ export function countdownText(hoursRemaining: number | null): string {
   if (hoursRemaining < 0) return 'vencido';
   if (hoursRemaining < 1) return 'vence em menos de 1 h';
   if (hoursRemaining < 48) return `vence em ${Math.floor(hoursRemaining)} h`;
-  return `vence em ${Math.floor(hoursRemaining / 24)} dias`;
+  return `vence em ${Math.ceil(hoursRemaining / 24)} dias`;
 }
 
 // ---------------------------------------------------------------------------
