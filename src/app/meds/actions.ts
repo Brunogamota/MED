@@ -333,6 +333,47 @@ export async function createSubmissionAction(form: FormData): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Acoes em lote da fila
+// ---------------------------------------------------------------------------
+
+function medIdsFrom(form: FormData): string[] {
+  const raw = text(form, 'medIds');
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Regera a minuta dos casos selecionados. Falha individual não trava o lote. */
+export async function batchGenerateDefensesAction(form: FormData): Promise<void> {
+  const auth = serverPageContext();
+  for (const medId of medIdsFrom(form)) {
+    try {
+      await generateDefenseForMed(auth, medId, { useLlm: false });
+    } catch {
+      // Caso inelegível (ex.: sem permissão ou inexistente) fica como está.
+    }
+  }
+  revalidatePath('/meds');
+}
+
+/** Prepara o payload de envio dos casos selecionados, um a um. */
+export async function batchPrepareSubmissionsAction(form: FormData): Promise<void> {
+  const auth = serverPageContext();
+  for (const medId of medIdsFrom(form)) {
+    try {
+      await createSubmission(auth, medId, { provider: 'generic-json' });
+    } catch {
+      // Sem defesa ou caso inelegível: pulado; o operador vê o estado na fila.
+    }
+  }
+  revalidatePath('/meds');
+}
+
+// ---------------------------------------------------------------------------
 // Importacao em lote
 // ---------------------------------------------------------------------------
 
