@@ -22,7 +22,6 @@ import {
   KeyValueRow,
   MetricCell,
   MetricStrip,
-  MonoId,
   Panel,
   RequirementMark,
   ScoreBar,
@@ -33,12 +32,14 @@ import {
   Td,
   Th,
 } from '@/components/ui';
+import { CopyId } from '@/components/CopyId';
+import { HiddenFields } from '@/components/HiddenFields';
 import {
-  daysUntil,
   formatAddress,
   formatAmount,
   formatDate,
-  formatDateTime,
+  formatDateTimeSmart,
+  hoursUntil,
 } from '@/lib/format';
 import {
   AUDIT_ACTION_LABEL,
@@ -55,6 +56,10 @@ import {
   deadlineText,
   deadlineTone,
 } from '@/lib/labels';
+import { MED_ORIGIN, evidenceSourceOrigin, type FieldOrigin } from '@/lib/origin';
+import { nextAction } from '@/lib/nextAction';
+import { NextActionCard } from '@/components/med/NextActionCard';
+import { CaseTimeline } from '@/components/med/CaseTimeline';
 import { createSubmissionAction, generateDefenseAction } from '@/app/meds/actions';
 import { FulfillmentPanel } from '@/components/FulfillmentPanel';
 import { CommunicationPanel } from '@/components/CommunicationPanel';
@@ -71,19 +76,33 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Detalhe do MED em cinco abas (briefing 2.4). O progresso do caso é
+ * comunicado pelo bloco "Próxima ação" e pela barra de score — não existe
+ * trilha de etapas decorativa.
+ */
 const TABS = [
-  { key: 'overview', label: 'Visão geral' },
-  { key: 'data', label: 'Dados' },
-  { key: 'evidence', label: 'Evidências' },
-  { key: 'timeline', label: 'Linha do tempo' },
-  { key: 'defense', label: 'Defesa' },
-  { key: 'comprovantes', label: 'Comprovantes' },
-  { key: 'documents', label: 'Documentos' },
-  { key: 'submission', label: 'Envio' },
-  { key: 'audit', label: 'Auditoria' },
+  { key: 'resumo', label: 'Resumo' },
+  { key: 'evidencias', label: 'Evidências' },
+  { key: 'defesa', label: 'Defesa' },
+  { key: 'envio', label: 'Envio' },
+  { key: 'auditoria', label: 'Auditoria' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
+
+/** URLs antigas (9 abas) continuam funcionando. */
+const LEGACY_TAB_MAP: Record<string, TabKey> = {
+  overview: 'resumo',
+  data: 'evidencias',
+  evidence: 'evidencias',
+  timeline: 'auditoria',
+  defense: 'defesa',
+  comprovantes: 'evidencias',
+  documents: 'evidencias',
+  submission: 'envio',
+  audit: 'auditoria',
+};
 
 const DEADLINE_COLOR = {
   neutral: 'text-[var(--color-text-muted)]',
@@ -91,58 +110,42 @@ const DEADLINE_COLOR = {
   danger: 'text-[var(--color-danger)]',
 } as const;
 
-/** Etapas do caso: onde o operador esta no processo, derivado do estado real. */
-function Steps({
-  hasData,
-  requiredMissing,
-  hasDefense,
-  hasSubmission,
-}: {
-  hasData: boolean;
-  requiredMissing: number;
-  hasDefense: boolean;
-  hasSubmission: boolean;
-}) {
-  const steps = [
-    { label: 'Dados', done: hasData },
-    { label: 'Evidências', done: hasData && requiredMissing === 0 },
-    { label: 'Defesa', done: hasDefense },
-    { label: 'Envio', done: hasSubmission },
-  ];
-  const current = steps.findIndex((step) => !step.done);
+interface RowSpec {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+  origin: FieldOrigin;
+}
 
+/** Bloco rótulo-valor: preenchidos primeiro, vazios atrás de um clique. */
+function OriginKeyValueBlock({ rows }: { rows: RowSpec[] }) {
+  const filled = rows.filter((row) => row.value);
+  const empty = rows.filter((row) => !row.value);
   return (
-    <ol className="flex items-center gap-2 overflow-x-auto text-[13px]">
-      {steps.map((step, index) => {
-        const state = step.done ? 'done' : index === current ? 'current' : 'todo';
-        return (
-          <li key={step.label} className="flex items-center gap-2">
-            {index > 0 ? (
-              <span aria-hidden className="h-px w-6 bg-[var(--color-border)]" />
-            ) : null}
-            <span
-              className={`flex items-center gap-1.5 ${
-                state === 'todo'
-                  ? 'text-[var(--color-text-muted)]'
-                  : 'text-[var(--color-text)]'
-              } ${state === 'current' ? 'font-medium' : ''}`}
-            >
-              <span
-                aria-hidden
-                className={`h-1.5 w-1.5 rounded-full ${
-                  state === 'done'
-                    ? 'bg-[var(--color-accent)]'
-                    : state === 'current'
-                      ? 'bg-[var(--color-text)]'
-                      : 'bg-[var(--color-border-strong)]'
-                }`}
-              />
-              {step.label}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+    <>
+      <KeyValueList>
+        {filled.map((row) => (
+          <KeyValueRow key={row.label} label={row.label} value={row.value} mono={row.mono} origin={row.origin} />
+        ))}
+      </KeyValueList>
+      {rows.length > 6 && empty.length > 0 ? (
+        <HiddenFields count={empty.length}>
+          <KeyValueList>
+            {empty.map((row) => (
+              <KeyValueRow key={row.label} label={row.label} value={row.value} mono={row.mono} origin={row.origin} />
+            ))}
+          </KeyValueList>
+        </HiddenFields>
+      ) : (
+        <KeyValueList>
+          {rows.length <= 6
+            ? empty.map((row) => (
+                <KeyValueRow key={row.label} label={row.label} value={row.value} mono={row.mono} origin={row.origin} />
+              ))
+            : null}
+        </KeyValueList>
+      )}
+    </>
   );
 }
 
@@ -155,7 +158,8 @@ export default async function MedDetailPage({
 }) {
   const { id } = await params;
   const { tab, modelo } = await searchParams;
-  const activeTab: TabKey = (TABS.find((entry) => entry.key === tab)?.key ?? 'overview') as TabKey;
+  const activeTab: TabKey =
+    TABS.find((entry) => entry.key === tab)?.key ?? LEGACY_TAB_MAP[tab ?? ''] ?? 'resumo';
 
   const auth = serverPageContext();
 
@@ -190,33 +194,57 @@ export default async function MedDetailPage({
   );
 
   const { med } = medCase;
-  const remaining = daysUntil(med.responseDeadlineAt);
-  const tone = deadlineTone(remaining);
-  const strongCount = assessment.items.filter(
-    (item) => item.status === 'AVAILABLE' && item.strength === 'STRONG',
-  ).length;
-  const requiredMissing = assessment.missingEvidences.filter(
-    (missing) => missing.necessity === 'REQUIRED',
-  ).length;
-  const hasData =
-    medCase.transaction !== null ||
-    medCase.order !== null ||
-    medCase.tracking !== null ||
-    medCase.digitalDelivery !== null;
-  const reconstructions = evidences.filter(
-    (evidence) => evidence.type === 'DELIVERY_COMMUNICATION',
-  );
+  const hoursRemaining = hoursUntil(med.responseDeadlineAt);
+  const daysRemaining = hoursRemaining === null ? null : Math.ceil(hoursRemaining / 24);
+  const tone = deadlineTone(daysRemaining);
+  const availableItems = assessment.items.filter((item) => item.status === 'AVAILABLE');
+  const strongCount = availableItems.filter((item) => item.strength === 'STRONG').length;
+  const lastEvidenceAt = evidences.reduce<string | null>((latest, evidence) => {
+    if (!latest || Date.parse(evidence.receivedAt) > Date.parse(latest)) {
+      return evidence.receivedAt;
+    }
+    return latest;
+  }, null);
+  const action = nextAction({
+    med,
+    assessment,
+    latestDefense,
+    submissions,
+    hoursRemaining,
+    lastEvidenceAt,
+  });
   const activeTemplate: CommunicationTemplate = COMMUNICATION_TEMPLATES.includes(
     modelo as CommunicationTemplate,
   )
     ? (modelo as CommunicationTemplate)
     : 'ACCESS_DELIVERY';
-  const hasSubmission =
-    submissions.length > 0 || ['SUBMITTED', 'ACCEPTED', 'REJECTED'].includes(med.status);
+
+  const medRows: RowSpec[] = [
+    { label: 'Instituição', value: med.requestingInstitution, origin: MED_ORIGIN },
+    { label: 'Motivo', value: MED_REASON_LABEL[med.reason], origin: MED_ORIGIN },
+    { label: 'Tipo de produto', value: PRODUCT_TYPE_LABEL[productType], origin: MED_ORIGIN },
+    { label: 'Transação', value: med.transactionId, mono: true, origin: MED_ORIGIN },
+    { label: 'End-to-end', value: med.endToEndId, mono: true, origin: MED_ORIGIN },
+    { label: 'Data da transação', value: formatDateTimeSmart(med.transactionAt), origin: MED_ORIGIN },
+    { label: 'Abertura do MED', value: formatDateTimeSmart(med.openedAt), origin: MED_ORIGIN },
+    { label: 'Loja', value: med.merchantName, origin: MED_ORIGIN },
+  ];
+  const payerRows: RowSpec[] = [
+    { label: 'Nome', value: med.payer.name, origin: MED_ORIGIN },
+    { label: 'CPF/CNPJ', value: med.payer.document, mono: true, origin: MED_ORIGIN },
+    { label: 'E-mail', value: med.payer.email, origin: MED_ORIGIN },
+    { label: 'Telefone', value: med.payer.phone, origin: MED_ORIGIN },
+    { label: 'IP', value: med.payerIp, mono: true, origin: MED_ORIGIN },
+    { label: 'Dispositivo', value: med.payerDevice, mono: true, origin: MED_ORIGIN },
+    { label: 'Endereço', value: formatAddress(med.payerAddress), origin: MED_ORIGIN },
+  ];
+
+  const deadlineCellDanger = hoursRemaining !== null && hoursRemaining < 48;
+  const deadlineUrgent = hoursRemaining !== null && hoursRemaining >= 0 && hoursRemaining < 24;
 
   return (
     <div className="space-y-4">
-      {/* Cabecalho da pagina */}
+      {/* Cabeçalho */}
       <div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
           <div className="flex items-baseline gap-3">
@@ -238,15 +266,18 @@ export default async function MedDetailPage({
                 Baixar PDF
               </a>
             ) : null}
-            <form action={generateDefenseAction}>
-              <input type="hidden" name="medId" value={med.id} />
-              <button
-                type="submit"
-                className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)]"
-              >
-                {latestDefense ? 'Gerar nova versão' : 'Gerar defesa'}
-              </button>
-            </form>
+            {med.status === 'READY_TO_SUBMIT' ? (
+              <form action={createSubmissionAction}>
+                <input type="hidden" name="medId" value={med.id} />
+                <input type="hidden" name="provider" value="generic-json" />
+                <button
+                  type="submit"
+                  className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)]"
+                >
+                  Preparar envio
+                </button>
+              </form>
+            ) : null}
           </div>
         </div>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-[var(--color-text-muted)]">
@@ -262,31 +293,47 @@ export default async function MedDetailPage({
           ) : null}
           <span>aberto em {formatDate(med.openedAt)}</span>
           <span aria-hidden>·</span>
-          <span className={DEADLINE_COLOR[tone]}>{deadlineText(remaining)}</span>
+          <span className={DEADLINE_COLOR[tone]}>{deadlineText(daysRemaining)}</span>
         </p>
-        <div className="mt-3">
-          <Steps
-            hasData={hasData}
-            requiredMissing={requiredMissing}
-            hasDefense={latestDefense !== null}
-            hasSubmission={hasSubmission}
-          />
-        </div>
       </div>
 
-      {/* Faixa de metricas */}
+      {/* Faixa de métricas — quatro células iguais */}
       <MetricStrip>
         <MetricCell
           label="Score documental"
           value={latestDefense?.score.total ?? assessment.score.total}
           unit={`/ ${assessment.score.max}`}
+          bar={{
+            value: latestDefense?.score.total ?? assessment.score.total,
+            max: assessment.score.max,
+          }}
         />
-        <MetricCell label="Evidências fortes" value={strongCount} />
+        <MetricCell
+          label="Evidências fortes"
+          value={strongCount}
+          unit={`de ${availableItems.length}`}
+        />
         <MetricCell
           label="Prazo restante"
-          value={remaining === null ? '—' : remaining < 0 ? 'vencido' : remaining}
-          unit={remaining !== null && remaining >= 0 ? (remaining === 1 ? 'dia' : 'dias') : undefined}
+          value={
+            hoursRemaining === null
+              ? '—'
+              : hoursRemaining < 0
+                ? 'vencido'
+                : hoursRemaining < 48
+                  ? Math.floor(hoursRemaining)
+                  : Math.floor(hoursRemaining / 24)
+          }
+          unit={
+            hoursRemaining === null || hoursRemaining < 0
+              ? undefined
+              : hoursRemaining < 48
+                ? 'h'
+                : 'dias'
+          }
           tone={tone === 'neutral' ? 'neutral' : tone}
+          cellTone={deadlineCellDanger ? 'danger' : undefined}
+          badge={deadlineUrgent ? <SubtleBadge tone="danger">urgente</SubtleBadge> : undefined}
         />
         <MetricCell label="Valor contestado" value={formatAmount(med.amount, med.currency)} />
       </MetricStrip>
@@ -298,6 +345,7 @@ export default async function MedDetailPage({
             <li key={entry.key}>
               <Link
                 href={`/meds/${med.id}?tab=${entry.key}`}
+                aria-current={entry.key === activeTab ? 'page' : undefined}
                 className={`inline-flex h-9 items-center whitespace-nowrap border-b-2 px-3 text-[13px] transition-colors duration-[120ms] ${
                   entry.key === activeTab
                     ? 'border-[var(--color-text)] font-medium text-[var(--color-text)]'
@@ -311,34 +359,62 @@ export default async function MedDetailPage({
         </ul>
       </nav>
 
-      {activeTab === 'overview' ? (
+      {activeTab === 'resumo' ? (
         <div className="space-y-4">
-          <FulfillmentPanel medCase={medCase} productType={productType} />
+          <NextActionCard medId={med.id} action={action} />
+
+          <div id="entrega" className="scroll-mt-16">
+            <FulfillmentPanel medCase={medCase} productType={productType} />
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
+            <Panel title={`O que temos (${availableItems.length})`}>
+              {availableItems.length === 0 ? (
+                <EmptyState title="Nenhuma evidência disponível">
+                  Registre a entrega e os dados do caso para as evidências aparecerem aqui.
+                </EmptyState>
+              ) : (
+                <ul className="divide-y divide-[var(--color-border)]">
+                  {availableItems.map((item) => (
+                    <li key={item.type} className="flex min-h-9 items-center justify-between gap-3 py-1.5 text-[13px]">
+                      <span>{item.label}</span>
+                      <StrengthBadge strength={item.strength} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
+            <Panel title={`O que falta (${assessment.missingEvidences.length})`}>
+              {assessment.missingEvidences.length === 0 ? (
+                <EmptyState title="Nada faltando">
+                  Todos os itens obrigatórios e recomendados estão disponíveis.
+                </EmptyState>
+              ) : (
+                <ul className="divide-y divide-[var(--color-border)]">
+                  {assessment.missingEvidences.map((missing) => (
+                    <li key={missing.type} className="flex min-h-9 items-start justify-between gap-3 py-1.5 text-[13px]">
+                      <span>
+                        {missing.label}
+                        <span className="block text-xs text-[var(--color-text-muted)]">
+                          {missing.rationale}
+                        </span>
+                      </span>
+                      <SubtleBadge tone={missing.necessity === 'REQUIRED' ? 'danger' : 'warning'}>
+                        {NECESSITY_LABEL[missing.necessity]}
+                      </SubtleBadge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+
             <Panel title="MED">
-              <KeyValueList>
-                <KeyValueRow label="Instituição" value={med.requestingInstitution} />
-                <KeyValueRow label="Motivo" value={MED_REASON_LABEL[med.reason]} />
-                <KeyValueRow label="Tipo de produto" value={PRODUCT_TYPE_LABEL[productType]} />
-                <KeyValueRow label="Transação" value={med.transactionId} mono />
-                <KeyValueRow label="End-to-end" value={med.endToEndId} mono />
-                <KeyValueRow label="Data da transação" value={formatDateTime(med.transactionAt)} />
-                <KeyValueRow label="Abertura do MED" value={formatDateTime(med.openedAt)} />
-                <KeyValueRow label="Loja" value={med.merchantName} />
-              </KeyValueList>
+              <OriginKeyValueBlock rows={medRows} />
             </Panel>
 
             <Panel title="Pagador informado no MED">
-              <KeyValueList>
-                <KeyValueRow label="Nome" value={med.payer.name} />
-                <KeyValueRow label="CPF/CNPJ" value={med.payer.document} mono />
-                <KeyValueRow label="E-mail" value={med.payer.email} />
-                <KeyValueRow label="Telefone" value={med.payer.phone} />
-                <KeyValueRow label="IP" value={med.payerIp} mono />
-                <KeyValueRow label="Dispositivo" value={med.payerDevice} mono />
-                <KeyValueRow label="Endereço" value={formatAddress(med.payerAddress)} />
-              </KeyValueList>
+              <OriginKeyValueBlock rows={payerRows} />
             </Panel>
 
             <Panel
@@ -351,10 +427,7 @@ export default async function MedDetailPage({
               </div>
               <ul>
                 {assessment.score.components.map((component) => (
-                  <li
-                    key={component.category}
-                    className="flex h-7 items-center justify-between gap-3"
-                  >
+                  <li key={component.category} className="flex h-7 items-center justify-between gap-3">
                     <span className="w-32 shrink-0 text-xs text-[var(--color-text-secondary)]">
                       {CATEGORY_LABEL[component.category]}
                     </span>
@@ -366,8 +439,8 @@ export default async function MedDetailPage({
 
             <Panel title={`Riscos operacionais (${latestDefense?.riskFlags.length ?? 0})`}>
               {!latestDefense ? (
-                <EmptyState title="Defesa ainda não gerada">
-                  Gere a defesa para avaliar os riscos operacionais deste caso.
+                <EmptyState title="Minuta ainda não gerada">
+                  A avaliação de riscos acompanha a minuta da defesa.
                 </EmptyState>
               ) : latestDefense.riskFlags.length === 0 ? (
                 <EmptyState title="Nenhum risco identificado">
@@ -398,81 +471,45 @@ export default async function MedDetailPage({
         </div>
       ) : null}
 
-      {activeTab === 'data' ? (
+      {activeTab === 'evidencias' ? (
         <div className="space-y-4">
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Registre aqui os dados que você já possui. Campo em branco permanece ausente e será
-            apontado como evidência faltante — nada é preenchido por suposição.
-          </p>
-          <TransactionForm medCase={medCase} />
-          <CustomerForm medCase={medCase} />
-          <OrderForm medCase={medCase} />
-          <TrackingForm medCase={medCase} />
-        </div>
-      ) : null}
-
-      {activeTab === 'evidence' ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Panel title={`Requisitos (${assessment.items.length})`} flush>
-            <div className="max-h-[480px] overflow-y-auto">
-              <table className="w-full">
-                <thead className="sticky top-0 bg-white">
-                  <tr>
-                    <Th>Evidência</Th>
-                    <Th>Necessidade</Th>
-                    <Th>Situação</Th>
-                    <Th>Força</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assessment.items.map((item) => (
-                    <tr key={item.type}>
-                      <Td>
-                        <span className="block">{item.label}</span>
-                        <span className="block text-xs text-[var(--color-text-muted)]">
-                          {CATEGORY_LABEL[item.category]}
-                        </span>
-                      </Td>
-                      <Td className="text-xs text-[var(--color-text-secondary)]">
-                        {NECESSITY_LABEL[item.necessity]}
-                      </Td>
-                      <Td>
-                        <RequirementMark status={item.status} />
-                      </Td>
-                      <Td>
-                        <StrengthBadge strength={item.strength} />
-                      </Td>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Panel title={`Requisitos (${assessment.items.length})`} flush>
+              <div className="max-h-[480px] overflow-y-auto">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-white">
+                    <tr>
+                      <Th>Evidência</Th>
+                      <Th>Necessidade</Th>
+                      <Th>Situação</Th>
+                      <Th>Força</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Panel>
-
-          <div className="space-y-4">
-            <Panel title={`Evidências faltantes (${assessment.missingEvidences.length})`}>
-              {assessment.missingEvidences.length === 0 ? (
-                <EmptyState title="Nada faltando">
-                  Todos os itens obrigatórios e recomendados estão disponíveis.
-                </EmptyState>
-              ) : (
-                <ul className="space-y-2.5">
-                  {assessment.missingEvidences.map((missing) => (
-                    <li key={missing.type} className="flex items-start gap-2 text-[13px]">
-                      <SubtleBadge tone={missing.necessity === 'REQUIRED' ? 'danger' : 'warning'}>
-                        {NECESSITY_LABEL[missing.necessity]}
-                      </SubtleBadge>
-                      <span>
-                        {missing.label}
-                        <span className="block text-xs text-[var(--color-text-muted)]">
-                          {missing.rationale}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                  </thead>
+                  <tbody>
+                    {assessment.items.map((item) => (
+                      <tr key={item.type}>
+                        <Td>
+                          <span className="block">{item.label}</span>
+                          <span className="block text-xs text-[var(--color-text-muted)]">
+                            {CATEGORY_LABEL[item.category]}
+                          </span>
+                        </Td>
+                        <Td className="text-xs text-[var(--color-text-secondary)]">
+                          {NECESSITY_LABEL[item.necessity]}
+                        </Td>
+                        <Td>
+                          <RequirementMark status={item.status} />
+                        </Td>
+                        <Td>
+                          <StrengthBadge strength={item.strength} />
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </Panel>
+
             <EvidenceForm medId={med.id} />
           </div>
 
@@ -496,109 +533,150 @@ export default async function MedDetailPage({
                     </tr>
                   </thead>
                   <tbody>
-                    {evidences.map((evidence) => (
-                      <tr key={evidence.id}>
-                        <Td>{getEvidenceDefinition(evidence.type).label}</Td>
-                        <Td className="max-w-[220px]">
-                          <span className="block truncate">
-                            {evidence.displayValue ??
-                              (typeof evidence.value === 'string'
-                                ? evidence.value
-                                : 'Registro estruturado')}
-                          </span>
-                        </Td>
-                        <Td>
-                          <span className="block text-[13px]">
-                            {EVIDENCE_SOURCE_LABEL[evidence.source]}
-                          </span>
-                          {evidence.sourceReference ? (
-                            <MonoId value={evidence.sourceReference} />
-                          ) : (
-                            <span className="text-xs text-[var(--color-text-muted)]">
-                              sem referência
+                    {evidences.map((evidence) => {
+                      const origin = evidenceSourceOrigin(evidence.source, evidence.sourceProvider);
+                      return (
+                        <tr key={evidence.id}>
+                          <Td>{getEvidenceDefinition(evidence.type).label}</Td>
+                          <Td className="max-w-[220px]">
+                            <span className="block truncate">
+                              {evidence.displayValue ??
+                                (typeof evidence.value === 'string'
+                                  ? evidence.value
+                                  : 'Registro estruturado')}
                             </span>
-                          )}
-                        </Td>
-                        <Td className="text-xs text-[var(--color-text-secondary)]">
-                          {VERIFICATION_STATUS_LABEL[evidence.verificationStatus]}
-                        </Td>
-                        <Td>
-                          <StrengthBadge strength={evaluateStrength(evidence).strength} />
-                        </Td>
-                      </tr>
-                    ))}
+                          </Td>
+                          <Td>
+                            <SubtleBadge tone={origin.kind === 'manual' ? 'warning' : 'neutral'}>
+                              {EVIDENCE_SOURCE_LABEL[evidence.source]}
+                            </SubtleBadge>
+                            {evidence.sourceReference ? (
+                              <span className="mt-0.5 block">
+                                <CopyId value={evidence.sourceReference} />
+                              </span>
+                            ) : null}
+                          </Td>
+                          <Td className="text-xs text-[var(--color-text-secondary)]">
+                            {VERIFICATION_STATUS_LABEL[evidence.verificationStatus]}
+                          </Td>
+                          <Td>
+                            <StrengthBadge strength={evaluateStrength(evidence).strength} />
+                          </Td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
           </Panel>
+
+          <CommunicationPanel
+            medCase={{ ...medCase, evidences }}
+            template={activeTemplate}
+            reconstructions={evidences.filter(
+              (evidence) => evidence.type === 'DELIVERY_COMMUNICATION',
+            )}
+          />
+
+          <div id="documentos" className="scroll-mt-16 space-y-4">
+            <Panel title={`Documentos (${medCase.documents.length})`} flush>
+              {medCase.documents.length === 0 ? (
+                <div className="p-4">
+                  <EmptyState title="Nenhum documento anexado">
+                    Envie o arquivo ou registre a referência de um documento que já existe no seu
+                    sistema.
+                  </EmptyState>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <Th>Arquivo</Th>
+                      <Th>Tipo</Th>
+                      <Th>Origem</Th>
+                      <Th>Anexado em</Th>
+                      <Th className="text-right">Abrir</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {medCase.documents.map((document) => {
+                      const link = documentLinks.get(document.id) ?? null;
+                      return (
+                        <tr key={document.id}>
+                          <Td className="font-medium">{document.filename}</Td>
+                          <Td className="text-[var(--color-text-secondary)]">
+                            {DOCUMENT_KIND_LABEL[document.kind]}
+                          </Td>
+                          <Td className="text-[var(--color-text-secondary)]">
+                            {EVIDENCE_SOURCE_LABEL[document.source]}
+                          </Td>
+                          <Td className="tabular">{formatDateTimeSmart(document.uploadedAt)}</Td>
+                          <Td className="text-right">
+                            {link ? (
+                              <a
+                                href={link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="font-medium text-[var(--color-text)] hover:underline"
+                              >
+                                Abrir
+                              </a>
+                            ) : (
+                              <span
+                                className="text-xs text-[var(--color-text-muted)]"
+                                title="Configure a assinatura de links para gerar URLs de download"
+                              >
+                                —
+                              </span>
+                            )}
+                          </Td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </Panel>
+            <DocumentUploadForm medId={med.id} storageAvailable={storageAvailable} />
+            <DocumentForm medId={med.id} />
+          </div>
+
+          <div className="space-y-4">
+            <p className="pt-2 text-xs text-[var(--color-text-muted)]">
+              Registros do caso — o que os conectores não trouxerem pode ser completado aqui. Campo
+              em branco permanece ausente e é apontado como evidência faltante; o salvamento é
+              automático ao sair do campo.
+            </p>
+            <TransactionForm medCase={medCase} />
+            <CustomerForm medCase={medCase} />
+            <OrderForm medCase={medCase} />
+            <TrackingForm medCase={medCase} />
+          </div>
         </div>
       ) : null}
 
-      {activeTab === 'timeline' ? (
-        <Panel title={`Linha do tempo (${timeline.length})`}>
-          {timeline.length === 0 ? (
-            <EmptyState title="Nenhum evento datado">
-              Os eventos aparecem aqui conforme os dados do caso são registrados com data e hora.
-            </EmptyState>
-          ) : (
-            <ol>
-              {timeline.map((event, index) => (
-                <li
-                  key={`${event.type}-${event.occurredAt}-${index}`}
-                  className="relative flex gap-4 pb-4 last:pb-0"
-                >
-                  <span className="tabular w-36 shrink-0 pt-0.5 text-xs text-[var(--color-text-muted)]">
-                    {formatDateTime(event.occurredAt)}
-                  </span>
-                  <span className="relative flex flex-col items-center">
-                    <span
-                      aria-hidden
-                      className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-accent)]"
-                    />
-                    {index < timeline.length - 1 ? (
-                      <span aria-hidden className="w-px flex-1 bg-[var(--color-border)]" />
-                    ) : null}
-                  </span>
-                  <span className="pb-1">
-                    <span className="block text-[13px]">{event.description}</span>
-                    <span className="block text-xs text-[var(--color-text-muted)]">
-                      {EVIDENCE_SOURCE_LABEL[event.source]}
-                      {event.sourceReference ? (
-                        <>
-                          {' · '}
-                          <MonoId value={event.sourceReference} />
-                        </>
-                      ) : null}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </Panel>
-      ) : null}
-
-      {activeTab === 'defense' ? (
+      {activeTab === 'defesa' ? (
         <div className="space-y-4">
-          <Panel title={`Versões (${defenses.length})`} flush>
+          <Panel
+            title={`Versões (${defenses.length})`}
+            flush
+            actions={
+              <form action={generateDefenseAction}>
+                <input type="hidden" name="medId" value={med.id} />
+                <button
+                  type="submit"
+                  className="inline-flex h-7 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px] font-medium hover:bg-[var(--color-surface-hover)]"
+                >
+                  Regerar
+                </button>
+              </form>
+            }
+          >
             {defenses.length === 0 ? (
               <div className="p-4">
-                <EmptyState
-                  title="Nenhuma defesa gerada"
-                  action={
-                    <form action={generateDefenseAction}>
-                      <input type="hidden" name="medId" value={med.id} />
-                      <button
-                        type="submit"
-                        className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)]"
-                      >
-                        Gerar defesa
-                      </button>
-                    </form>
-                  }
-                >
-                  A defesa é montada apenas com as evidências registradas — nada é inventado.
+                <EmptyState title="Nenhuma minuta gerada">
+                  A minuta nasce com o MED; use Regerar para criá-la com as evidências atuais.
                 </EmptyState>
               </div>
             ) : (
@@ -616,11 +694,9 @@ export default async function MedDetailPage({
                   {defenses.map((defense) => (
                     <tr key={defense.id}>
                       <Td>
-                        <span className="inline-flex h-5 items-center rounded bg-[#f4f4f5] px-1.5 text-[11px] font-medium text-[#3f3f46]">
-                          v{defense.version}
-                        </span>
+                        <SubtleBadge tone="neutral">v{defense.version}</SubtleBadge>
                       </Td>
-                      <Td className="tabular">{formatDateTime(defense.generatedAt)}</Td>
+                      <Td className="tabular">{formatDateTimeSmart(defense.generatedAt)}</Td>
                       <Td className="tabular text-right">{defense.claims.length}</Td>
                       <Td>
                         <ScoreBar value={defense.score.total} max={defense.score.max} width="w-16" />
@@ -668,7 +744,7 @@ export default async function MedDetailPage({
                     {latestDefense.narrative.guardRejections[0]}
                   </p>
                 ) : null}
-                <div className="max-w-[75ch] whitespace-pre-line text-[14px] leading-relaxed text-[var(--color-text)]">
+                <div className="max-w-[70ch] whitespace-pre-line text-[14px] leading-relaxed text-[var(--color-text)]">
                   {latestDefense.narrative.body}
                 </div>
               </Panel>
@@ -677,80 +753,7 @@ export default async function MedDetailPage({
         </div>
       ) : null}
 
-      {activeTab === 'documents' ? (
-        <div className="space-y-4">
-          <Panel title={`Documentos (${medCase.documents.length})`} flush>
-            {medCase.documents.length === 0 ? (
-              <div className="p-4">
-                <EmptyState title="Nenhum documento anexado">
-                  Envie o arquivo ou registre a referência de um documento que já existe no seu
-                  sistema.
-                </EmptyState>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <Th>Arquivo</Th>
-                    <Th>Tipo</Th>
-                    <Th>Origem</Th>
-                    <Th>Anexado em</Th>
-                    <Th className="text-right">Abrir</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {medCase.documents.map((document) => {
-                    const link = documentLinks.get(document.id) ?? null;
-                    return (
-                      <tr key={document.id}>
-                        <Td className="font-medium">{document.filename}</Td>
-                        <Td className="text-[var(--color-text-secondary)]">
-                          {DOCUMENT_KIND_LABEL[document.kind]}
-                        </Td>
-                        <Td className="text-[var(--color-text-secondary)]">
-                          {EVIDENCE_SOURCE_LABEL[document.source]}
-                        </Td>
-                        <Td className="tabular">{formatDateTime(document.uploadedAt)}</Td>
-                        <Td className="text-right">
-                          {link ? (
-                            <a
-                              href={link}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-medium text-[var(--color-text)] hover:underline"
-                            >
-                              Abrir
-                            </a>
-                          ) : (
-                            <span
-                              className="text-xs text-[var(--color-text-muted)]"
-                              title="Configure a assinatura de links para gerar URLs de download"
-                            >
-                              —
-                            </span>
-                          )}
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </Panel>
-          <DocumentUploadForm medId={med.id} storageAvailable={storageAvailable} />
-          <DocumentForm medId={med.id} />
-        </div>
-      ) : null}
-
-      {activeTab === 'comprovantes' ? (
-        <CommunicationPanel
-          medCase={{ ...medCase, evidences }}
-          template={activeTemplate}
-          reconstructions={reconstructions}
-        />
-      ) : null}
-
-      {activeTab === 'submission' ? (
+      {activeTab === 'envio' ? (
         <div className="space-y-4">
           <Panel
             title="Preparar envio"
@@ -809,9 +812,9 @@ export default async function MedDetailPage({
                         </StatusDot>
                       </Td>
                       <Td>
-                        <MonoId value={submission.defenseId} />
+                        <CopyId value={submission.defenseId} />
                       </Td>
-                      <Td className="tabular">{formatDateTime(submission.createdAt)}</Td>
+                      <Td className="tabular">{formatDateTimeSmart(submission.createdAt)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -821,47 +824,53 @@ export default async function MedDetailPage({
         </div>
       ) : null}
 
-      {activeTab === 'audit' ? (
-        <Panel title={`Auditoria (${audit.length})`} flush>
-          {audit.length === 0 ? (
-            <div className="p-4">
-              <EmptyState title="Nenhum evento registrado">
-                Toda alteração neste caso fica registrada aqui, com autor e origem.
-              </EmptyState>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    <Th>Quando</Th>
-                    <Th>Ação</Th>
-                    <Th>Registro</Th>
-                    <Th>Autor</Th>
-                    <Th>Origem</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {audit.map((entry) => (
-                    <tr key={entry.id}>
-                      <Td className="tabular whitespace-nowrap">
-                        {formatDateTime(entry.occurredAt)}
-                      </Td>
-                      <Td>{AUDIT_ACTION_LABEL[entry.action]}</Td>
-                      <Td>
-                        <MonoId value={entry.entityId} />
-                      </Td>
-                      <Td className="text-xs text-[var(--color-text-secondary)]">{entry.actor}</Td>
-                      <Td className="text-xs text-[var(--color-text-secondary)]">
-                        {EVIDENCE_SOURCE_LABEL[entry.source]}
-                      </Td>
+      {activeTab === 'auditoria' ? (
+        <div className="space-y-4">
+          <Panel title={`Linha do tempo (${timeline.length})`}>
+            <CaseTimeline timeline={timeline} />
+          </Panel>
+
+          <Panel title={`Registro de alterações (${audit.length})`} flush>
+            {audit.length === 0 ? (
+              <div className="p-4">
+                <EmptyState title="Nenhum evento registrado">
+                  Toda alteração neste caso fica registrada aqui, com autor e origem.
+                </EmptyState>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <Th>Quando</Th>
+                      <Th>Ação</Th>
+                      <Th>Registro</Th>
+                      <Th>Autor</Th>
+                      <Th>Origem</Th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Panel>
+                  </thead>
+                  <tbody>
+                    {audit.map((entry) => (
+                      <tr key={entry.id}>
+                        <Td className="tabular whitespace-nowrap">
+                          {formatDateTimeSmart(entry.occurredAt)}
+                        </Td>
+                        <Td>{AUDIT_ACTION_LABEL[entry.action]}</Td>
+                        <Td>
+                          <CopyId value={entry.entityId} />
+                        </Td>
+                        <Td className="text-xs text-[var(--color-text-secondary)]">{entry.actor}</Td>
+                        <Td className="text-xs text-[var(--color-text-secondary)]">
+                          {EVIDENCE_SOURCE_LABEL[entry.source]}
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+        </div>
       ) : null}
     </div>
   );

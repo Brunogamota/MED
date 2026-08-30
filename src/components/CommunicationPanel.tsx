@@ -70,7 +70,7 @@ export function CommunicationPanel({
           {COMMUNICATION_TEMPLATES.map((option) => (
             <Link
               key={option}
-              href={`/meds/${medId}?tab=comprovantes&modelo=${option}`}
+              href={`/meds/${medId}?tab=evidencias&modelo=${option}`}
               className={`inline-flex h-8 items-center rounded-md border px-3 text-[13px] font-medium transition-colors duration-[120ms] ${
                 option === template
                   ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'

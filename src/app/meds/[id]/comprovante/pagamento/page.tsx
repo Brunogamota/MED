@@ -33,7 +33,7 @@ export default async function ComprovantePagamentoPage({
     <div className="mx-auto max-w-[440px] py-4">
       <div className="mb-3 flex items-center justify-between print:hidden">
         <Link
-          href={`/meds/${id}?tab=comprovantes`}
+          href={`/meds/${id}?tab=evidencias`}
           className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
         >
           ← Voltar ao MED
