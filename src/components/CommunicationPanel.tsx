@@ -11,7 +11,7 @@ import {
 } from '@/domain/communication/receipt';
 import { EVIDENCE_SOURCE_LABEL } from '@/lib/labels';
 import { Panel, EmptyState } from '@/components/ui';
-import { Field, Select, SubmitButton } from '@/components/form';
+import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
 import { addCommunicationAction } from '@/app/meds/actions';
@@ -27,13 +27,6 @@ import { addCommunicationAction } from '@/app/meds/actions';
  * nunca uma captura da caixa de entrada do cliente.
  */
 
-function localDateTime(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  const offset = parsed.getTimezoneOffset() * 60_000;
-  return new Date(parsed.getTime() - offset).toISOString().slice(0, 16);
-}
 
 export function CommunicationPanel({
   medCase,
@@ -102,12 +95,7 @@ export function CommunicationPanel({
               hint="E-mail ou contato que recebeu a mensagem"
             />
             <Field label="Assunto" name="subject" required defaultValue={draft.subject} />
-            <Field
-              label="Enviado em"
-              name="sentAt"
-              type="datetime-local"
-              defaultValue={localDateTime(draft.sentAt)}
-            />
+            <DateTimeField label="Enviado em" name="sentAt" defaultValue={draft.sentAt} />
           </div>
           <div>
             <label

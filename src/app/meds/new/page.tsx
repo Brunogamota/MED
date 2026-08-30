@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { MED_REASONS, PRODUCT_TYPES } from '@/domain/types';
 import { Panel } from '@/components/ui';
-import { Field, FormGrid, Select, SubmitButton } from '@/components/form';
+import { DateTimeField, Field, FormGrid, MoneyField, Select, SubmitButton } from '@/components/form';
 import { createMedAction } from '@/app/meds/actions';
 import { MED_REASON_LABEL, PRODUCT_TYPE_LABEL } from '@/lib/labels';
 
@@ -31,11 +31,11 @@ export default function NewMedPage() {
           <FormGrid>
             <Field label="Identificador do MED" name="institutionMedId" required placeholder="MED-2026-0001" />
             <Field label="Instituição solicitante" name="requestingInstitution" />
-            <Field label="Valor" name="amount" type="number" required placeholder="349,90" />
+            <MoneyField label="Valor" name="amount" required />
             <Field label="Moeda" name="currency" defaultValue="BRL" />
-            <Field label="Abertura do MED" name="openedAt" type="datetime-local" required />
-            <Field label="Prazo de resposta" name="responseDeadlineAt" type="datetime-local" />
-            <Field label="Data da transação" name="transactionAt" type="datetime-local" />
+            <DateTimeField label="Abertura do MED" name="openedAt" required />
+            <DateTimeField label="Prazo de resposta" name="responseDeadlineAt" />
+            <DateTimeField label="Data da transação" name="transactionAt" />
             <Select label="Motivo" name="reason" options={MED_REASONS} labels={MED_REASON_LABEL} required />
             <Field label="ID da transação" name="transactionId" />
             <Field label="End-to-end" name="endToEndId" />

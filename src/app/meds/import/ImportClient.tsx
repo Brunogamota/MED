@@ -7,6 +7,7 @@ import {
   previewImportAction,
   type ImportPreviewState,
 } from '@/app/meds/actions';
+import { DateTimeField } from '@/components/fields';
 
 /**
  * Importacao em dois passos: analisar e depois confirmar.
@@ -72,19 +73,11 @@ export function ImportClient() {
                 className="mt-1 w-full rounded border border-[var(--color-border)] bg-white px-2 py-1 text-xs"
               />
             </label>
-            <label className="block">
-              <span className="block text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
-                Data de abertura do lote
-              </span>
-              <input
-                type="datetime-local"
-                name="defaultOpenedAt"
-                className="mt-1 w-full rounded border border-[var(--color-border)] bg-white px-2 py-1.5 text-sm"
-              />
-              <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
-                Usada só nas linhas em que o arquivo não traz a data.
-              </span>
-            </label>
+            <DateTimeField
+              label="Data de abertura do lote"
+              name="defaultOpenedAt"
+              hint="Usada só nas linhas em que o arquivo não traz a data."
+            />
             <label className="block">
               <span className="block text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
                 Referência do lote

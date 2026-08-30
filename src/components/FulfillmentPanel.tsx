@@ -2,7 +2,7 @@ import { DELIVERY_CHANNELS, EVIDENCE_SOURCES } from '@/domain/types';
 import type { ProductType } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import { Panel } from '@/components/ui';
-import { Field, FormGrid, Select, SubmitButton } from '@/components/form';
+import { DateTimeField, Field, FormGrid, Select, SubmitButton } from '@/components/form';
 import { recordDigitalDeliveryAction, recordShipmentAction } from '@/app/meds/actions';
 import {
   DELIVERY_CHANNEL_LABEL,
@@ -23,17 +23,9 @@ import {
  * afirmação — sem a data, o marco não entra na linha do tempo nem no PDF.
  */
 
-function localDateTime(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  const offset = parsed.getTimezoneOffset() * 60_000;
-  return new Date(parsed.getTime() - offset).toISOString().slice(0, 16);
-}
-
 function milestoneValue(medCase: MedCase, status: string): string | undefined {
   const event = medCase.tracking?.events.find((entry) => entry.status === status);
-  return localDateTime(event?.occurredAt);
+  return event?.occurredAt;
 }
 
 function GenerateToggle() {
@@ -104,48 +96,39 @@ export function ShipmentPanel({ medCase }: { medCase: MedCase }) {
             Quando cada etapa aconteceu
           </p>
           <FormGrid>
-            <Field
+            <DateTimeField
               label="Entrou em produção"
               name="inProductionAt"
-              type="datetime-local"
               defaultValue={milestoneValue(medCase, 'IN_PRODUCTION')}
             />
-            <Field
+            <DateTimeField
               label="Postado"
               name="postedAt"
-              type="datetime-local"
-              defaultValue={localDateTime(tracking?.postedAt) ?? milestoneValue(medCase, 'POSTED')}
+              defaultValue={tracking?.postedAt ?? milestoneValue(medCase, 'POSTED')}
             />
-            <Field
+            <DateTimeField
               label="Entrou em trânsito"
               name="inTransitAt"
-              type="datetime-local"
               defaultValue={milestoneValue(medCase, 'IN_TRANSIT')}
             />
-            <Field
+            <DateTimeField
               label="Saiu para entrega"
               name="outForDeliveryAt"
-              type="datetime-local"
               defaultValue={milestoneValue(medCase, 'OUT_FOR_DELIVERY')}
             />
-            <Field
+            <DateTimeField
               label="Entregue"
               name="deliveredAt"
-              type="datetime-local"
-              defaultValue={
-                localDateTime(tracking?.deliveredAt) ?? milestoneValue(medCase, 'DELIVERED')
-              }
+              defaultValue={tracking?.deliveredAt ?? milestoneValue(medCase, 'DELIVERED')}
             />
-            <Field
+            <DateTimeField
               label="Tentativa sem sucesso"
               name="notDeliveredAt"
-              type="datetime-local"
               defaultValue={milestoneValue(medCase, 'NOT_DELIVERED')}
             />
-            <Field
+            <DateTimeField
               label="Devolvido"
               name="returnedAt"
-              type="datetime-local"
               defaultValue={milestoneValue(medCase, 'RETURNED')}
             />
           </FormGrid>
@@ -190,11 +173,10 @@ export function DigitalDeliveryPanel({ medCase }: { medCase: MedCase }) {
             defaultValue={delivery?.sentTo ?? undefined}
             hint="E-mail ou contato que recebeu o acesso"
           />
-          <Field
+          <DateTimeField
             label="Enviado em"
             name="sentAt"
-            type="datetime-local"
-            defaultValue={localDateTime(delivery?.sentAt)}
+            defaultValue={delivery?.sentAt}
           />
           <Field
             label="Plataforma"
@@ -209,11 +191,10 @@ export function DigitalDeliveryPanel({ medCase }: { medCase: MedCase }) {
             Uso pelo comprador (quando você tiver)
           </p>
           <FormGrid>
-            <Field
+            <DateTimeField
               label="Primeiro acesso"
               name="firstAccessAt"
-              type="datetime-local"
-              defaultValue={localDateTime(delivery?.firstAccessAt)}
+              defaultValue={delivery?.firstAccessAt}
             />
             <Field
               label="Número de acessos"

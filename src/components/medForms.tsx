@@ -9,7 +9,7 @@ import {
 import type { MedCase } from '@/domain/case';
 import { listEvidenceDefinitions } from '@/domain/evidence/catalog';
 import { Panel } from '@/components/ui';
-import { Field, FormGrid, Select, SubmitButton } from '@/components/form';
+import { DateTimeField, Field, FormGrid, MoneyField, Select, SubmitButton } from '@/components/form';
 import { AutoSaveForm } from '@/components/AutoSaveForm';
 import {
   addDocumentAction,
@@ -38,14 +38,6 @@ const EVIDENCE_TYPE_LABEL = Object.fromEntries(
   listEvidenceDefinitions().map((definition) => [definition.type, definition.label]),
 );
 
-function localDateTime(value: string | null | undefined): string | undefined {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  const offset = parsed.getTimezoneOffset() * 60_000;
-  return new Date(parsed.getTime() - offset).toISOString().slice(0, 16);
-}
-
 export function TransactionForm({ medCase }: { medCase: MedCase }) {
   const transaction = medCase.transaction;
   return (
@@ -53,27 +45,24 @@ export function TransactionForm({ medCase }: { medCase: MedCase }) {
       <AutoSaveForm action={upsertTransactionAction} className="space-y-4">
         <input type="hidden" name="medId" value={medCase.med.id} />
         <FormGrid>
-          <Field
+          <MoneyField
             label="Valor"
             name="amount"
-            type="number"
             required
-            defaultValue={String(transaction?.amount ?? medCase.med.amount)}
+            defaultValue={transaction?.amount ?? medCase.med.amount}
           />
           <Field label="Moeda" name="currency" defaultValue={transaction?.currency ?? 'BRL'} />
           <Field label="Método" name="method" defaultValue={transaction?.method ?? undefined} />
           <Field label="Situação" name="status" defaultValue={transaction?.status ?? undefined} />
-          <Field
+          <DateTimeField
             label="Autorizado em"
             name="authorizedAt"
-            type="datetime-local"
-            defaultValue={localDateTime(transaction?.authorizedAt)}
+            defaultValue={transaction?.authorizedAt}
           />
-          <Field
+          <DateTimeField
             label="Capturado em"
             name="capturedAt"
-            type="datetime-local"
-            defaultValue={localDateTime(transaction?.capturedAt)}
+            defaultValue={transaction?.capturedAt}
           />
           <Field label="Provedor" name="provider" defaultValue={transaction?.provider ?? undefined} />
           <Field
@@ -122,11 +111,10 @@ export function CustomerForm({ medCase }: { medCase: MedCase }) {
             name="phone"
             defaultValue={customer?.identification.phone ?? undefined}
           />
-          <Field
+          <DateTimeField
             label="Cliente desde"
             name="accountCreatedAt"
-            type="datetime-local"
-            defaultValue={localDateTime(customer?.accountCreatedAt)}
+            defaultValue={customer?.accountCreatedAt}
           />
           <Field label="ID externo" name="externalId" defaultValue={customer?.externalId ?? undefined} />
         </FormGrid>
@@ -161,21 +149,15 @@ export function OrderForm({ medCase }: { medCase: MedCase }) {
             defaultValue={order?.productType ?? medCase.med.productType ?? 'PHYSICAL'}
           />
           <Field label="Número do pedido" name="externalId" defaultValue={order?.externalId ?? undefined} />
-          <Field
+          <DateTimeField
             label="Data da compra"
             name="placedAt"
-            type="datetime-local"
-            defaultValue={localDateTime(order?.placedAt)}
+            defaultValue={order?.placedAt}
           />
-          <Field
+          <MoneyField
             label="Valor total"
             name="totalAmount"
-            type="number"
-            defaultValue={
-              order?.totalAmount === null || order?.totalAmount === undefined
-                ? undefined
-                : String(order.totalAmount)
-            }
+            defaultValue={order?.totalAmount}
           />
           <Field label="IP do checkout" name="checkoutIp" defaultValue={order?.checkoutIp ?? undefined} />
           <Field
@@ -200,15 +182,10 @@ export function OrderForm({ medCase }: { medCase: MedCase }) {
             type="number"
             defaultValue={item ? String(item.quantity) : undefined}
           />
-          <Field
+          <MoneyField
             label="Valor unitário"
             name="itemUnitAmount"
-            type="number"
-            defaultValue={
-              item?.unitAmount === null || item?.unitAmount === undefined
-                ? undefined
-                : String(item.unitAmount)
-            }
+            defaultValue={item?.unitAmount}
           />
         </FormGrid>
         <FormGrid>
@@ -257,17 +234,15 @@ export function TrackingForm({ medCase }: { medCase: MedCase }) {
             required
             defaultValue={tracking?.source ?? 'MANUAL'}
           />
-          <Field
+          <DateTimeField
             label="Postado em"
             name="postedAt"
-            type="datetime-local"
-            defaultValue={localDateTime(tracking?.postedAt)}
+            defaultValue={tracking?.postedAt}
           />
-          <Field
+          <DateTimeField
             label="Entregue em"
             name="deliveredAt"
-            type="datetime-local"
-            defaultValue={localDateTime(tracking?.deliveredAt)}
+            defaultValue={tracking?.deliveredAt}
           />
           <Field label="Recebido por" name="receiverName" defaultValue={tracking?.receiverName ?? undefined} />
           <Field
@@ -317,7 +292,7 @@ export function EvidenceForm({ medId }: { medId: string }) {
             required
             defaultValue="UNVERIFIED"
           />
-          <Field label="Recebido em" name="receivedAt" type="datetime-local" />
+          <DateTimeField label="Recebido em" name="receivedAt" />
           <Field label="Texto exibido" name="displayValue" />
         </FormGrid>
         <SubmitButton>Adicionar evidência</SubmitButton>

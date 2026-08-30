@@ -2,11 +2,16 @@ import type { ReactNode } from 'react';
 
 /**
  * Campos do padrao console: 32px de altura, borda 1px strong, raio 6px,
- * rotulo acima em 12px/500 sentence case. Select nao usa o chrome nativo:
- * appearance-none + chevron proprio, mesma altura e borda dos demais campos.
+ * rotulo acima em 12px/500 sentence case.
+ *
+ * Data/hora, dinheiro e select vem de components/fields.tsx (controles
+ * proprios — nenhum input nativo cru chega a tela). Numero generico vira
+ * texto com inputMode numerico: sem spinner, teclado certo no toque.
  *
  * Campo em branco continua produzindo dado ausente, nunca default.
  */
+
+export { DateTimeField, MoneyField, SelectField as Select } from '@/components/fields';
 
 const FIELD_CLASS =
   'h-8 w-full rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]';
@@ -31,6 +36,7 @@ export function Field({
   className?: string;
 }) {
   const id = `field-${name}`;
+  const numeric = type === 'number';
   return (
     <div className={className}>
       <label
@@ -43,69 +49,16 @@ export function Field({
       <input
         id={id}
         name={name}
-        type={type}
+        type={numeric ? 'text' : type}
+        inputMode={numeric ? 'decimal' : undefined}
         required={required}
         placeholder={placeholder}
         defaultValue={defaultValue}
-        step={type === 'number' ? 'any' : undefined}
-        className={FIELD_CLASS}
+        className={`${FIELD_CLASS}${numeric ? ' tabular' : ''}`}
       />
       {hint ? (
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>
       ) : null}
-    </div>
-  );
-}
-
-/** Chevron proprio: o select nativo cru e proibido pela direcao. */
-const CHEVRON =
-  "url(\"data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
-
-export function Select({
-  label,
-  name,
-  options,
-  labels,
-  required = false,
-  defaultValue,
-  includeBlank = false,
-  className = '',
-}: {
-  label: string;
-  name: string;
-  options: readonly string[];
-  /** Traducao valor tecnico -> rotulo. Enum bruto nunca chega ao usuario. */
-  labels?: Partial<Record<string, string>>;
-  required?: boolean;
-  defaultValue?: string;
-  includeBlank?: boolean;
-  className?: string;
-}) {
-  const id = `field-${name}`;
-  return (
-    <div className={className}>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)]"
-      >
-        {label}
-        {required ? <span className="text-[var(--color-danger)]"> *</span> : null}
-      </label>
-      <select
-        id={id}
-        name={name}
-        required={required}
-        defaultValue={defaultValue ?? (includeBlank ? '' : undefined)}
-        className={`${FIELD_CLASS} appearance-none bg-no-repeat pr-8`}
-        style={{ backgroundImage: CHEVRON, backgroundPosition: 'right 8px center' }}
-      >
-        {includeBlank ? <option value="">—</option> : null}
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {labels?.[option] ?? option}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }
