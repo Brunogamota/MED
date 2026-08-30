@@ -17,9 +17,21 @@ export function PaymentReceiptCard({ medCase }: { medCase: MedCase }) {
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#2b2b2e] bg-[#121214] shadow-sm">
-      {/* Selo de reconstrução — inseparável da peça */}
-      <div className="border-b border-[#3a2f16] bg-[#231b0c] px-5 py-2.5 text-[11px] leading-snug text-[#e0b64a]">
-        {view.stamp}
+      {/* Selo de reconstrução — inseparável da peça, mais discreto que uma faixa cheia */}
+      <div className="flex items-start gap-1.5 border-b border-[#242427] px-5 py-1.5 text-[10px] leading-snug text-[#8a8a92]">
+        <svg
+          width={11}
+          height={11}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          className="mt-px shrink-0"
+          aria-hidden
+        >
+          <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+        </svg>
+        <span>{view.stamp}</span>
       </div>
 
       <div className="px-6 py-6">
