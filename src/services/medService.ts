@@ -515,6 +515,7 @@ export async function addCommunicationReconstruction(
     template: input.template,
     from: input.from,
     to: input.to,
+    toName: input.toName ?? null,
     subject: input.subject,
     sentAt: input.sentAt ?? null,
     body: input.body,

@@ -169,7 +169,15 @@ export function ClientEmailView({
 
       {/* Grade de metadados do registro de envio */}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-[var(--color-border)] px-5 py-4 sm:grid-cols-4">
-        <Field label="Destinatário" value={view.to || 'não informado'} />
+        <div className="min-w-0">
+          <dt className="text-[11px] text-[var(--color-text-muted)]">Destinatário</dt>
+          <dd className="mt-0.5 truncate text-[13px] text-[var(--color-text)]">
+            {view.toName || view.to || 'não informado'}
+          </dd>
+          {view.toName && view.to ? (
+            <dd className="truncate text-[11px] text-[var(--color-text-muted)]">{view.to}</dd>
+          ) : null}
+        </div>
         <Field label="Canal" value="E-mail" />
         <Field label="Tipo" value={COMMUNICATION_TEMPLATE_LABEL[view.template]} />
         <Field label="Enviado em" value={view.sentAtLabel ?? 'não informado'} />

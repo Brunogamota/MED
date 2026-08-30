@@ -14,7 +14,15 @@ describe('draftCommunication', () => {
     // O remetente é sempre o gateway que efetivamente envia — não a loja.
     expect(draft.from).toBe('IronPay');
     expect(draft.to).toBe('maria@example.com');
+    expect(draft.toName).toBe('Maria Souza');
     expect(draft.reference).toBe('AA123456789BR');
+  });
+
+  it('sem cliente cadastrado, usa o nome do pagador do MED', () => {
+    const medCase = makeCompleteCase();
+    medCase.customer = null;
+    const draft = draftCommunication(medCase, 'DELIVERY_CONFIRMATION');
+    expect(draft.toName).toBe(medCase.med.payer.name);
   });
 
   it('deixa destinatário vazio quando o caso não tem e-mail', () => {

@@ -448,6 +448,7 @@ export async function seedDemoData(repository: Repository): Promise<void> {
       template: 'DELIVERY_CONFIRMATION',
       from: EMAIL_SENDER_NAME,
       to: 'cliente.tres@exemplo.demo',
+      toName: 'Cliente Demonstração Três',
       subject: 'Seu pedido foi entregue',
       sentAt: days(-20),
       body:

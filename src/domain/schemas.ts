@@ -209,6 +209,7 @@ export const createCommunicationSchema = z.object({
   template: z.enum(['PURCHASE_CONFIRMATION', 'ACCESS_DELIVERY', 'DELIVERY_CONFIRMATION', 'GENERIC']),
   from: nonEmpty,
   to: nonEmpty,
+  toName: nonEmpty.optional(),
   subject: nonEmpty,
   sentAt: isoDateTime.optional(),
   body: nonEmpty,

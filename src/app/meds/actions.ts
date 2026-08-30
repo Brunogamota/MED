@@ -461,6 +461,7 @@ export async function addCommunicationAction(form: FormData): Promise<void> {
       template: text(form, 'template') ?? 'GENERIC',
       from: text(form, 'from'),
       to: text(form, 'to'),
+      toName: text(form, 'toName'),
       subject: text(form, 'subject'),
       sentAt: dateTime(form, 'sentAt'),
       body: text(form, 'body'),

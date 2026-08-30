@@ -57,6 +57,8 @@ export interface CommunicationReceipt {
   template: CommunicationTemplate;
   from: string;
   to: string;
+  /** Nome do destinatário, quando o caso tem — o e-mail sozinho não identifica ninguém no painel. */
+  toName?: string | null;
   subject: string;
   sentAt: IsoDateTime | null;
   body: string;
@@ -78,6 +80,7 @@ export interface ClientEmailView {
   /** Inicial do remetente, para o monograma da marca. */
   fromInitial: string;
   to: string;
+  toName: string | null;
   subject: string;
   sentAtLabel: string | null;
   paragraphs: string[];
@@ -115,6 +118,7 @@ export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmail
     from: receipt.from,
     fromInitial: (receipt.from.trim()[0] ?? '?').toUpperCase(),
     to: receipt.to,
+    toName: receipt.toName ?? null,
     subject: receipt.subject,
     sentAtLabel: formatDateTimeSmart(receipt.sentAt),
     paragraphs: receipt.body
@@ -144,10 +148,11 @@ export function draftCommunication(
     customer?.identification.email ??
     med.payer.email ??
     '';
+  const toName = customer?.identification.name ?? med.payer.name ?? null;
   const productName = order?.items[0]?.name ?? '';
   const sentAt = digitalDelivery?.sentAt ?? order?.placedAt ?? med.transactionAt ?? null;
 
-  const base = { from: EMAIL_SENDER_NAME, to, sentAt };
+  const base = { from: EMAIL_SENDER_NAME, to, toName, sentAt };
 
   switch (template) {
     case 'PURCHASE_CONFIRMATION':
@@ -205,6 +210,7 @@ export function parseCommunicationReceipt(value: JsonValue): CommunicationReceip
     template,
     from: str('from'),
     to: str('to'),
+    toName: typeof record.toName === 'string' ? (record.toName as string) : null,
     subject: str('subject'),
     sentAt: typeof record.sentAt === 'string' ? (record.sentAt as string) : null,
     body: str('body'),

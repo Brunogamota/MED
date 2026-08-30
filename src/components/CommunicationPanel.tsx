@@ -89,6 +89,12 @@ export function CommunicationPanel({
           <div className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
             <Field label="Remetente" name="from" required defaultValue={draft.from} />
             <Field
+              label="Nome do destinatário"
+              name="toName"
+              defaultValue={draft.toName ?? undefined}
+              hint="Quem recebeu — aparece no painel de envios"
+            />
+            <Field
               label="Destinatário"
               name="to"
               required
