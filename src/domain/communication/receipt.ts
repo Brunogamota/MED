@@ -57,20 +57,56 @@ export interface CommunicationReceipt {
   reference?: string | null;
 }
 
+/** Ação em destaque derivada da referência (link de acesso, código, rastreio). */
+export interface ClientEmailAction {
+  kind: 'LINK' | 'CODE' | 'TRACKING' | 'TEXT';
+  label: string;
+  value: string;
+}
+
 /** Modelo de visão do cliente, pronto para renderizar (UI e PDF). */
 export interface ClientEmailView {
+  template: CommunicationTemplate;
   from: string;
+  /** Inicial do remetente, para o monograma da marca. */
+  fromInitial: string;
   to: string;
   subject: string;
   sentAtLabel: string | null;
   paragraphs: string[];
   reference: string | null;
+  /** Referência apresentada como ação em destaque, quando há uma. */
+  action: ClientEmailAction | null;
   stamp: string;
+}
+
+function deriveAction(
+  template: CommunicationTemplate,
+  reference: string | null | undefined,
+): ClientEmailAction | null {
+  const value = reference?.trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value)) {
+    return {
+      kind: 'LINK',
+      label: template === 'ACCESS_DELIVERY' ? 'Acessar agora' : 'Abrir link',
+      value,
+    };
+  }
+  if (template === 'DELIVERY_CONFIRMATION') {
+    return { kind: 'TRACKING', label: 'Código de rastreio', value };
+  }
+  if (template === 'ACCESS_DELIVERY') {
+    return { kind: 'CODE', label: 'Acesso', value };
+  }
+  return { kind: 'TEXT', label: 'Referência', value };
 }
 
 export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmailView {
   return {
+    template: receipt.template,
     from: receipt.from,
+    fromInitial: (receipt.from.trim()[0] ?? '?').toUpperCase(),
     to: receipt.to,
     subject: receipt.subject,
     sentAtLabel: formatDateTime(receipt.sentAt),
@@ -79,6 +115,7 @@ export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmail
       .map((paragraph) => paragraph.trim())
       .filter((paragraph) => paragraph.length > 0),
     reference: receipt.reference ?? null,
+    action: deriveAction(receipt.template, receipt.reference),
     stamp: RECONSTRUCTION_STAMP,
   };
 }
