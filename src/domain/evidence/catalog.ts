@@ -47,7 +47,7 @@ const DEFINITIONS: EvidenceTypeDefinition[] = [
   // --- Transaction ---------------------------------------------------------
   def('TRANSACTION_RECEIPT', 'TRANSACTION', 'Comprovante da transação', 'STRONG', 'Documento base da operação contestada.'),
   def('END_TO_END_ID', 'TRANSACTION', 'End-to-end ID', 'STRONG', 'Identificador único da transação Pix.'),
-  def('PAYMENT_AUTHORIZATION', 'TRANSACTION', 'Autorizacao do pagamento', 'STRONG', 'Confirma que o pagamento foi aprovado pelo provedor.'),
+  def('PAYMENT_AUTHORIZATION', 'TRANSACTION', 'Autorização do pagamento', 'STRONG', 'Confirma que o pagamento foi aprovado pelo provedor.'),
   def('ORDER_RECORD', 'TRANSACTION', 'Registro do pedido', 'MEDIUM', 'Liga a transação a uma compra concreta.'),
   def('ORDER_PLACED_AT', 'TRANSACTION', 'Data e hora da compra', 'MEDIUM', 'Ancora temporal da operação.'),
 
@@ -93,8 +93,8 @@ const DEFINITIONS: EvidenceTypeDefinition[] = [
 
   // --- Documentation -------------------------------------------------------
   def('INVOICE', 'DOCUMENTATION', 'Nota fiscal', 'STRONG', 'Documento fiscal da operação.'),
-  def('COMMUNICATION_HISTORY', 'DOCUMENTATION', 'Histórico de comunicacao', 'MEDIUM', 'Trocas de mensagens com o cliente.'),
-  def('REFUND_POLICY', 'DOCUMENTATION', 'Politica de reembolso', 'WEAK', 'Regras aceitas no momento da compra.'),
+  def('COMMUNICATION_HISTORY', 'DOCUMENTATION', 'Histórico de comunicação', 'MEDIUM', 'Trocas de mensagens com o cliente.'),
+  def('REFUND_POLICY', 'DOCUMENTATION', 'Política de reembolso', 'WEAK', 'Regras aceitas no momento da compra.'),
   def('OTHER_DOCUMENT', 'DOCUMENTATION', 'Outro documento', 'WEAK', 'Documento complementar anexado ao caso.'),
 ];
 

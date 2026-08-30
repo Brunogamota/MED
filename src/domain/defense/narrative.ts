@@ -111,7 +111,7 @@ export function renderNarrative(input: RenderNarrativeInput): DefenseNarrative {
   }
 
   paragraphs.push(
-    'Todas as informações acima constam dos registros do estabelecimento e das integracoes indicadas no pacote de evidências anexo, com identificação da origem de cada dado. Colocamo-nos à disposição para prestar esclarecimentos adicionais.',
+    'Todas as informações acima constam dos registros do estabelecimento e das integrações indicadas no pacote de evidências anexo, com identificação da origem de cada dado. Colocamo-nos à disposição para prestar esclarecimentos adicionais.',
   );
 
   return {

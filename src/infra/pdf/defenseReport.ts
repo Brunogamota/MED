@@ -1,14 +1,23 @@
+import { createHash } from 'node:crypto';
 import type { EvidencePack } from '@/domain/types';
 import { getEvidenceDefinition } from '@/domain/evidence/catalog';
 import { evaluateStrength } from '@/domain/evidence/strength';
 import { formatAddress, formatAmount, formatDate, formatDateTime } from '@/lib/format';
-import { DELIVERY_CHANNEL_LABEL, SHIPMENT_STATUS_LABEL } from '@/lib/labels';
+import {
+  CATEGORY_LABEL,
+  DELIVERY_CHANNEL_LABEL,
+  DOCUMENT_KIND_LABEL,
+  MED_STATUS_LABEL,
+  PRODUCT_TYPE_LABEL,
+  SHIPMENT_STATUS_LABEL,
+  STRENGTH_LABEL,
+  VERIFICATION_STATUS_LABEL,
+} from '@/lib/labels';
 import {
   A4,
   COLORS,
   CONTENT_WIDTH,
   MARGIN,
-  addPage,
   createDocument,
   drawFooters,
   drawKeyValueGrid,
@@ -86,7 +95,7 @@ function drawCover(context: DocumentContext, pack: EvidencePack): void {
     context,
     [
       { label: 'MED ID', value: med.medId },
-      { label: 'TRANSACTION ID', value: med.transactionId ?? 'Não informado' },
+      { label: 'ID DA TRANSAÇÃO', value: med.transactionId ?? 'Não informado' },
       { label: 'END-TO-END ID', value: med.endToEndId ?? 'Não informado' },
       { label: 'VALOR', value: formatAmount(med.amount, med.currency) },
       { label: 'DATA DA TRANSAÇÃO', value: formatDateTime(med.transactionAt) ?? 'Não informada' },
@@ -97,7 +106,7 @@ function drawCover(context: DocumentContext, pack: EvidencePack): void {
       },
       { label: 'INSTITUIÇÃO SOLICITANTE', value: med.requestingInstitution ?? 'Não informada' },
       { label: 'MOTIVO', value: REASON_LABEL[med.reason] ?? med.reason },
-      { label: 'STATUS', value: med.status },
+      { label: 'SITUAÇÃO', value: MED_STATUS_LABEL[med.status] },
     ],
     2,
   );
@@ -119,7 +128,7 @@ function drawScorePanel(context: DocumentContext, pack: EvidencePack): void {
     color: COLORS.panel,
   });
 
-  context.page.drawText('DOCUMENTATION SCORE', {
+  context.page.drawText('SCORE DOCUMENTAL', {
     x: MARGIN + 12,
     y: panelTop - 18,
     size: 8,
@@ -136,7 +145,7 @@ function drawScorePanel(context: DocumentContext, pack: EvidencePack): void {
 
   let lineY = panelTop - 20;
   for (const component of score.components) {
-    const label = `${component.category}: ${component.earned}/${component.max}`;
+    const label = `${CATEGORY_LABEL[component.category]}: ${component.earned}/${component.max}`;
     context.page.drawText(sanitize(label), {
       x: MARGIN + 160,
       y: lineY,
@@ -167,7 +176,7 @@ function drawScorePanel(context: DocumentContext, pack: EvidencePack): void {
   context.y = panelTop - panelHeight - 8;
   drawParagraph(
     context,
-    'Este indicador mede exclusivamente a completude e a força documental do conjunto de evidências segundo as regras internas do sistema. Não representa probabilidade de exito na contestação.',
+    'Este indicador mede exclusivamente a completude e a força documental do conjunto de evidências segundo as regras internas do sistema. Não representa probabilidade de êxito na contestação.',
     { size: 7.5, color: COLORS.muted },
   );
 }
@@ -262,12 +271,15 @@ function drawEvidences(context: DocumentContext, pack: EvidencePack): void {
       const origin = `${SOURCE_LABEL[evidence.source] ?? evidence.source}${
         evidence.sourceReference ? `\nref. ${evidence.sourceReference}` : ''
       }`;
+      const displayed = /^\d{4}-\d{2}-\d{2}T/.test(value)
+        ? (formatDateTime(value) ?? value)
+        : value;
       return [
         definition.label,
-        value,
+        displayed,
         origin,
-        evidence.verificationStatus,
-        evaluateStrength(evidence).strength,
+        VERIFICATION_STATUS_LABEL[evidence.verificationStatus],
+        STRENGTH_LABEL[evaluateStrength(evidence).strength],
       ];
     }),
   );
@@ -277,7 +289,7 @@ function drawMissing(context: DocumentContext, pack: EvidencePack): void {
   drawSectionTitle(context, 'Evidências não disponíveis');
 
   if (pack.defense.missingEvidences.length === 0) {
-    drawParagraph(context, 'Todas as evidências previstas para este caso estao disponíveis.', {
+    drawParagraph(context, 'Todas as evidências previstas para este caso estão disponíveis.', {
       color: COLORS.success,
     });
     return;
@@ -299,8 +311,8 @@ function drawMissing(context: DocumentContext, pack: EvidencePack): void {
     ],
     pack.defense.missingEvidences.map((missing) => [
       missing.label,
-      missing.status,
-      missing.necessity,
+      missing.status === 'PENDING' ? 'Pendente' : missing.status === 'CONFLICTING' ? 'Conflitante' : 'Faltante',
+      missing.necessity === 'REQUIRED' ? 'Obrigatória' : missing.necessity === 'RECOMMENDED' ? 'Recomendada' : 'Opcional',
       missing.rationale,
     ]),
   );
@@ -334,7 +346,14 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
   drawSectionTitle(context, 'Dados da compra');
   drawKeyValueGrid(context, [
     { label: 'PEDIDO', value: order?.externalId ?? order?.id ?? 'Não informado' },
-    { label: 'TIPO DE PRODUTO', value: order?.productType ?? med.productType ?? 'Não informado' },
+    {
+      label: 'TIPO DE PRODUTO',
+      value: order?.productType
+        ? PRODUCT_TYPE_LABEL[order.productType]
+        : med.productType
+          ? PRODUCT_TYPE_LABEL[med.productType]
+          : 'Não informado',
+    },
     { label: 'DATA DA COMPRA', value: formatDateTime(order?.placedAt) ?? 'Não informada' },
     {
       label: 'VALOR DO PEDIDO',
@@ -368,7 +387,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
   drawSectionTitle(context, 'Dados do pagamento');
   drawKeyValueGrid(context, [
     { label: 'MÉTODO', value: transaction?.method ?? 'Não informado' },
-    { label: 'STATUS', value: transaction?.status ?? 'Não informado' },
+    { label: 'SITUAÇÃO', value: transaction?.status ?? 'Não informado' },
     { label: 'AUTORIZADO EM', value: formatDateTime(transaction?.authorizedAt) ?? 'Não informado' },
     { label: 'PROVEDOR', value: transaction?.provider ?? 'Não informado' },
     { label: 'REFERÊNCIA', value: transaction?.providerReference ?? 'Não informada' },
@@ -398,7 +417,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
     drawKeyValueGrid(context, [
       { label: 'TRANSPORTADORA', value: tracking.carrier ?? 'Não informada' },
       { label: 'CÓDIGO DE RASTREIO', value: tracking.trackingCode ?? 'Não informado' },
-      { label: 'STATUS', value: SHIPMENT_STATUS_LABEL[tracking.status] },
+      { label: 'SITUAÇÃO', value: SHIPMENT_STATUS_LABEL[tracking.status] },
       { label: 'POSTAGEM', value: formatDateTime(tracking.postedAt) ?? 'Não informada' },
       { label: 'ENTREGA', value: formatDateTime(tracking.deliveredAt) ?? 'Não registrada' },
       { label: 'RECEBIDO POR', value: tracking.receiverName ?? 'Não informado' },
@@ -473,7 +492,7 @@ function drawDocuments(context: DocumentContext, pack: EvidencePack): void {
     pack.documents.map((document, index) => [
       String(index + 1),
       document.filename,
-      document.kind,
+      DOCUMENT_KIND_LABEL[document.kind],
       `${SOURCE_LABEL[document.source] ?? document.source}${
         document.sourceReference ? ` - ${document.sourceReference}` : ''
       }`,
@@ -513,8 +532,106 @@ function drawClaims(context: DocumentContext, pack: EvidencePack): void {
   }
 }
 
+/**
+ * Seção de verificação e integridade.
+ *
+ * Feita para o analista da instituição de pagamento: diz exatamente como cada
+ * dado deste documento pode ser reconferido fora dele — na transportadora, no
+ * SPI, no provedor — e amarra o conteúdo a um hash SHA-256 da defesa, que é
+ * imutável e versionada no sistema de origem.
+ */
+function drawIntegrity(context: DocumentContext, pack: EvidencePack, defenseHash: string): void {
+  drawSectionTitle(context, 'Verificação e integridade');
+
+  drawParagraph(
+    context,
+    'Cada afirmação deste documento referencia evidências identificadas individualmente, com origem e referência externa. Nenhum dado ausente foi preenchido por estimativa: o que não consta nos registros aparece como não disponível.',
+    { size: 9.5 },
+  );
+  context.y -= 4;
+
+  const byVerification = { VERIFIED: 0, UNVERIFIED: 0, PENDING: 0, CONFLICTING: 0 } as Record<string, number>;
+  let machineSourced = 0;
+  let withReference = 0;
+  for (const evidence of pack.evidences) {
+    byVerification[evidence.verificationStatus] = (byVerification[evidence.verificationStatus] ?? 0) + 1;
+    if (evidence.source !== 'MANUAL') machineSourced += 1;
+    if (evidence.sourceReference) withReference += 1;
+  }
+
+  drawKeyValueGrid(context, [
+    { label: 'DEFESA', value: `${pack.defense.id} — versão ${pack.defense.version} (imutável)` },
+    { label: 'GERADA EM', value: formatDateTime(pack.defense.generatedAt) ?? pack.defense.generatedAt },
+    { label: 'SHA-256 DO JSON DA DEFESA', value: defenseHash },
+    { label: 'PACOTE DE EVIDÊNCIAS', value: `versão ${pack.packVersion}` },
+    {
+      label: 'EVIDÊNCIAS',
+      value: `${pack.evidences.length} no total — ${byVerification.VERIFIED} verificadas na origem, ${byVerification.UNVERIFIED} não verificadas, ${byVerification.PENDING} pendentes, ${byVerification.CONFLICTING} conflitantes (conflitantes não sustentam afirmação)`,
+    },
+    {
+      label: 'PROCEDÊNCIA',
+      value: `${machineSourced} de ${pack.evidences.length} vindas de sistema (integração ou provedor); ${withReference} com referência externa conferível`,
+    },
+  ], 2);
+
+  if (pack.documents.length > 0) {
+    drawParagraph(context, 'Integridade dos documentos anexados (SHA-256):', {
+      size: 9,
+      bold: true,
+    });
+    drawTable(
+      context,
+      [
+        { header: 'Arquivo', width: 175 },
+        { header: 'Checksum SHA-256', width: 324 },
+      ],
+      pack.documents.map((document) => [
+        document.filename,
+        document.checksumSha256 ?? 'não calculado no recebimento',
+      ]),
+    );
+  }
+
+  drawParagraph(context, 'Como reconferir os dados deste documento:', { size: 9, bold: true });
+  const checks: string[] = [];
+  if (pack.med.endToEndId) {
+    checks.push(
+      `- O end-to-end ID ${pack.med.endToEndId} identifica a transação no SPI e pode ser conferido pela própria instituição.`,
+    );
+  }
+  if (pack.tracking?.trackingCode) {
+    checks.push(
+      `- O código de rastreio ${pack.tracking.trackingCode} pode ser consultado diretamente na transportadora${pack.tracking.carrier ? ` (${pack.tracking.carrier})` : ''}.`,
+    );
+  }
+  checks.push(
+    '- Cada evidência lista origem e referência na tabela de evidências; itens com procedência de sistema podem ser reconsultados na fonte.',
+    '- O hash SHA-256 acima é recalculável a partir do JSON da defesa exportado pelo sistema de origem: qualquer alteração no conteúdo invalida o hash.',
+  );
+  for (const line of checks) {
+    drawParagraph(context, line, { size: 9, color: COLORS.muted });
+  }
+  context.y -= 4;
+}
+
 export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Array> {
   const context = await createDocument();
+
+  const defenseHash = createHash('sha256')
+    .update(JSON.stringify(pack.defense))
+    .digest('hex');
+
+  // Metadados do arquivo: quem gerou, sobre o quê, quando. Aparecem nas
+  // propriedades do PDF e contam para a triagem de autenticidade da instituição.
+  context.pdf.setTitle(`MED Defense Report — ${pack.med.medId}`);
+  context.pdf.setSubject(
+    `Defesa do MED ${pack.med.medId}, versão ${pack.defense.version}. SHA-256 da defesa: ${defenseHash}`,
+  );
+  context.pdf.setAuthor(pack.med.merchantName ?? 'MED Defense');
+  context.pdf.setCreator('MED Defense');
+  context.pdf.setProducer('MED Defense');
+  const created = new Date(pack.generatedAt);
+  if (!Number.isNaN(created.getTime())) context.pdf.setCreationDate(created);
 
   drawCover(context, pack);
 
@@ -526,7 +643,6 @@ export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Arra
     context.y -= 4;
   }
 
-  addPage(context);
   drawTimeline(context, pack);
   drawParties(context, pack);
   drawClaims(context, pack);
@@ -534,10 +650,12 @@ export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Arra
   drawMissing(context, pack);
   drawDocuments(context, pack);
 
+  drawIntegrity(context, pack, defenseHash);
+
   drawSectionTitle(context, 'Conclusão');
   drawParagraph(
     context,
-    'Todas as afirmações desta defesa estao vinculadas a evidências registradas, com identificação da origem de cada dado. Informacoes não disponíveis foram declaradas como indisponiveis e não foram objeto de afirmação.',
+    'Todas as afirmações desta defesa estão vinculadas a evidências registradas, com identificação da origem de cada dado. Informações não disponíveis foram declaradas como indisponíveis e não foram objeto de afirmação.',
     { size: 9.5 },
   );
   drawParagraph(
@@ -546,6 +664,9 @@ export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Arra
     { size: 8, color: COLORS.muted },
   );
 
-  drawFooters(context, `MED ${pack.med.medId} - defesa v${pack.defense.version}`);
+  drawFooters(
+    context,
+    `MED ${pack.med.medId} - defesa v${pack.defense.version} - SHA-256 ${defenseHash.slice(0, 20)}...`,
+  );
   return context.pdf.save();
 }

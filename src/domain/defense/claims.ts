@@ -295,7 +295,7 @@ export const CLAIM_TEMPLATES: ClaimTemplate[] = [
     render: ({ value }) => {
       const history = value('COMMUNICATION_HISTORY');
       if (!history) return null;
-      return `Há histórico de comunicacao com o cliente referente a esta compra (${history}).`;
+      return `Há histórico de comunicação com o cliente referente a esta compra (${history}).`;
     },
   },
 ];
