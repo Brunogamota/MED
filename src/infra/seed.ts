@@ -438,6 +438,34 @@ export async function seedDemoData(repository: Repository): Promise<void> {
     });
   }
 
+  await repository.addEvidence({
+    id: 'demo_ev_comm',
+    organizationId: DEMO_ORGANIZATION_ID,
+    medId: showcase.id,
+    type: 'DELIVERY_COMMUNICATION',
+    value: {
+      template: 'DELIVERY_CONFIRMATION',
+      from: 'Loja Demonstração',
+      to: 'cliente.tres@exemplo.demo',
+      subject: 'Seu pedido foi entregue',
+      sentAt: days(-20),
+      body:
+        'Olá,\n\nSeu pedido DEMO-PED-2100 foi entregue no endereço cadastrado (rastreio DM987654321BR).\n\nObrigado pela preferência.',
+      reference: 'DM987654321BR',
+    },
+    displayValue: 'Comprovante enviado a cliente.tres@exemplo.demo: Seu pedido foi entregue',
+    source: 'MERCHANT',
+    sourceProvider: null,
+    sourceReference: 'demo-msg-2100',
+    receivedAt: days(-20),
+    verifiedAt: null,
+    verificationStatus: 'UNVERIFIED',
+    documentId: null,
+    metadata: { reconstruction: true, template: 'DELIVERY_CONFIRMATION' },
+    createdAt: days(-5),
+    createdBy: 'demo',
+  });
+
   // Defesa já gerada, pelo mesmo engine determinístico do produto.
   const showcaseCase = {
     med: (await repository.getMed(DEMO_ORGANIZATION_ID, showcase.id)) ?? showcase,

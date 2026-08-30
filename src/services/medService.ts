@@ -24,6 +24,7 @@ import { getConfig } from '@/lib/env';
 import { newId } from '@/lib/ids';
 import { toJson } from '@/lib/json';
 import type {
+  CreateCommunicationInput,
   CreateDocumentInput,
   CreateEvidenceInput,
   CreateMedInput,
@@ -470,6 +471,77 @@ export async function addDocument(
   });
   await refreshStatus(repository, auth, medId);
   return saved;
+}
+
+// ---------------------------------------------------------------------------
+// Comprovante de comunicação (reconstrução do que foi enviado ao cliente)
+// ---------------------------------------------------------------------------
+
+/**
+ * Registra a reconstrução de uma comunicação enviada ao cliente.
+ *
+ * Guarda o conteúdo estruturado como evidência do tipo DELIVERY_COMMUNICATION —
+ * categoria documental, fora da matriz de requisitos: ilustra a entrega, não
+ * infla o score nem vira afirmação factual automática. `metadata.reconstruction`
+ * marca a natureza do artefato; o autor fica no audit log.
+ */
+export async function addCommunicationReconstruction(
+  auth: AuthContext,
+  medId: string,
+  input: CreateCommunicationInput,
+): Promise<Evidence> {
+  assertCan(auth.role, 'evidence:write');
+  const repository = await getRepository();
+  await loadCaseOrThrow(repository, auth, medId);
+
+  const now = new Date().toISOString();
+  const receipt = {
+    template: input.template,
+    from: input.from,
+    to: input.to,
+    subject: input.subject,
+    sentAt: input.sentAt ?? null,
+    body: input.body,
+    reference: input.reference ?? null,
+  };
+
+  const evidence: Evidence = {
+    id: newId('ev'),
+    organizationId: auth.organizationId,
+    medId,
+    type: 'DELIVERY_COMMUNICATION',
+    value: receipt as unknown as Evidence['value'],
+    displayValue: `Comprovante enviado a ${input.to}: ${input.subject}`,
+    source: input.source,
+    sourceProvider: null,
+    sourceReference: input.sourceReference ?? null,
+    receivedAt: input.sentAt ?? now,
+    verifiedAt: null,
+    verificationStatus: 'UNVERIFIED',
+    documentId: null,
+    metadata: { reconstruction: true, template: input.template, generatedAt: now },
+    createdAt: now,
+    createdBy: auth.actor,
+  };
+
+  const saved = await repository.addEvidence(evidence);
+  await recordAudit(repository, auth, {
+    action: 'EVIDENCE_ADDED',
+    entityType: 'Evidence',
+    entityId: saved.id,
+    medId,
+    source: saved.source,
+    newValue: toJson({ type: saved.type, reconstruction: true, to: input.to, subject: input.subject }),
+  });
+  await refreshStatus(repository, auth, medId);
+  return saved;
+}
+
+export async function listCommunications(auth: AuthContext, medId: string): Promise<Evidence[]> {
+  assertCan(auth.role, 'med:read');
+  const repository = await getRepository();
+  const evidences = await repository.listEvidence(auth.organizationId, medId);
+  return evidences.filter((evidence) => evidence.type === 'DELIVERY_COMMUNICATION');
 }
 
 export interface GenerateDefenseOptions {

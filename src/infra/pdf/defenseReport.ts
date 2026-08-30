@@ -1,5 +1,10 @@
 import { createHash } from 'node:crypto';
 import type { EvidencePack } from '@/domain/types';
+import {
+  parseCommunicationReceipt,
+  buildClientEmailView,
+  COMMUNICATION_TEMPLATE_LABEL,
+} from '@/domain/communication/receipt';
 import { getEvidenceDefinition } from '@/domain/evidence/catalog';
 import { evaluateStrength } from '@/domain/evidence/strength';
 import { formatAddress, formatAmount, formatDate, formatDateTime } from '@/lib/format';
@@ -64,32 +69,70 @@ const SOURCE_LABEL: Record<string, string> = {
   SYSTEM_DERIVED: 'Derivado pelo sistema',
 };
 
-function drawCover(context: DocumentContext, pack: EvidencePack): void {
+function drawCover(context: DocumentContext, pack: EvidencePack, defenseHash: string): void {
   const { med } = pack;
+  const top = A4.height - MARGIN;
 
-  context.page.drawRectangle({
-    x: 0,
-    y: A4.height - 96,
-    width: A4.width,
-    height: 96,
-    color: COLORS.accent,
-  });
-  context.page.drawText('MED DEFENSE REPORT', {
+  // Letterhead: emissor a esquerda, natureza do documento a direita.
+  context.page.drawText(sanitize((med.merchantName ?? 'Estabelecimento').toUpperCase()), {
     x: MARGIN,
-    y: A4.height - 52,
-    size: 20,
-    font: context.bold,
-    color: COLORS.panel,
-  });
-  context.page.drawText(sanitize(med.merchantName ?? 'Estabelecimento'), {
-    x: MARGIN,
-    y: A4.height - 74,
+    y: top - 9,
     size: 10,
+    font: context.bold,
+    color: COLORS.text,
+  });
+  const issued = `Emitido em ${formatDateTime(pack.generatedAt) ?? pack.generatedAt}`;
+  context.page.drawText(sanitize(issued), {
+    x: A4.width - MARGIN - context.regular.widthOfTextAtSize(issued, 8.5),
+    y: top - 9,
+    size: 8.5,
     font: context.regular,
-    color: COLORS.panel,
+    color: COLORS.muted,
   });
 
-  context.y = A4.height - 120;
+  context.page.drawLine({
+    start: { x: MARGIN, y: top - 18 },
+    end: { x: A4.width - MARGIN, y: top - 18 },
+    thickness: 1.2,
+    color: COLORS.rule,
+  });
+
+  // Titulo do documento, serif.
+  context.page.drawText('Relatório de defesa de MED', {
+    x: MARGIN,
+    y: top - 46,
+    size: 21,
+    font: context.serifBold,
+    color: COLORS.text,
+  });
+
+  // Linha de identificacao do documento: protocolo, versao, natureza.
+  const docLine = `Documento nº ${med.medId}  ·  defesa versão ${pack.defense.version}  ·  peça de contestação de MED (Pix)`;
+  context.page.drawText(sanitize(docLine), {
+    x: MARGIN,
+    y: top - 63,
+    size: 9,
+    font: context.regular,
+    color: COLORS.muted,
+  });
+
+  // Ancora de autenticidade ja na capa: qualquer alteracao invalida o hash.
+  context.page.drawText(sanitize(`Autenticação SHA-256: ${defenseHash}`), {
+    x: MARGIN,
+    y: top - 77,
+    size: 7,
+    font: context.regular,
+    color: COLORS.faint,
+  });
+
+  context.page.drawLine({
+    start: { x: MARGIN, y: top - 87 },
+    end: { x: A4.width - MARGIN, y: top - 87 },
+    thickness: 0.5,
+    color: COLORS.hairline,
+  });
+
+  context.y = top - 104;
 
   drawKeyValueGrid(
     context,
@@ -116,73 +159,69 @@ function drawCover(context: DocumentContext, pack: EvidencePack): void {
 
 function drawScorePanel(context: DocumentContext, pack: EvidencePack): void {
   const { score } = pack.defense;
-  ensureSpace(context, 120);
+  ensureSpace(context, 40 + score.components.length * 15);
 
-  const panelTop = context.y;
-  const panelHeight = 40 + score.components.length * 14;
-  context.page.drawRectangle({
+  const top = context.y;
+  context.page.drawText('Índice de completude documental', {
     x: MARGIN,
-    y: panelTop - panelHeight,
-    width: CONTENT_WIDTH,
-    height: panelHeight,
-    color: COLORS.panel,
-  });
-
-  context.page.drawText('SCORE DOCUMENTAL', {
-    x: MARGIN + 12,
-    y: panelTop - 18,
-    size: 8,
+    y: top - 11,
+    size: 9,
     font: context.bold,
-    color: COLORS.muted,
+    color: COLORS.text,
   });
-  context.page.drawText(`${score.total}/${score.max}`, {
-    x: MARGIN + 12,
-    y: panelTop - 36,
-    size: 16,
-    font: context.bold,
-    color: COLORS.accent,
+  const total = `${score.total} de ${score.max}`;
+  context.page.drawText(sanitize(total), {
+    x: A4.width - MARGIN - context.serifBold.widthOfTextAtSize(total, 15),
+    y: top - 13,
+    size: 15,
+    font: context.serifBold,
+    color: COLORS.text,
   });
+  context.y = top - 24;
 
-  let lineY = panelTop - 20;
+  // Barras monocromaticas: tinta sobre trilho claro. Sem cor semantica.
   for (const component of score.components) {
-    const label = `${CATEGORY_LABEL[component.category]}: ${component.earned}/${component.max}`;
-    context.page.drawText(sanitize(label), {
-      x: MARGIN + 160,
-      y: lineY,
+    ensureSpace(context, 15);
+    const rowTop = context.y;
+    context.page.drawText(sanitize(CATEGORY_LABEL[component.category]), {
+      x: MARGIN,
+      y: rowTop - 8,
       size: 8.5,
       font: context.regular,
       color: COLORS.text,
     });
-    const barX = MARGIN + 300;
-    const barWidth = CONTENT_WIDTH - 320;
-    context.page.drawRectangle({
-      x: barX,
-      y: lineY - 1,
-      width: barWidth,
-      height: 6,
-      color: COLORS.line,
-    });
+    const barX = MARGIN + 150;
+    const barWidth = CONTENT_WIDTH - 210;
+    context.page.drawRectangle({ x: barX, y: rowTop - 8, width: barWidth, height: 5, color: COLORS.hairline });
     const ratio = component.max === 0 ? 0 : component.earned / component.max;
     context.page.drawRectangle({
       x: barX,
-      y: lineY - 1,
+      y: rowTop - 8,
       width: Math.max(0, barWidth * ratio),
-      height: 6,
-      color: ratio >= 0.8 ? COLORS.success : COLORS.accent,
+      height: 5,
+      color: COLORS.text,
     });
-    lineY -= 14;
+    const frac = `${component.earned}/${component.max}`;
+    context.page.drawText(sanitize(frac), {
+      x: A4.width - MARGIN - context.regular.widthOfTextAtSize(frac, 8.5),
+      y: rowTop - 8,
+      size: 8.5,
+      font: context.regular,
+      color: COLORS.muted,
+    });
+    context.y = rowTop - 15;
   }
 
-  context.y = panelTop - panelHeight - 8;
+  context.y -= 4;
   drawParagraph(
     context,
-    'Este indicador mede exclusivamente a completude e a força documental do conjunto de evidências segundo as regras internas do sistema. Não representa probabilidade de êxito na contestação.',
+    'Índice interno de completude e força documental do conjunto de evidências, segundo as regras deste sistema. Não expressa probabilidade de êxito na contestação.',
     { size: 7.5, color: COLORS.muted },
   );
 }
 
 function drawTimeline(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Linha do tempo da transação');
+  drawSectionTitle(context, '2. Linha do tempo da transação');
 
   if (pack.timeline.length === 0) {
     drawParagraph(context, 'Nenhum evento datado foi registrado para esta transação.', {
@@ -245,7 +284,7 @@ function drawTimeline(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawEvidences(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Evidências apresentadas');
+  drawSectionTitle(context, '9. Evidências apresentadas');
 
   if (pack.evidences.length === 0) {
     drawParagraph(context, 'Nenhuma evidência registrada.', { color: COLORS.muted });
@@ -286,7 +325,7 @@ function drawEvidences(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawMissing(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Evidências não disponíveis');
+  drawSectionTitle(context, '10. Evidências não disponíveis');
 
   if (pack.defense.missingEvidences.length === 0) {
     drawParagraph(context, 'Todas as evidências previstas para este caso estão disponíveis.', {
@@ -321,7 +360,7 @@ function drawMissing(context: DocumentContext, pack: EvidencePack): void {
 function drawParties(context: DocumentContext, pack: EvidencePack): void {
   const { med, customer, order, transaction, tracking } = pack;
 
-  drawSectionTitle(context, 'Dados do cliente');
+  drawSectionTitle(context, '3. Dados do cliente');
   drawKeyValueGrid(context, [
     { label: 'NOME', value: customer?.identification.name ?? med.payer.name ?? 'Não informado' },
     {
@@ -343,7 +382,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
     },
   ]);
 
-  drawSectionTitle(context, 'Dados da compra');
+  drawSectionTitle(context, '4. Dados da compra');
   drawKeyValueGrid(context, [
     { label: 'PEDIDO', value: order?.externalId ?? order?.id ?? 'Não informado' },
     {
@@ -384,7 +423,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
     );
   }
 
-  drawSectionTitle(context, 'Dados do pagamento');
+  drawSectionTitle(context, '5. Dados do pagamento');
   drawKeyValueGrid(context, [
     { label: 'MÉTODO', value: transaction?.method ?? 'Não informado' },
     { label: 'SITUAÇÃO', value: transaction?.status ?? 'Não informado' },
@@ -394,7 +433,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
     { label: 'END-TO-END ID', value: transaction?.endToEndId ?? med.endToEndId ?? 'Não informado' },
   ]);
 
-  drawSectionTitle(context, 'Dados técnicos da compra');
+  drawSectionTitle(context, '6. Dados técnicos da compra');
   drawKeyValueGrid(context, [
     { label: 'IP DO CHECKOUT', value: order?.checkoutIp ?? 'Não informado' },
     { label: 'DEVICE', value: order?.deviceFingerprint ?? 'Não informado' },
@@ -404,7 +443,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
 
   const digitalDelivery = pack.digitalDelivery;
 
-  drawSectionTitle(context, 'Dados de entrega');
+  drawSectionTitle(context, '7. Dados de entrega');
 
   if (!tracking && !digitalDelivery) {
     drawParagraph(context, 'Não ha dados de entrega registrados para este caso.', {
@@ -476,7 +515,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawDocuments(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Documentos anexados');
+  drawSectionTitle(context, '11. Documentos anexados');
   if (pack.documents.length === 0) {
     drawParagraph(context, 'Nenhum documento anexado a este caso.', { color: COLORS.muted });
     return;
@@ -501,7 +540,7 @@ function drawDocuments(context: DocumentContext, pack: EvidencePack): void {
 }
 
 function drawClaims(context: DocumentContext, pack: EvidencePack): void {
-  drawSectionTitle(context, 'Afirmações e evidências que as sustentam');
+  drawSectionTitle(context, '8. Afirmações e evidências que as sustentam');
 
   if (pack.defense.claims.length === 0) {
     drawParagraph(
@@ -541,7 +580,7 @@ function drawClaims(context: DocumentContext, pack: EvidencePack): void {
  * imutável e versionada no sistema de origem.
  */
 function drawIntegrity(context: DocumentContext, pack: EvidencePack, defenseHash: string): void {
-  drawSectionTitle(context, 'Verificação e integridade');
+  drawSectionTitle(context, '13. Verificação e integridade');
 
   drawParagraph(
     context,
@@ -614,6 +653,50 @@ function drawIntegrity(context: DocumentContext, pack: EvidencePack, defenseHash
   context.y -= 4;
 }
 
+function drawCommunications(context: DocumentContext, pack: EvidencePack): void {
+  const receipts = pack.evidences
+    .filter((evidence) => evidence.type === 'DELIVERY_COMMUNICATION')
+    .map((evidence) => parseCommunicationReceipt(evidence.value))
+    .filter((receipt): receipt is NonNullable<typeof receipt> => receipt !== null);
+
+  if (receipts.length === 0) return;
+
+  drawSectionTitle(context, '12. Comprovantes de comunicação (reconstrução)');
+  drawParagraph(
+    context,
+    'Reconstrução das comunicações que o estabelecimento enviou ao cliente, apresentadas na visão do destinatário. Cada peça representa a mensagem enviada; não é captura da caixa de entrada do cliente.',
+    { size: 9, color: COLORS.muted },
+  );
+  context.y -= 4;
+
+  for (const receipt of receipts) {
+    const view = buildClientEmailView(receipt);
+    ensureSpace(context, 90);
+
+    // Moldura da comunicacao
+    drawParagraph(context, COMMUNICATION_TEMPLATE_LABEL[receipt.template], {
+      size: 8,
+      bold: true,
+      color: COLORS.muted,
+    });
+    drawKeyValueGrid(context, [
+      { label: 'DE', value: view.from },
+      { label: 'PARA', value: view.to || 'Não informado' },
+      { label: 'ASSUNTO', value: view.subject || 'Sem assunto' },
+      { label: 'ENVIADO EM', value: view.sentAtLabel ?? 'Não informado' },
+    ], 2);
+    for (const paragraph of view.paragraphs) {
+      drawParagraph(context, paragraph, { size: 9.5 });
+      context.y -= 2;
+    }
+    if (view.reference) {
+      drawParagraph(context, `Referência: ${view.reference}`, { size: 8.5, color: COLORS.muted });
+    }
+    drawParagraph(context, view.stamp, { size: 7.5, color: COLORS.danger });
+    context.y -= 8;
+  }
+}
+
 export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Array> {
   const context = await createDocument();
 
@@ -633,9 +716,9 @@ export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Arra
   const created = new Date(pack.generatedAt);
   if (!Number.isNaN(created.getTime())) context.pdf.setCreationDate(created);
 
-  drawCover(context, pack);
+  drawCover(context, pack, defenseHash);
 
-  drawSectionTitle(context, 'Resumo da defesa');
+  drawSectionTitle(context, '1. Resumo da defesa');
   drawParagraph(context, pack.defense.summary, { size: 9.5 });
   context.y -= 4;
   for (const paragraph of pack.defense.narrative.body.split('\n\n')) {
@@ -649,10 +732,11 @@ export async function renderDefenseReport(pack: EvidencePack): Promise<Uint8Arra
   drawEvidences(context, pack);
   drawMissing(context, pack);
   drawDocuments(context, pack);
+  drawCommunications(context, pack);
 
   drawIntegrity(context, pack, defenseHash);
 
-  drawSectionTitle(context, 'Conclusão');
+  drawSectionTitle(context, '14. Conclusão');
   drawParagraph(
     context,
     'Todas as afirmações desta defesa estão vinculadas a evidências registradas, com identificação da origem de cada dado. Informações não disponíveis foram declaradas como indisponíveis e não foram objeto de afirmação.',

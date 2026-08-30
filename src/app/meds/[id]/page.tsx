@@ -57,6 +57,8 @@ import {
 } from '@/lib/labels';
 import { createSubmissionAction, generateDefenseAction } from '@/app/meds/actions';
 import { FulfillmentPanel } from '@/components/FulfillmentPanel';
+import { CommunicationPanel } from '@/components/CommunicationPanel';
+import { COMMUNICATION_TEMPLATES, type CommunicationTemplate } from '@/domain/communication/receipt';
 import {
   CustomerForm,
   DocumentForm,
@@ -75,6 +77,7 @@ const TABS = [
   { key: 'evidence', label: 'Evidências' },
   { key: 'timeline', label: 'Linha do tempo' },
   { key: 'defense', label: 'Defesa' },
+  { key: 'comprovantes', label: 'Comprovantes' },
   { key: 'documents', label: 'Documentos' },
   { key: 'submission', label: 'Envio' },
   { key: 'audit', label: 'Auditoria' },
@@ -148,10 +151,10 @@ export default async function MedDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; modelo?: string }>;
 }) {
   const { id } = await params;
-  const { tab } = await searchParams;
+  const { tab, modelo } = await searchParams;
   const activeTab: TabKey = (TABS.find((entry) => entry.key === tab)?.key ?? 'overview') as TabKey;
 
   const auth = serverPageContext();
@@ -200,6 +203,14 @@ export default async function MedDetailPage({
     medCase.order !== null ||
     medCase.tracking !== null ||
     medCase.digitalDelivery !== null;
+  const reconstructions = evidences.filter(
+    (evidence) => evidence.type === 'DELIVERY_COMMUNICATION',
+  );
+  const activeTemplate: CommunicationTemplate = COMMUNICATION_TEMPLATES.includes(
+    modelo as CommunicationTemplate,
+  )
+    ? (modelo as CommunicationTemplate)
+    : 'ACCESS_DELIVERY';
   const hasSubmission =
     submissions.length > 0 || ['SUBMITTED', 'ACCEPTED', 'REJECTED'].includes(med.status);
 
@@ -729,6 +740,14 @@ export default async function MedDetailPage({
           <DocumentUploadForm medId={med.id} storageAvailable={storageAvailable} />
           <DocumentForm medId={med.id} />
         </div>
+      ) : null}
+
+      {activeTab === 'comprovantes' ? (
+        <CommunicationPanel
+          medCase={{ ...medCase, evidences }}
+          template={activeTemplate}
+          reconstructions={reconstructions}
+        />
       ) : null}
 
       {activeTab === 'submission' ? (

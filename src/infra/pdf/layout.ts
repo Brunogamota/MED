@@ -13,13 +13,16 @@ export const MARGIN = 48;
 export const CONTENT_WIDTH = A4.width - MARGIN * 2;
 
 export const COLORS = {
-  text: rgb(0.11, 0.13, 0.16),
-  muted: rgb(0.42, 0.46, 0.52),
-  line: rgb(0.85, 0.87, 0.9),
-  accent: rgb(0.05, 0.35, 0.55),
-  danger: rgb(0.7, 0.15, 0.15),
-  success: rgb(0.11, 0.45, 0.28),
-  panel: rgb(0.96, 0.97, 0.98),
+  text: rgb(0.10, 0.10, 0.10),
+  muted: rgb(0.40, 0.40, 0.40),
+  faint: rgb(0.55, 0.55, 0.55),
+  line: rgb(0.80, 0.80, 0.80),
+  hairline: rgb(0.88, 0.88, 0.88),
+  rule: rgb(0.15, 0.15, 0.15),
+  accent: rgb(0.10, 0.10, 0.10),
+  danger: rgb(0.45, 0.10, 0.10),
+  success: rgb(0.10, 0.10, 0.10),
+  panel: rgb(0.96, 0.96, 0.96),
 };
 
 /**
@@ -44,6 +47,9 @@ export interface DocumentContext {
   y: number;
   regular: PDFFont;
   bold: PDFFont;
+  /** Serif, para titulo do documento e cabecalhos de secao. */
+  serif: PDFFont;
+  serifBold: PDFFont;
   pages: PDFPage[];
 }
 
@@ -51,8 +57,10 @@ export async function createDocument(): Promise<DocumentContext> {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const serif = await pdf.embedFont(StandardFonts.TimesRoman);
+  const serifBold = await pdf.embedFont(StandardFonts.TimesRomanBold);
   const page = pdf.addPage([A4.width, A4.height]);
-  return { pdf, page, y: A4.height - MARGIN, regular, bold, pages: [page] };
+  return { pdf, page, y: A4.height - MARGIN, regular, bold, serif, serifBold, pages: [page] };
 }
 
 export function addPage(context: DocumentContext): void {
@@ -129,23 +137,23 @@ export function drawParagraph(
 }
 
 export function drawSectionTitle(context: DocumentContext, title: string): void {
-  ensureSpace(context, 40);
-  context.y -= 10;
-  context.page.drawText(sanitize(title.toUpperCase()), {
+  ensureSpace(context, 42);
+  context.y -= 14;
+  context.page.drawText(sanitize(title), {
     x: MARGIN,
-    y: context.y - 11,
-    size: 11,
-    font: context.bold,
-    color: COLORS.accent,
+    y: context.y - 12,
+    size: 12.5,
+    font: context.serifBold,
+    color: COLORS.text,
   });
-  context.y -= 18;
+  context.y -= 19;
   context.page.drawLine({
     start: { x: MARGIN, y: context.y },
     end: { x: A4.width - MARGIN, y: context.y },
-    thickness: 0.7,
+    thickness: 0.6,
     color: COLORS.line,
   });
-  context.y -= 12;
+  context.y -= 13;
 }
 
 export function drawKeyValueGrid(

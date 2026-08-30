@@ -365,6 +365,8 @@ export const EVIDENCE_TYPES = [
   'SERVICE_PROFESSIONAL',
   'SERVICE_SCHEDULE',
   'SERVICE_USAGE_PROOF',
+  // Comunicacao reconstruida (comprovante do que foi enviado ao cliente)
+  'DELIVERY_COMMUNICATION',
   // Documents / misc
   'INVOICE',
   'COMMUNICATION_HISTORY',

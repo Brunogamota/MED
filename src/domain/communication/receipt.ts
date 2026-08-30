@@ -1,0 +1,173 @@
+import type { EvidenceSource, IsoDateTime, JsonValue } from '@/domain/types';
+import type { MedCase } from '@/domain/case';
+import { formatDateTime } from '@/lib/format';
+
+/**
+ * Comprovante de comunicação — reconstrução da mensagem que o estabelecimento
+ * enviou ao cliente (confirmação de compra, entrega de acesso, confirmação de
+ * entrega).
+ *
+ * O que esta feature é, e o que ela NÃO é:
+ *
+ *  - É a reconstrução, na visão do cliente, de uma comunicação que o
+ *    estabelecimento realmente enviou. O prazo curto do MED não deixa esperar
+ *    o comprador confirmar que recebeu; o que o estabelecimento controla e pode
+ *    comprovar é o envio. Isto é a mesma lógica do registro manual de marco de
+ *    entrega: transcrição de um fato real, gravada com origem.
+ *
+ *  - NÃO é uma captura da caixa de entrada do cliente, e nunca pode ser
+ *    apresentada como tal. Todo artefato gerado carrega um selo visível de
+ *    reconstrução (RECONSTRUCTION_STAMP). Sem esse selo o documento seria uma
+ *    falsificação; com ele, é a representação honesta do que foi enviado.
+ *
+ * A reconstrução é evidência documental (categoria DOCUMENTATION, força WEAK) e
+ * fica fora da matriz de requisitos: ela ilustra a entrega, não infla o score
+ * nem gera afirmação factual automática.
+ */
+
+export const COMMUNICATION_TEMPLATES = [
+  'PURCHASE_CONFIRMATION',
+  'ACCESS_DELIVERY',
+  'DELIVERY_CONFIRMATION',
+  'GENERIC',
+] as const;
+export type CommunicationTemplate = (typeof COMMUNICATION_TEMPLATES)[number];
+
+export const COMMUNICATION_TEMPLATE_LABEL: Record<CommunicationTemplate, string> = {
+  PURCHASE_CONFIRMATION: 'Confirmação de compra',
+  ACCESS_DELIVERY: 'Entrega de acesso',
+  DELIVERY_CONFIRMATION: 'Confirmação de entrega',
+  GENERIC: 'Mensagem ao cliente',
+};
+
+/** Texto do selo. Vai na tela, na rota de impressão e no PDF, sem exceção. */
+export const RECONSTRUCTION_STAMP =
+  'RECONSTRUÇÃO — Representação da mensagem enviada ao cliente pelo estabelecimento, ' +
+  'gerada a partir dos registros do caso. Não é uma captura da caixa de entrada do destinatário.';
+
+/** Conteúdo estruturado da reconstrução, guardado no `value` da evidência. */
+export interface CommunicationReceipt {
+  template: CommunicationTemplate;
+  from: string;
+  to: string;
+  subject: string;
+  sentAt: IsoDateTime | null;
+  body: string;
+  /** Referência do que foi entregue: link de acesso, código, rastreio. */
+  reference?: string | null;
+}
+
+/** Modelo de visão do cliente, pronto para renderizar (UI e PDF). */
+export interface ClientEmailView {
+  from: string;
+  to: string;
+  subject: string;
+  sentAtLabel: string | null;
+  paragraphs: string[];
+  reference: string | null;
+  stamp: string;
+}
+
+export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmailView {
+  return {
+    from: receipt.from,
+    to: receipt.to,
+    subject: receipt.subject,
+    sentAtLabel: formatDateTime(receipt.sentAt),
+    paragraphs: receipt.body
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter((paragraph) => paragraph.length > 0),
+    reference: receipt.reference ?? null,
+    stamp: RECONSTRUCTION_STAMP,
+  };
+}
+
+/**
+ * Rascunho inicial de uma reconstrução, a partir do que o caso já tem.
+ *
+ * Preenche remetente, destinatário, data e um corpo padrão apenas com dados
+ * que já existem no caso — nunca inventa e-mail, data ou produto. Campos sem
+ * dado ficam vazios para o operador completar com o que realmente enviou.
+ */
+export function draftCommunication(
+  medCase: MedCase,
+  template: CommunicationTemplate,
+): CommunicationReceipt {
+  const { med, customer, order, digitalDelivery, tracking } = medCase;
+  const merchant = med.merchantName ?? 'Estabelecimento';
+  const to =
+    digitalDelivery?.sentTo ??
+    customer?.identification.email ??
+    med.payer.email ??
+    '';
+  const productName = order?.items[0]?.name ?? '';
+  const sentAt = digitalDelivery?.sentAt ?? order?.placedAt ?? med.transactionAt ?? null;
+
+  const base = { from: merchant, to, sentAt };
+
+  switch (template) {
+    case 'PURCHASE_CONFIRMATION':
+      return {
+        ...base,
+        template,
+        subject: productName
+          ? `Confirmação da sua compra — ${productName}`
+          : 'Confirmação da sua compra',
+        body:
+          `Olá,\n\n` +
+          `Recebemos e confirmamos a sua compra${productName ? ` de ${productName}` : ''}${
+            order?.externalId ? ` (pedido ${order.externalId})` : ''
+          }.\n\n` +
+          `Qualquer dúvida, é só responder a este e-mail.`,
+        reference: order?.externalId ?? null,
+      };
+    case 'ACCESS_DELIVERY':
+      return {
+        ...base,
+        template,
+        subject: productName ? `Seu acesso — ${productName}` : 'Seu acesso está liberado',
+        body:
+          `Olá,\n\n` +
+          `Seu acesso${productName ? ` a ${productName}` : ''} já está liberado.\n\n` +
+          `[Inclua aqui o link ou as instruções de acesso que foram realmente enviados.]`,
+        reference: digitalDelivery?.platform ?? null,
+      };
+    case 'DELIVERY_CONFIRMATION':
+      return {
+        ...base,
+        template,
+        subject: 'Seu pedido foi entregue',
+        body:
+          `Olá,\n\n` +
+          `Seu pedido${order?.externalId ? ` ${order.externalId}` : ''} foi entregue` +
+          `${tracking?.trackingCode ? ` (rastreio ${tracking.trackingCode})` : ''}.\n\n` +
+          `Obrigado pela preferência.`,
+        reference: tracking?.trackingCode ?? null,
+      };
+    default:
+      return { ...base, template, subject: '', body: '', reference: null };
+  }
+}
+
+/** Lê a reconstrução de volta do `value` da evidência, com validação leve. */
+export function parseCommunicationReceipt(value: JsonValue): CommunicationReceipt | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const record = value as Record<string, JsonValue>;
+  const str = (key: string): string =>
+    typeof record[key] === 'string' ? (record[key] as string) : '';
+  const template = str('template') as CommunicationTemplate;
+  if (!COMMUNICATION_TEMPLATES.includes(template)) return null;
+  return {
+    template,
+    from: str('from'),
+    to: str('to'),
+    subject: str('subject'),
+    sentAt: typeof record.sentAt === 'string' ? (record.sentAt as string) : null,
+    body: str('body'),
+    reference: typeof record.reference === 'string' ? (record.reference as string) : null,
+  };
+}
+
+/** Origens permitidas para uma reconstrução: quem atesta o envio. */
+export const COMMUNICATION_SOURCES: EvidenceSource[] = ['MERCHANT', 'MANUAL', 'API', 'SHOPIFY', 'ERP'];

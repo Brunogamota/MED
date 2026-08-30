@@ -205,6 +205,19 @@ export const createEvidenceSchema = z.object({
 });
 export type CreateEvidenceInput = z.infer<typeof createEvidenceSchema>;
 
+export const createCommunicationSchema = z.object({
+  template: z.enum(['PURCHASE_CONFIRMATION', 'ACCESS_DELIVERY', 'DELIVERY_CONFIRMATION', 'GENERIC']),
+  from: nonEmpty,
+  to: nonEmpty,
+  subject: nonEmpty,
+  sentAt: isoDateTime.optional(),
+  body: nonEmpty,
+  reference: nonEmpty.optional(),
+  source: z.enum(EVIDENCE_SOURCES).default('MERCHANT'),
+  sourceReference: nonEmpty.optional(),
+});
+export type CreateCommunicationInput = z.infer<typeof createCommunicationSchema>;
+
 export const createDocumentSchema = z.object({
   kind: z.enum(DOCUMENT_KINDS),
   filename: nonEmpty,

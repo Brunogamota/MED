@@ -91,6 +91,9 @@ const DEFINITIONS: EvidenceTypeDefinition[] = [
   def('SERVICE_SCHEDULE', 'DELIVERY', 'Agendamento', 'MEDIUM', 'Data e hora acordadas para a execucao.'),
   def('SERVICE_USAGE_PROOF', 'DELIVERY', 'Comprovante de utilização', 'STRONG', 'Evidência de que o serviço foi usufruido.'),
 
+  // --- Comunicacao reconstruida --------------------------------------------
+  def('DELIVERY_COMMUNICATION', 'DOCUMENTATION', 'Comprovante de comunicação enviada', 'WEAK', 'Reconstrução da mensagem que o estabelecimento enviou ao cliente (e-mail de confirmação, entrega de acesso).', true),
+
   // --- Documentation -------------------------------------------------------
   def('INVOICE', 'DOCUMENTATION', 'Nota fiscal', 'STRONG', 'Documento fiscal da operação.'),
   def('COMMUNICATION_HISTORY', 'DOCUMENTATION', 'Histórico de comunicação', 'MEDIUM', 'Trocas de mensagens com o cliente.'),

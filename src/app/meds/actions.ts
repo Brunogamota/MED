@@ -28,7 +28,8 @@ import {
 import { address, compact, dateTime, integer, number, text } from '@/lib/forms';
 import { importParsedMeds } from '@/services/importService';
 import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentService';
-import { recordDigitalDeliverySchema, recordShipmentSchema } from '@/domain/schemas';
+import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
+import { addCommunicationReconstruction } from '@/services/medService';
 import { parseMedImport } from '@/domain/import/csv';
 
 /**
@@ -404,4 +405,30 @@ export async function confirmImportAction(
 
   revalidatePath('/meds');
   return { csv, defaultOpenedAt, batchReference, parsed, report, error: null };
+}
+
+// ---------------------------------------------------------------------------
+// Comprovante de comunicação
+// ---------------------------------------------------------------------------
+
+export async function addCommunicationAction(form: FormData): Promise<void> {
+  const medId = requireMedId(form);
+  const auth = serverPageContext();
+
+  const input = createCommunicationSchema.parse(
+    compact({
+      template: text(form, 'template') ?? 'GENERIC',
+      from: text(form, 'from'),
+      to: text(form, 'to'),
+      subject: text(form, 'subject'),
+      sentAt: dateTime(form, 'sentAt'),
+      body: text(form, 'body'),
+      reference: text(form, 'reference'),
+      source: text(form, 'source') ?? 'MERCHANT',
+      sourceReference: text(form, 'sourceReference'),
+    }),
+  );
+
+  await addCommunicationReconstruction(auth, medId, input);
+  revalidatePath(`/meds/${medId}`);
 }
