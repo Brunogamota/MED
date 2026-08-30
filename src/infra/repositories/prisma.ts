@@ -349,6 +349,10 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
               OR: [
                 { medId: { contains: search, mode: 'insensitive' } },
                 { endToEndId: { contains: search, mode: 'insensitive' } },
+                // payer é Json: busca por nome, CPF/CNPJ e e-mail via JSON path.
+                { payer: { path: ['name'], string_contains: search } },
+                { payer: { path: ['document'], string_contains: search } },
+                { payer: { path: ['email'], string_contains: search } },
               ],
             }
           : {}),

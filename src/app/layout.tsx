@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getConfig } from '@/lib/env';
 import { Sidebar } from '@/components/Sidebar';
+import { CommandPalette } from '@/components/CommandPalette';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -62,6 +63,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="pt-[52px] lg:pl-[280px]">
           <div className="mx-auto max-w-[1440px] px-8 py-6 max-md:px-4">{children}</div>
         </main>
+
+        <CommandPalette />
       </body>
     </html>
   );

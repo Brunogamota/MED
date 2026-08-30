@@ -78,7 +78,13 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
       if (med.organizationId !== organizationId) continue;
       if (filter.status && med.status !== filter.status) continue;
       if (search) {
-        const haystack = [med.medId, med.payer.name, med.payer.document, med.endToEndId]
+        const haystack = [
+          med.medId,
+          med.payer.name,
+          med.payer.document,
+          med.payer.email,
+          med.endToEndId,
+        ]
           .filter((value): value is string => typeof value === 'string')
           .join(' ')
           .toLowerCase();
