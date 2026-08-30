@@ -711,6 +711,41 @@ export async function listSubmissions(
   return repository.listSubmissions(auth.organizationId, medId);
 }
 
+export interface AutoFillStats {
+  /** Evidências registradas nos últimos 30 dias. */
+  totalEvidences: number;
+  /** Quantas chegaram sem digitação (fonte diferente de MANUAL). */
+  automaticEvidences: number;
+}
+
+/**
+ * Indicador honesto da página de Integrações: quanto do preenchimento dos
+ * últimos 30 dias chegou sem digitação. Conta apenas evidências registradas
+ * (a projeção derivada é computada por caso e inflaria o número).
+ */
+export async function computeAutoFillStats(
+  auth: AuthContext,
+  options: { limit?: number } = {},
+): Promise<AutoFillStats> {
+  assertCan(auth.role, 'med:read');
+  const repository = await getRepository();
+  const rows = await repository.listMeds(auth.organizationId, { limit: options.limit ?? 50 });
+  const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+  let totalEvidences = 0;
+  let automaticEvidences = 0;
+  for (const row of rows) {
+    const evidences = await repository.listEvidence(auth.organizationId, row.med.id);
+    for (const evidence of evidences) {
+      const receivedAt = Date.parse(evidence.receivedAt);
+      if (Number.isNaN(receivedAt) || receivedAt < cutoff) continue;
+      totalEvidences += 1;
+      if (evidence.source !== 'MANUAL') automaticEvidences += 1;
+    }
+  }
+  return { totalEvidences, automaticEvidences };
+}
+
 export async function listAudit(auth: AuthContext, medId: string) {
   assertCan(auth.role, 'audit:read');
   const repository = await getRepository();
