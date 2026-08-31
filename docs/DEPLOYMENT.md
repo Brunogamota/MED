@@ -21,12 +21,24 @@ O projeto ja esta pronto para a Vercel:
 - Todas as rotas de API sao `force-dynamic`; nada que dependa de dados de tenant
   e pre-renderizado.
 
-### Estado atual: o projeto ainda nao esta conectado
+### Estado atual: secrets cadastrados, mas apontando para o projeto errado
 
-Nenhum deploy aconteceu ate agora. Nao ha projeto Vercel ligado a este
-repositorio, e o ambiente onde o agente roda **nao alcanca a rede da Vercel**
-(`vercel.com` e `api.vercel.com` sao bloqueados pela politica de rede; npm passa).
-Ou seja: publicar a partir da sessao do agente e impossivel, mesmo com token.
+O CI passa (lint, typecheck, testes e build verdes) e o job `deploy` chega a
+rodar, mas para no primeiro comando da Vercel:
+
+```
+Retrieving project…
+Error: Project not found ({"VERCEL_PROJECT_ID":"***","VERCEL_ORG_ID":"***"})
+```
+
+Os tres secrets existem — o que nao existe e um projeto que corresponda ao par
+`VERCEL_ORG_ID` + `VERCEL_PROJECT_ID` dentro do escopo do `VERCEL_TOKEN`. Ver
+"Quando o deploy falha com Project not found", abaixo.
+
+O ambiente onde o agente roda **nao alcanca a rede da Vercel** (`vercel.com` e
+`api.vercel.com` sao bloqueados pela politica de rede; npm passa). Ou seja:
+publicar, ou conferir as credenciais, a partir da sessao do agente e impossivel,
+mesmo com token. Os passos abaixo sao seus.
 
 Por isso o deploy foi movido para o CI, onde ele funciona sem depender do agente.
 Escolha um dos dois caminhos abaixo — os dois deixam toda versao nova publicada
@@ -68,6 +80,33 @@ execucao que faltam credenciais e segue verde.
 
 > `.vercel/` esta no `.gitignore` — o arquivo de link nunca entra no repositorio.
 
+#### Quando o deploy falha com "Project not found"
+
+O erro nao vem do codigo: e o token nao alcancando o projeto identificado pelos
+secrets. Em ordem de probabilidade:
+
+1. **`VERCEL_PROJECT_ID` guarda o nome do projeto**, e nao o id. O valor certo
+   comeca com `prj_`. O CI agora avisa quando o formato nao bate.
+2. **Escopo errado.** O projeto vive em um time e o `VERCEL_ORG_ID` e o da conta
+   pessoal, ou o contrario. Id de time comeca com `team_`.
+3. **Token de outro escopo, ou revogado.** Um token so enxerga os projetos do
+   escopo em que foi criado.
+
+A forma confiavel de pegar os dois ids e deixar a propria CLI escrever:
+
+```bash
+npx vercel@latest login
+npx vercel@latest link      # escolha (ou crie) o projeto e o time
+cat .vercel/project.json    # orgId e projectId, exatamente como o CI espera
+```
+
+Copie os dois valores para os secrets e redisparre a execucao em
+**Actions -> CI -> Re-run failed jobs**. Nada de novo commit e necessario: o
+deploy le o codigo da branch, e a branch ja esta atualizada.
+
+> Token e segredo: cadastre direto no GitHub e nunca cole em chat, issue ou PR.
+> Se um token vazou, revogue em <https://vercel.com/account/tokens> e gere outro.
+
 ### Ver a versao no ar agora, sem nenhuma credencial
 
 O workflow `.github/workflows/deploy-temporario.yml` publica um deployment
@@ -94,6 +133,12 @@ A diferenca em relacao ao caminho A: a Vercel publica **antes** de saber se o CI
 passou. Se voce quer a garantia de nunca publicar uma versao com teste quebrado,
 prefira o caminho A, ou ative "Ignored Build Step" no projeto para condicionar o
 build ao CI.
+
+Um detalhe que costuma explicar "a Vercel ainda mostra a versao antiga": em
+**Settings -> Git -> Production Branch**, o projeto precisa apontar para a branch
+padrao deste repositorio. Se ela apontar para uma branch que nao recebe push, a
+producao congela na ultima versao que aquela branch teve, enquanto as branches
+novas so geram preview.
 
 ### Vercel CLI direto (fora do CI)
 

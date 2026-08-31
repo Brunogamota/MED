@@ -88,6 +88,14 @@ jobs:
             echo 'configured=true' >> "$GITHUB_OUTPUT"
           fi
 
+          # Confere so o formato do identificador, nunca o valor: o erro mais
+          # comum e cadastrar o *nome* do projeto no lugar do id `prj_...`, e a
+          # Vercel responde a isso com um generico "Project not found".
+          case "$VERCEL_PROJECT_ID" in
+            prj_*|'') ;;
+            *) echo "::warning::VERCEL_PROJECT_ID nao comeca com 'prj_'. O valor esperado e o id do projeto, nao o nome dele." ;;
+          esac
+
       - name: Instalar Vercel CLI
         if: steps.creds.outputs.configured == 'true'
         run: npm install --global vercel@latest
@@ -110,7 +118,37 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel pull --yes --environment=${{ steps.target.outputs.environment }}
+        run: |
+          if vercel pull --yes --environment=${{ steps.target.outputs.environment }}; then
+            exit 0
+          fi
+          # "Project not found" aqui nao e falha do codigo: o token nao alcanca o
+          # projeto identificado pelos secrets. Dizer isso no resumo evita
+          # procurar o problema no build.
+          {
+            echo '## Deploy nao executado: o Vercel nao encontrou o projeto'
+            echo ''
+            echo 'Os tres secrets existem, mas o par `VERCEL_ORG_ID` + `VERCEL_PROJECT_ID`'
+            echo 'nao corresponde a nenhum projeto no escopo do `VERCEL_TOKEN`. Causas, na'
+            echo 'ordem em que costumam acontecer:'
+            echo ''
+            echo '1. `VERCEL_PROJECT_ID` guarda o **nome** do projeto em vez do id `prj_...`.'
+            echo '2. O projeto vive em um **time**, e o `VERCEL_ORG_ID` e o da conta pessoal'
+            echo '   (ou o contrario). O id de time comeca com `team_`.'
+            echo '3. O token foi criado com escopo em outro time, ou foi revogado.'
+            echo ''
+            echo 'Para pegar os valores certos, na raiz do repositorio:'
+            echo ''
+            echo '```bash'
+            echo 'npx vercel@latest login'
+            echo 'npx vercel@latest link'
+            echo 'cat .vercel/project.json   # orgId e projectId'
+            echo '```'
+            echo ''
+            echo 'Detalhes em `docs/DEPLOYMENT.md`.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo '::error::Vercel: projeto nao encontrado com os secrets cadastrados. Veja o resumo da execucao.'
+          exit 1
 
       - name: Build
         if: steps.creds.outputs.configured == 'true'
