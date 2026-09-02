@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BellRing } from 'lucide-react';
 import type { NextAction } from '@/lib/nextAction';
 import { formatDateTime } from '@/lib/format';
 import { ScoreBar, SubtleBadge } from '@/components/ui';
@@ -8,6 +9,25 @@ import { createSubmissionAction, generateDefenseAction } from '@/app/(console)/m
  * Bloco "Próxima ação" — o novo centro da tela do caso (briefing 3.4).
  * Um estado por vez; cada item faltante leva o operador direto ao campo.
  */
+
+/**
+ * Envio a partir do cartão vermelho: o botão é escuro sobre o vermelho, e não
+ * o primário do sistema, que sumiria no fundo.
+ */
+function CriticalSubmit({ medId, label }: { medId: string; label: string }) {
+  return (
+    <form action={createSubmissionAction}>
+      <input type="hidden" name="medId" value={medId} />
+      <input type="hidden" name="provider" value="generic-json" />
+      <button
+        type="submit"
+        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-neutral-900 px-6 font-semibold text-neutral-50 text-sm shadow-sm transition-colors hover:bg-neutral-800"
+      >
+        {label}
+      </button>
+    </form>
+  );
+}
 
 function PrimarySubmit({ medId, label }: { medId: string; label: string }) {
   return (
@@ -56,33 +76,47 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
 
   if (action.kind === 'critical') {
     return (
-      <section className="rounded-lg border border-destructive bg-destructive/10 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="flex items-center gap-2 text-xs text-destructive">
-              Próxima ação
-              <SubtleBadge tone="danger">urgente</SubtleBadge>
-            </p>
-            <p className="mt-1 text-sm font-medium text-destructive">
+      // Vermelho cheio, e não a variante suave dos outros estados: quando
+      // faltam horas para o prazo, o cartão precisa interromper a leitura da
+      // página, não conviver com ela. Cor fixa nos dois temas — o alarme não
+      // muda de intensidade porque o operador prefere tema claro.
+      <section className="overflow-hidden rounded-2xl bg-[#f9575f] p-6 text-white shadow-lg">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-2xl leading-tight tracking-tight">
               Prazo crítico: menos de {action.hoursLeft + 1} h para responder
+            </h2>
+            <p className="mt-2 max-w-prose text-[15px] text-white/90 leading-snug">
+              {action.impact}
             </p>
           </div>
-          <PrimarySubmit medId={medId} label="Preparar envio mesmo incompleto" />
+          <span
+            aria-hidden
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white/15"
+          >
+            <BellRing className="size-5" />
+          </span>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">{action.impact}</p>
-        <ul className="mt-3 space-y-2">
-          {action.missing.map((item) => (
-            <li key={item.label} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-foreground">{item.label}</span>
-              <Link
-                href={item.href}
-                className="shrink-0 font-medium text-foreground underline underline-offset-2"
-              >
-                {item.actionLabel}
-              </Link>
-            </li>
-          ))}
-        </ul>
+
+        {action.missing.length > 0 ? (
+          <ul className="mt-5 divide-y divide-white/20 border-white/20 border-y">
+            {action.missing.map((item) => (
+              <li key={item.label} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                <span>{item.label}</span>
+                <Link
+                  href={item.href}
+                  className="shrink-0 font-medium underline underline-offset-2 hover:no-underline"
+                >
+                  {item.actionLabel}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        <div className="mt-5">
+          <CriticalSubmit medId={medId} label="Preparar envio mesmo incompleto" />
+        </div>
       </section>
     );
   }
