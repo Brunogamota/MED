@@ -403,6 +403,14 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
     return mapMed(row);
   }
 
+  async deleteMed(organizationId: string, id: string): Promise<boolean> {
+    // `deleteMany` com a organizacao no filtro, e nao `delete` por id: o id
+    // sozinho apagaria caso de outro inquilino se algum dia vazasse na URL.
+    // O que pende do MED vai junto pela cascata declarada no schema.
+    const result = await this.prisma.med.deleteMany({ where: { id, organizationId } });
+    return result.count > 0;
+  }
+
   async upsertTransaction(transaction: Transaction): Promise<Transaction> {
     const data = {
       organizationId: transaction.organizationId,

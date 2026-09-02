@@ -40,6 +40,11 @@ export interface MedRepository {
   findMedByExternalId(organizationId: string, medId: string): Promise<Med | null>;
   listMeds(organizationId: string, filter: ListMedsFilter): Promise<MedListRow[]>;
   updateMed(organizationId: string, id: string, patch: Partial<Med>): Promise<Med>;
+  /**
+   * Apaga o MED e tudo que pende dele. Devolve `false` quando o id nao existe
+   * nesta organizacao — nunca apaga por id sozinho, sem o dono.
+   */
+  deleteMed(organizationId: string, id: string): Promise<boolean>;
 
   upsertTransaction(transaction: Transaction): Promise<Transaction>;
   upsertCustomer(customer: Customer): Promise<Customer>;

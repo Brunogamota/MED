@@ -19,6 +19,7 @@ import {
   upsertTracking,
   upsertTransaction,
   addDocument,
+  deleteMeds,
   uploadDocument,
   getDocumentDownloadPath,
   readVerifiedDocument,
@@ -29,6 +30,7 @@ import type { CreateMedInput } from '@/domain/schemas';
 const orgA: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'test:a' };
 const orgB: AuthContext = { organizationId: 'org_b', role: 'OWNER', actor: 'test:b' };
 const viewerA: AuthContext = { organizationId: 'org_a', role: 'VIEWER', actor: 'test:viewer' };
+const analystA: AuthContext = { organizationId: 'org_a', role: 'ANALYST', actor: 'test:analyst' };
 
 function medInput(overrides: Partial<CreateMedInput> = {}): CreateMedInput {
   return {
@@ -119,8 +121,11 @@ async function seedDeliveredCase(auth: AuthContext) {
   return med;
 }
 
+let repository: InMemoryMedRepository;
+
 beforeEach(() => {
-  __setRepositoryForTests(new InMemoryMedRepository());
+  repository = new InMemoryMedRepository();
+  __setRepositoryForTests(repository);
 });
 
 describe('tenant isolation', () => {
@@ -375,5 +380,73 @@ describe('documents', () => {
     });
 
     expect(await getDocumentDownloadPath(orgA, document.id)).toBeNull();
+  });
+});
+
+describe('deleteMeds', () => {
+  it('apaga o caso e tudo que pendia dele', async () => {
+    const med = await createMed(orgA, medInput());
+    await addEvidence(orgA, med.id, {
+      type: 'TRANSACTION_RECEIPT',
+      value: 'comprovante.pdf',
+      source: 'MANUAL',
+      verificationStatus: 'UNVERIFIED',
+      metadata: {},
+    });
+
+    const report = await deleteMeds(orgA, [med.id]);
+
+    expect(report.deleted).toEqual([med.id]);
+    expect(await listMeds(orgA, {})).toHaveLength(0);
+    await expect(getCase(orgA, med.id)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it('deixa rastro na auditoria, que sobrevive ao caso', async () => {
+    const med = await createMed(orgA, medInput());
+    await deleteMeds(orgA, [med.id]);
+
+    // A auditoria presa ao MED cai junto com ele, no banco por cascata e aqui
+    // pela limpeza do adapter.
+    expect(await listAudit(orgA, med.id)).toHaveLength(0);
+
+    // A entrada da exclusão é gravada sem `medId`, e por isso continua lá — é
+    // o único registro de que aquele caso existiu.
+    const orphan = await repository.listAudit(orgA.organizationId, '-');
+    const deletion = orphan.find((entry) => entry.action === 'MED_DELETED');
+    expect(deletion).toBeDefined();
+    expect(deletion?.entityId).toBe(med.id);
+    expect(deletion?.actor).toBe(orgA.actor);
+    // O caso apagado vai inteiro no valor anterior.
+    expect((deletion?.previousValue as { medId?: string } | null)?.medId).toBe('MED-1');
+  });
+
+  it('nao apaga caso de outra organização', async () => {
+    const med = await createMed(orgA, medInput());
+
+    const report = await deleteMeds(orgB, [med.id]);
+
+    expect(report.deleted).toEqual([]);
+    expect(report.notFound).toEqual([med.id]);
+    // Continua vivo para o dono.
+    expect(await listMeds(orgA, {})).toHaveLength(1);
+  });
+
+  it('id inexistente entra em notFound sem derrubar o resto do lote', async () => {
+    const first = await createMed(orgA, medInput({ medId: 'MED-1' }));
+    const second = await createMed(orgA, medInput({ medId: 'MED-2' }));
+
+    const report = await deleteMeds(orgA, [first.id, 'med_que_nao_existe', second.id]);
+
+    expect(report.deleted).toEqual([first.id, second.id]);
+    expect(report.notFound).toEqual(['med_que_nao_existe']);
+    expect(await listMeds(orgA, {})).toHaveLength(0);
+  });
+
+  it('analista e leitor não podem apagar', async () => {
+    const med = await createMed(orgA, medInput());
+
+    await expect(deleteMeds(analystA, [med.id])).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(deleteMeds(viewerA, [med.id])).rejects.toBeInstanceOf(ForbiddenError);
+    expect(await listMeds(orgA, {})).toHaveLength(1);
   });
 });

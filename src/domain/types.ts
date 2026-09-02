@@ -615,6 +615,7 @@ export interface DefenseSubmission {
 export const AUDIT_ACTIONS = [
   'MED_CREATED',
   'MED_UPDATED',
+  'MED_DELETED',
   'MED_STATUS_CHANGED',
   'ORDER_UPSERTED',
   'CUSTOMER_UPSERTED',

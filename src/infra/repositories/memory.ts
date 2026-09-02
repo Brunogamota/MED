@@ -118,6 +118,30 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
     return updated;
   }
 
+  async deleteMed(organizationId: string, id: string): Promise<boolean> {
+    const current = await this.getMed(organizationId, id);
+    if (!current) return false;
+
+    // O Prisma apaga o que pende do MED por cascata; aqui a limpeza e manual,
+    // e esquecer um mapa deixaria evidencia orfa aparecendo num MED futuro que
+    // reaproveitasse o id.
+    const key = this.scoped(organizationId, id);
+    this.meds.delete(id);
+    this.transactions.delete(key);
+    this.customers.delete(key);
+    this.orders.delete(key);
+    this.trackings.delete(key);
+    this.digitalDeliveries.delete(key);
+    this.evidences.delete(key);
+    this.documents.delete(key);
+    this.defenses.delete(key);
+    this.submissions.delete(key);
+    // A auditoria do proprio caso vai junto, como no banco. O registro de que
+    // ele foi apagado e gravado sem `medId`, e por isso sobrevive.
+    this.audits.delete(key);
+    return true;
+  }
+
   async upsertTransaction(transaction: Transaction): Promise<Transaction> {
     this.transactions.set(this.scoped(transaction.organizationId, transaction.medId), transaction);
     return transaction;

@@ -2,9 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, RefreshCw, Send } from 'lucide-react';
-import { batchGenerateDefensesAction, batchPrepareSubmissionsAction } from '@/app/(console)/meds/actions';
+import { Download, RefreshCw, Send, Trash2 } from 'lucide-react';
+import {
+  batchDeleteMedsAction,
+  batchGenerateDefensesAction,
+  batchPrepareSubmissionsAction,
+} from '@/app/(console)/meds/actions';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -68,6 +81,9 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [cursor, setCursor] = useState(-1);
   const [confirming, setConfirming] = useState<null | 'submit'>(null);
+  // Excluir nao usa a confirmacao de dois cliques das outras acoes: e a unica
+  // que nao tem desfazer, entao pede uma janela que diz o que se perde.
+  const [deleting, setDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const tableRef = useRef<HTMLTableElement>(null);
 
@@ -270,6 +286,16 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
                 <RefreshCw data-icon="inline-start" />
                 Regerar defesa ({selected.size})
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isPending}
+                className="text-destructive hover:text-destructive"
+                onClick={() => setDeleting(true)}
+              >
+                <Trash2 data-icon="inline-start" />
+                Excluir ({selected.size})
+              </Button>
               {confirming === 'submit' ? (
                 <Button
                   variant="destructive"
@@ -289,6 +315,39 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
           </div>
         </div>
       ) : null}
+
+      <Dialog open={deleting} onOpenChange={setDeleting}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Excluir {selected.size} {selected.size === 1 ? 'caso' : 'casos'}?
+            </DialogTitle>
+            <DialogDescription>
+              Some junto tudo que pende do caso: evidências, documentos anexados, defesas geradas
+              e envios preparados. Não dá para desfazer. Fica registrado na auditoria quem
+              excluiu e quando.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" size="sm">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={isPending}
+              onClick={() => {
+                setDeleting(false);
+                runBatch(batchDeleteMedsAction);
+              }}
+            >
+              {isPending ? 'Excluindo…' : `Excluir ${selected.size}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import type { Role } from '@/domain/types';
 export const PERMISSIONS = [
   'med:read',
   'med:write',
+  'med:delete',
   'evidence:write',
   'defense:generate',
   'submission:create',
@@ -20,6 +21,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   OWNER: [...PERMISSIONS],
+  // Apagar caso fica só com o dono: e uma perda que nao tem desfazer.
   ANALYST: ['med:read', 'med:write', 'evidence:write', 'defense:generate', 'audit:read'],
   VIEWER: ['med:read', 'audit:read'],
 };

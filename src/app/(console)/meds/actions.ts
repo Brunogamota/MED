@@ -10,6 +10,7 @@ import {
   MAX_DOCUMENT_BYTES,
   createMed,
   createSubmission,
+  deleteMeds,
   generateDefenseForMed,
   upsertCustomer,
   upsertOrder,
@@ -359,6 +360,20 @@ export async function batchGenerateDefensesAction(form: FormData): Promise<void>
     }
   }
   revalidatePath('/meds');
+}
+
+/**
+ * Exclui os casos selecionados.
+ *
+ * Ao contrario das outras acoes em lote, aqui o erro nao e engolido: apagar e
+ * irreversivel, e uma falha silenciosa deixaria o operador achando que o caso
+ * sumiu quando ele continua la.
+ */
+export async function batchDeleteMedsAction(form: FormData): Promise<void> {
+  const auth = serverPageContext();
+  await deleteMeds(auth, medIdsFrom(form));
+  revalidatePath('/meds');
+  revalidatePath('/');
 }
 
 /** Prepara o payload de envio dos casos selecionados, um a um. */

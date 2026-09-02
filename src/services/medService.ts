@@ -213,6 +213,65 @@ export async function listMeds(
   return repository.listMeds(auth.organizationId, filter);
 }
 
+export interface DeleteMedsReport {
+  /** Ids apagados de fato. */
+  deleted: string[];
+  /** Ids que nao existem nesta organizacao — nem erro, nem apagado. */
+  notFound: string[];
+}
+
+/**
+ * Exclusao de MEDs.
+ *
+ * Apaga o caso e tudo que pende dele: transacao, cliente, pedido, entrega,
+ * evidencias, documentos, defesas geradas e envios. Nao ha desfazer.
+ *
+ * O registro de que o caso existiu sobrevive: a auditoria e gravada **sem**
+ * `medId`, porque a linha de auditoria presa ao MED cai junto com ele pela
+ * cascata do banco. O caso apagado inteiro vai em `previousValue` — sem isso a
+ * exclusao seria a unica operacao do sistema que nao deixa rastro.
+ *
+ * Id que nao existe nesta organizacao entra em `notFound` em vez de derrubar o
+ * lote: apagar dez casos nao pode falhar por causa de um id ja apagado noutra
+ * aba. Mas o filtro por organizacao continua valendo no repositorio — id de
+ * outro inquilino nunca e apagado, so e reportado como inexistente.
+ */
+export async function deleteMeds(
+  auth: AuthContext,
+  medIds: string[],
+): Promise<DeleteMedsReport> {
+  assertCan(auth.role, 'med:delete');
+  const repository = await getRepository();
+
+  const report: DeleteMedsReport = { deleted: [], notFound: [] };
+
+  for (const medId of medIds) {
+    const med = await repository.getMed(auth.organizationId, medId);
+    if (!med) {
+      report.notFound.push(medId);
+      continue;
+    }
+
+    const removed = await repository.deleteMed(auth.organizationId, medId);
+    if (!removed) {
+      report.notFound.push(medId);
+      continue;
+    }
+
+    await recordAudit(repository, auth, {
+      action: 'MED_DELETED',
+      entityType: 'Med',
+      entityId: medId,
+      medId: null,
+      previousValue: toJson(med),
+      newValue: null,
+    });
+    report.deleted.push(medId);
+  }
+
+  return report;
+}
+
 export async function getCase(auth: AuthContext, medId: string): Promise<MedCase> {
   assertCan(auth.role, 'med:read');
   const repository = await getRepository();

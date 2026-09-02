@@ -184,6 +184,7 @@ export const RENDERER_LABEL: Record<NarrativeRenderer, string> = {
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   MED_CREATED: 'MED criado',
   MED_UPDATED: 'MED atualizado',
+  MED_DELETED: 'MED excluído',
   MED_STATUS_CHANGED: 'Status alterado',
   ORDER_UPSERTED: 'Pedido registrado',
   CUSTOMER_UPSERTED: 'Cliente registrado',
@@ -232,6 +233,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const PERMISSION_LABEL: Record<Permission, string> = {
   'med:read': 'Ver MEDs',
   'med:write': 'Editar MEDs',
+  'med:delete': 'Excluir MEDs',
   'evidence:write': 'Anexar evidência',
   'defense:generate': 'Gerar defesa',
   'submission:create': 'Enviar defesa',
