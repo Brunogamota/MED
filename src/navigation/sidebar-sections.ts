@@ -180,13 +180,13 @@ export const RAIL_SECTIONS: RailSection[] = [
     id: 'configuracao',
     title: 'Configuração',
     icon: SettingsIcon,
-    matches: [],
+    matches: ['/equipe'],
     groups: [
       {
         title: 'Organização',
         items: [
           { id: 'instituicoes', label: 'Instituições', icon: Building },
-          { id: 'equipe', label: 'Equipe', icon: UserMultiple },
+          { id: 'equipe', label: 'Equipe', icon: UserMultiple, href: '/equipe' },
         ],
       },
     ],

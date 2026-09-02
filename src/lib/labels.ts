@@ -11,10 +11,12 @@ import type {
   NarrativeRenderer,
   ProductType,
   RequirementStatus,
+  Role,
   ShipmentStatus,
   SubmissionStatus,
   VerificationStatus,
 } from '@/domain/types';
+import type { Permission } from '@/infra/auth/rbac';
 
 /**
  * Dicionario unico de rotulos em portugues.
@@ -219,3 +221,19 @@ export function deadlineText(daysRemaining: number | null): string {
   if (daysRemaining === 1) return 'prazo em 1 dia';
   return `prazo em ${daysRemaining} dias`;
 }
+
+/** Papeis de acesso. O que cada um pode esta em `src/infra/auth/rbac.ts`. */
+export const ROLE_LABEL: Record<Role, string> = {
+  OWNER: 'Dono',
+  ANALYST: 'Analista',
+  VIEWER: 'Leitura',
+};
+
+export const PERMISSION_LABEL: Record<Permission, string> = {
+  'med:read': 'Ver MEDs',
+  'med:write': 'Editar MEDs',
+  'evidence:write': 'Anexar evidência',
+  'defense:generate': 'Gerar defesa',
+  'submission:create': 'Enviar defesa',
+  'audit:read': 'Ver auditoria',
+};

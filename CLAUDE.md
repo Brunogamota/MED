@@ -62,6 +62,7 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/app/login/` | Entrada no console. |
 | `src/lib/session.ts` | Cookie de sessão assinado (Web Crypto — roda no middleware). |
 | `src/lib/password.ts` | Hash scrypt da senha do console (só Node). |
+| `src/lib/team.ts` | Acessos configurados: login do console e chaves de API, com papel e permissões. |
 | `src/app/meds/` | UI operacional. |
 | `src/components/ui/` | Primitivas do sistema visual (shadcn/ui). Não editar por tela. |
 | `src/components/layout/` | Shell do console: sidebar, cabeçalho, busca, tema, preferência de movimento. |
