@@ -30,9 +30,14 @@ uma conta Hobby nao tem time nenhum.
 
 Dois pontos de configuracao no projeto da Vercel:
 
-- **Settings -> Git -> Production Branch** aponta para a branch padrao deste
-  repositorio. Apontar para uma branch que nao recebe push congela a producao
-  na ultima versao dela, enquanto o resto vira so preview.
+- **Settings -> Environments -> Production -> Branch Tracking** aponta para a
+  branch padrao deste repositorio. O campo *nao* fica em Settings -> Git, onde a
+  intuicao manda procurar. Apontar para uma branch que nao recebe push congela a
+  producao na ultima versao dela, enquanto o resto vira so preview.
+- Trocar a branch de producao **nao reconstroi sozinho**: a Vercel mantem o
+  ultimo deployment de producao que existia, que pode ser de meses atras. O
+  primeiro push depois da troca e o que publica a versao atual — ou promova a
+  mao, em Deployments -> `...` -> Promote to Production.
 - Nenhuma variavel de ambiente e obrigatoria para subir: sem `DATABASE_URL` a
   aplicacao roda em **modo demo**, com repositorio em memoria e dados de
   exemplo. Isso e deliberado, para o primeiro deploy funcionar antes de existir
@@ -163,10 +168,10 @@ prefira o caminho A, ou ative "Ignored Build Step" no projeto para condicionar o
 build ao CI.
 
 Um detalhe que costuma explicar "a Vercel ainda mostra a versao antiga": em
-**Settings -> Git -> Production Branch**, o projeto precisa apontar para a branch
-padrao deste repositorio. Se ela apontar para uma branch que nao recebe push, a
-producao congela na ultima versao que aquela branch teve, enquanto as branches
-novas so geram preview.
+**Settings -> Environments -> Production -> Branch Tracking**, o projeto precisa
+apontar para a branch padrao deste repositorio. Se ela apontar para uma branch
+que nao recebe push, a producao congela na ultima versao que aquela branch teve,
+enquanto as branches novas so geram preview.
 
 ### Vercel CLI direto (fora do CI)
 
