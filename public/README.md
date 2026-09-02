@@ -8,8 +8,14 @@ como entrou.
 
 | Arquivo | Onde é usado |
 | --- | --- |
-| `logo-dark.png` | Sobre fundo escuro: trilho lateral e cabeçalho do painel |
-| `logo-light.png` | Sobre fundo claro: telas que não são o cromo do console |
+| `logo-dark.jpg` | Sobre fundo escuro: trilho, cabeçalho do painel e login no tema escuro |
+| `logo-light.jpg` | Sobre fundo claro: login no tema claro |
 
-Preferir SVG a PNG sempre que houver o vetor: a marca aparece em tamanhos
-diferentes na interface, e o PNG borra quando cresce.
+Os dois são JPEG, que não tem transparência: cada arquivo traz o próprio fundo.
+Por isso `BrandMark` apresenta a marca como bloco arredondado, e não como
+símbolo solto — um símbolo tentando se fundir com a superfície atrás deixaria
+um quadrado visível de cor errada.
+
+Quando existir o vetor, trocar por SVG: a marca aparece em tamanhos diferentes
+na interface, o JPEG borra quando cresce, e o SVG dispensaria os dois arquivos
+(uma marca só, recolorida pelo tema).

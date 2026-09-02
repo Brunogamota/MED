@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useState, type ReactNode } from 'react';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { BrandMark } from '@/components/layout/brand-mark';
 import { cn } from '@/lib/cn';
 
 /**
@@ -77,9 +78,7 @@ export function SignInPage({
       <section className="flex flex-1 items-center justify-center p-8">
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-6">
-            <span className="animate-element animate-delay-100 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <ShieldCheck className="size-5" />
-            </span>
+            <BrandMark size={40} className="animate-element animate-delay-100" />
 
             <h1 className="animate-element animate-delay-200 font-semibold text-4xl leading-tight md:text-5xl">
               {title}

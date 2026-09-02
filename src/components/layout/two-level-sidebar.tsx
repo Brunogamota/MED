@@ -3,9 +3,10 @@
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ChevronDown, Security } from '@carbon/icons-react';
+import { ChevronDown } from '@carbon/icons-react';
 import { NavUserMenu } from '@/components/layout/nav-user-menu';
 import { SearchTrigger } from '@/components/layout/search-dialog';
+import { BrandMarkOnDark } from '@/components/layout/brand-mark';
 import { cn } from '@/lib/cn';
 import {
   RAIL_SECTIONS,
@@ -34,10 +35,6 @@ export interface NavCounts {
   submitted: number;
   /** Algum MED com menos de 24h — tinge o contador de "Vencendo". */
   hasUrgent: boolean;
-}
-
-function BrandMark({ size = 20 }: { size?: number }) {
-  return <Security size={size} className="text-neutral-50" />;
 }
 
 /* ------------------------------- Trilho ---------------------------------- */
@@ -104,7 +101,7 @@ function IconRail({
       className="flex w-16 shrink-0 flex-col items-center gap-2 border-neutral-800 border-r bg-black p-4"
     >
       <div className="mb-2 flex size-10 items-center justify-center">
-        <BrandMark size={24} />
+        <BrandMarkOnDark size={32} />
       </div>
 
       <div className="flex w-full flex-col items-center gap-2">
@@ -158,7 +155,7 @@ function PanelHeader({
   return (
     <div className="flex w-full items-center justify-between">
       <div className="flex items-center gap-2 px-2">
-        <BrandMark />
+        <BrandMarkOnDark size={22} />
         <span className="font-semibold text-[15px] text-neutral-50">{title}</span>
       </div>
       {toggle}
