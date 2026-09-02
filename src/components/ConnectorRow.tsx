@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,22 +14,13 @@ import {
   ItemMedia,
   ItemTitle,
 } from '@/components/ui/item';
-import {
-  Banknote,
-  CreditCard,
-  FileSpreadsheet,
-  Mail,
-  ShoppingBag,
-  ShoppingCart,
-  Store,
-  Users,
-  Webhook,
-  type LucideIcon,
-} from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { ClaudeIcon, GmailIcon, WhatsAppIcon } from '@/components/ui/brand-icons';
 import {
   CONNECTOR_STATE_LABEL,
   type Connector,
   type ConnectorIcon,
+  type ConnectorState,
 } from '@/lib/connectors';
 import { formatDateTime } from '@/lib/format';
 
@@ -44,24 +35,31 @@ import { formatDateTime } from '@/lib/format';
  * do backend: a sincronização automática ainda não existe (TODO(api) em
  * docs/api-gaps.md) e nenhuma credencial é armazenada até lá.
  */
-const ICONS: Record<ConnectorIcon, LucideIcon> = {
-  gateway: Banknote,
-  card: CreditCard,
-  digital: ShoppingBag,
-  members: Users,
-  store: Store,
-  cart: ShoppingCart,
-  webhook: Webhook,
-  csv: FileSpreadsheet,
-  email: Mail,
+/**
+ * Marca de verdade onde ela existe. O ChatGPT fica com um ícone neutro: o
+ * Simple Icons removeu a marca da OpenAI do acervo, e desenhar uma marca que
+ * foi retirada por questão de licença não é coisa que a gente faça sozinho.
+ */
+const ICONS: Record<ConnectorIcon, (props: { className?: string }) => ReactNode> = {
+  whatsapp: WhatsAppIcon,
+  claude: ClaudeIcon,
+  gmail: GmailIcon,
+  chatgpt: Sparkles,
 };
 
-export function ConnectorRow({ connector }: { connector: Connector }) {
+export function ConnectorRow({
+  connector,
+  state,
+}: {
+  connector: Connector;
+  /** Estado resolvido no servidor — pode vir do ambiente, não do catálogo. */
+  state: ConnectorState;
+}) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   const Icon = ICONS[connector.icon];
-  const connected = connector.state === 'CONNECTED';
+  const connected = state === 'CONNECTED';
 
   return (
     // O contorno fica no invólucro, não no Item: o formulário de conexão é
@@ -83,7 +81,7 @@ export function ConnectorRow({ connector }: { connector: Connector }) {
                   : ''
               }
             >
-              {CONNECTOR_STATE_LABEL[connector.state]}
+              {CONNECTOR_STATE_LABEL[state]}
             </Badge>
           </ItemTitle>
           <ItemDescription>{connector.fills}</ItemDescription>

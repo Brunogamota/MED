@@ -1,26 +1,13 @@
 import { serverPageContext } from '@/infra/auth/context';
+import { getConfig } from '@/lib/env';
 import { computeAutoFillStats } from '@/services/medService';
-import { CONNECTOR_GROUPS, CONNECTORS } from '@/lib/connectors';
+import { CONNECTOR_GROUPS, CONNECTORS, groupAnchor, resolveState } from '@/lib/connectors';
 import { ConnectorRow } from '@/components/ConnectorRow';
 import { ItemGroup } from '@/components/ui/item';
 import { MetricCell, MetricStrip } from '@/components/ui';
 import { PageHeader } from '@/components/layout/page-header';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * Âncora de cada grupo, para a navegação lateral cair direto nele. Derivada do
- * próprio rótulo: um id escrito à mão sairia do ar no dia em que o grupo for
- * renomeado.
- */
-function groupAnchor(group: string): string {
-  return group
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
 
 /**
  * Integrações — a segunda página mais importante do produto (briefing 3.7):
@@ -31,8 +18,11 @@ function groupAnchor(group: string): string {
 export default async function IntegracoesPage() {
   const auth = serverPageContext();
   const stats = await computeAutoFillStats(auth);
+  const runtime = { llmConfigured: getConfig().llm.apiKey !== null };
 
-  const connected = CONNECTORS.filter((connector) => connector.state === 'CONNECTED').length;
+  const connected = CONNECTORS.filter(
+    (connector) => resolveState(connector, runtime) === 'CONNECTED',
+  ).length;
   const total = CONNECTORS.length;
   const autoRate =
     stats.totalEvidences === 0
@@ -64,7 +54,11 @@ export default async function IntegracoesPage() {
             <h2 className="mb-3 font-semibold text-base">{group}</h2>
             <ItemGroup className="gap-3">
               {items.map((connector) => (
-                <ConnectorRow key={connector.id} connector={connector} />
+                <ConnectorRow
+                  key={connector.id}
+                  connector={connector}
+                  state={resolveState(connector, runtime)}
+                />
               ))}
             </ItemGroup>
           </section>
