@@ -2,7 +2,7 @@ import { MED_REASONS, PRODUCT_TYPES } from '@/domain/types';
 import { Panel } from '@/components/ui';
 import { PageHeader } from '@/components/layout/page-header';
 import { DateTimeField, Field, FormGrid, MoneyField, Select, SubmitButton } from '@/components/form';
-import { createMedAction } from '@/app/meds/actions';
+import { createMedAction } from '@/app/(console)/meds/actions';
 import { MED_REASON_LABEL, PRODUCT_TYPE_LABEL } from '@/lib/labels';
 
 export const dynamic = 'force-dynamic';

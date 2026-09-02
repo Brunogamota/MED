@@ -6,7 +6,7 @@ import {
   confirmImportAction,
   previewImportAction,
   type ImportPreviewState,
-} from '@/app/meds/actions';
+} from '@/app/(console)/meds/actions';
 import { DateTimeField } from '@/components/fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

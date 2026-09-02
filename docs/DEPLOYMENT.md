@@ -182,6 +182,40 @@ npx vercel@latest --yes          # preview
 npx vercel@latest --prod --yes   # producao
 ```
 
+## Login do console
+
+O console tem tela de entrada em `/login`. Ela **só protege alguma coisa
+quando as duas variaveis existem**:
+
+```
+ADMIN_PASSWORD_HASH=scrypt:<salt>:<hash>
+SESSION_SECRET=<32 bytes em hex>
+```
+
+Gere as duas de uma vez, na raiz do repositorio:
+
+```bash
+node scripts/hash-password.mjs 'sua senha'
+```
+
+Com elas configuradas, o middleware redireciona para `/login` toda rota que
+nao seja `/login`, `/api` ou asset, ate existir um cookie de sessao assinado e
+no prazo (oito horas). Sem elas o console continua aberto, como sempre esteve,
+e a propria tela de login diz isso — trocar esse comportamento em silencio
+trancaria quem ja tem um deploy no ar.
+
+As rotas de `/api` ficam de fora do portao de propósito: elas tem autenticacao
+propria, por API key (`API_KEYS`), e um cookie de navegador nao serve para
+integracao maquina a maquina.
+
+Duas observacoes que economizam tempo:
+
+- o hash usa `:` como separador, e nao o `$` do padrao PHC, porque `$` e
+  expandido por shell e por boa parte dos leitores de `.env` — o hash chegaria
+  mutilado e a senha certa seria recusada sem explicacao;
+- a senha nunca e gravada: o que vai para a variavel e o hash scrypt, com salt
+  proprio, comparado em tempo constante.
+
 ## Variaveis de ambiente
 
 Referencia completa e comentada em `.env.example`. Minimo por ambiente:

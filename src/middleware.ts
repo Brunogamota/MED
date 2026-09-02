@@ -1,20 +1,34 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { SESSION_COOKIE, verifySession } from '@/lib/session';
 
 /**
- * Neutraliza, em desenvolvimento, o bloqueio de Server Actions por origem.
+ * Duas responsabilidades, nesta ordem: proteger o console e destravar as
+ * Server Actions em desenvolvimento.
  *
- * O Next protege Server Actions contra CSRF exigindo que o cabeçalho `Origin`
- * bata com o `Host`. Quando o app é aberto por um host encaminhado (Dev Tunnels
- * do VS Code, Codespaces, proxy, túnel, preview), os dois não coincidem e todo
- * POST de formulário é recusado com "Invalid Server Actions request".
+ * **Sessão.** Quando `ADMIN_PASSWORD_HASH` e `SESSION_SECRET` existem, toda
+ * rota fora de `/login` e da API exige um cookie de sessão assinado e no
+ * prazo. Sem essas variáveis o login não existe e nada é bloqueado — é o
+ * comportamento que o console sempre teve, e mudá-lo em silêncio trancaria
+ * quem já tem um deploy no ar. A tela de login diz isso na cara.
  *
- * Aqui, e SOMENTE fora de produção, reescrevemos o `Origin` para o mesmo host
- * da requisição — o que faz a verificação passar para qualquer endereço, sem
- * precisar enumerar provedores. Em produção o middleware é um no-op: a proteção
- * CSRF continua íntegra e restrita ao host do app (ver next.config.ts).
+ * As rotas de API ficam de fora porque têm autenticação própria, por API key
+ * (`infra/auth/context.ts`); um cookie de navegador não serve para elas.
+ *
+ * **Origem em desenvolvimento.** O Next protege Server Actions contra CSRF
+ * exigindo que o `Origin` bata com o `Host`. Aberto por um host encaminhado
+ * (Codespaces, túnel, preview), os dois não coincidem e todo POST de
+ * formulário é recusado. Fora de produção reescrevemos o `Origin` para o host
+ * da requisição; em produção isso não acontece e a proteção fica íntegra.
  */
-export function middleware(request: NextRequest): NextResponse {
+
+const PUBLIC_PREFIXES = ['/login', '/api', '/_next'];
+
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+function relaxOriginInDevelopment(request: NextRequest): NextResponse {
   if (process.env.NODE_ENV === 'production') return NextResponse.next();
 
   const origin = request.headers.get('origin');
@@ -35,6 +49,24 @@ export function middleware(request: NextRequest): NextResponse {
   const headers = new Headers(request.headers);
   headers.set('origin', `${proto}://${host}`);
   return NextResponse.next({ request: { headers } });
+}
+
+export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const sessionSecret = process.env.SESSION_SECRET?.trim();
+  const authEnabled = Boolean(process.env.ADMIN_PASSWORD_HASH?.trim() && sessionSecret);
+  const { pathname } = request.nextUrl;
+
+  if (authEnabled && sessionSecret && !isPublic(pathname)) {
+    const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value, sessionSecret);
+    if (!session) {
+      const login = new URL('/login', request.url);
+      // Guarda para onde a pessoa ia, para voltar depois de entrar.
+      if (pathname !== '/') login.searchParams.set('next', pathname);
+      return NextResponse.redirect(login);
+    }
+  }
+
+  return relaxOriginInDevelopment(request);
 }
 
 export const config = {

@@ -63,7 +63,7 @@ import { MED_ORIGIN, evidenceSourceOrigin, type FieldOrigin } from '@/lib/origin
 import { nextAction } from '@/lib/nextAction';
 import { NextActionCard } from '@/components/med/NextActionCard';
 import { CaseTimeline } from '@/components/med/CaseTimeline';
-import { createSubmissionAction, generateDefenseAction } from '@/app/meds/actions';
+import { createSubmissionAction, generateDefenseAction } from '@/app/(console)/meds/actions';
 import { FulfillmentPanel } from '@/components/FulfillmentPanel';
 import { CommunicationPanel } from '@/components/CommunicationPanel';
 import { COMMUNICATION_TEMPLATES, type CommunicationTemplate } from '@/domain/communication/receipt';

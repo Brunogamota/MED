@@ -189,3 +189,49 @@ input[type='number']::-webkit-inner-spin-button {
     display: none !important;
   }
 }
+
+/*
+ * Entrada em escada da tela de login: cada elemento sobe um pouco depois do
+ * anterior. As classes vêm do componente de origem; sem elas ele renderiza
+ * invisível, porque a animação é quem devolve a opacidade.
+ */
+@keyframes element-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-element {
+  animation: element-in 600ms cubic-bezier(0.25, 1.1, 0.4, 1) both;
+}
+
+.animate-slide-right {
+  animation: slide-in-right 700ms cubic-bezier(0.25, 1.1, 0.4, 1) both;
+}
+
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+.animate-delay-600 { animation-delay: 600ms; }
+.animate-delay-700 { animation-delay: 700ms; }
+.animate-delay-1000 { animation-delay: 1000ms; }
+.animate-delay-1200 { animation-delay: 1200ms; }
+.animate-delay-1400 { animation-delay: 1400ms; }

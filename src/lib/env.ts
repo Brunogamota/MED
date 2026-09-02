@@ -56,6 +56,18 @@ export interface AppConfig {
   documentUrlSigningSecret: string | null;
   llm: { apiKey: string | null; model: string };
   appUrl: string;
+  /**
+   * Login do console. Só existe quando as duas variáveis estão presentes —
+   * senha sem segredo de sessão (ou o contrário) não autentica ninguém, então
+   * meia configuração vale como nenhuma.
+   */
+  auth: { passwordHash: string | null; sessionSecret: string | null; enabled: boolean };
+}
+
+function buildAuthConfig(): AppConfig['auth'] {
+  const passwordHash = process.env.ADMIN_PASSWORD_HASH?.trim() || null;
+  const sessionSecret = process.env.SESSION_SECRET?.trim() || null;
+  return { passwordHash, sessionSecret, enabled: passwordHash !== null && sessionSecret !== null };
 }
 
 let cached: AppConfig | null = null;
@@ -79,6 +91,7 @@ export function getConfig(): AppConfig {
       model: process.env.LLM_MODEL?.trim() || 'claude-sonnet-5',
     },
     appUrl: process.env.NEXT_PUBLIC_APP_URL?.trim() || vercelUrl || 'http://localhost:3000',
+    auth: buildAuthConfig(),
   };
 
   return cached;

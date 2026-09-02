@@ -289,6 +289,7 @@ function SectionPanel({
   onToggleCollapse,
   organization,
   demoMode,
+  authEnabled,
 }: {
   section: RailSection;
   collapsed: boolean;
@@ -296,6 +297,7 @@ function SectionPanel({
   onToggleCollapse: () => void;
   organization: string;
   demoMode: boolean;
+  authEnabled: boolean;
 }) {
   const pathname = usePathname();
   const view = useSearchParams().get('view');
@@ -378,7 +380,12 @@ function SectionPanel({
         ))}
       </div>
 
-      <NavUserMenu organization={organization} demoMode={demoMode} collapsed={collapsed} />
+      <NavUserMenu
+        organization={organization}
+        demoMode={demoMode}
+        collapsed={collapsed}
+        authEnabled={authEnabled}
+      />
     </div>
   );
 }
@@ -389,11 +396,14 @@ export function TwoLevelSidebar({
   counts,
   organization,
   demoMode,
+  authEnabled,
   defaultCollapsed,
 }: {
   counts: NavCounts;
   organization: string;
   demoMode: boolean;
+  /** Com login ligado, o rodapé ganha "Sair". */
+  authEnabled: boolean;
   defaultCollapsed: boolean;
 }) {
   const pathname = usePathname();
@@ -418,6 +428,7 @@ export function TwoLevelSidebar({
         onToggleCollapse={() => setCollapsed((value) => !value)}
         organization={organization}
         demoMode={demoMode}
+        authEnabled={authEnabled}
       />
     </aside>
   );

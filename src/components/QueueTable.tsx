@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Download, RefreshCw, Send } from 'lucide-react';
-import { batchGenerateDefensesAction, batchPrepareSubmissionsAction } from '@/app/meds/actions';
+import { batchGenerateDefensesAction, batchPrepareSubmissionsAction } from '@/app/(console)/meds/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';

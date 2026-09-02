@@ -15,7 +15,7 @@ import { Panel, EmptyState } from '@/components/ui';
 import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
-import { addCommunicationAction } from '@/app/meds/actions';
+import { addCommunicationAction } from '@/app/(console)/meds/actions';
 
 /**
  * Painel "Comprovantes": o operador reconstrói a comunicação enviada ao cliente

@@ -1,4 +1,4 @@
-import { ImportClient } from '@/app/meds/import/ImportClient';
+import { ImportClient } from '@/app/(console)/meds/import/ImportClient';
 import { PageHeader } from '@/components/layout/page-header';
 
 export const dynamic = 'force-dynamic';

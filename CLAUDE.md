@@ -58,6 +58,10 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/services/fulfillmentService.ts` | Registro de entrega: status + marcos datados (fisico) e envio do acesso (digital). |
 | `src/services/importService.ts` | Importacao em lote, idempotente e com relatorio por linha. |
 | `src/app/api/` | REST. |
+| `src/app/(console)/` | Telas autenticadas: painel, MEDs, integrações. |
+| `src/app/login/` | Entrada no console. |
+| `src/lib/session.ts` | Cookie de sessão assinado (Web Crypto — roda no middleware). |
+| `src/lib/password.ts` | Hash scrypt da senha do console (só Node). |
 | `src/app/meds/` | UI operacional. |
 | `src/components/ui/` | Primitivas do sistema visual (shadcn/ui). Não editar por tela. |
 | `src/components/layout/` | Shell do console: sidebar, cabeçalho, busca, tema. |
@@ -78,6 +82,9 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 - Defense e imutavel e versionada: gerar de novo cria uma nova versao, nunca
   sobrescreve.
 - Log nao carrega PII desnecessaria. Use os helpers de mascara em `src/lib/format.ts`.
+- Login errado devolve uma mensagem só, igual para usuário inexistente, senha
+  errada e login desligado. Distinguir os casos entrega informação a quem está
+  adivinhando.
 - Status de entrega sozinho nao e afirmacao: todo marco exige a data correspondente.
   Dado digitado pelo operador e valido, desde que gravado com `source: MANUAL`.
 

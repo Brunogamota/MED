@@ -4,7 +4,7 @@ import type { MedCase } from '@/domain/case';
 import { Panel } from '@/components/ui';
 import { DateTimeField, Field, FormGrid, Select } from '@/components/form';
 import { AutoSaveForm } from '@/components/AutoSaveForm';
-import { recordDigitalDeliveryAction, recordShipmentAction } from '@/app/meds/actions';
+import { recordDigitalDeliveryAction, recordShipmentAction } from '@/app/(console)/meds/actions';
 import {
   DELIVERY_CHANNEL_LABEL,
   EVIDENCE_SOURCE_LABEL,

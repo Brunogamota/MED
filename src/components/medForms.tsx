@@ -19,7 +19,7 @@ import {
   upsertOrderAction,
   upsertTrackingAction,
   upsertTransactionAction,
-} from '@/app/meds/actions';
+} from '@/app/(console)/meds/actions';
 import {
   DOCUMENT_KIND_LABEL,
   EVIDENCE_SOURCE_LABEL,

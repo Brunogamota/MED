@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { NextAction } from '@/lib/nextAction';
 import { formatDateTime } from '@/lib/format';
 import { ScoreBar, SubtleBadge } from '@/components/ui';
-import { createSubmissionAction, generateDefenseAction } from '@/app/meds/actions';
+import { createSubmissionAction, generateDefenseAction } from '@/app/(console)/meds/actions';
 
 /**
  * Bloco "Próxima ação" — o novo centro da tela do caso (briefing 3.4).
