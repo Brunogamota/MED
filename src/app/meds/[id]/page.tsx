@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Download, Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/layout/page-header';
 import { serverPageContext } from '@/infra/auth/context';
 import {
   getCase,
@@ -243,59 +246,51 @@ export default async function MedDetailPage({
   const deadlineUrgent = hoursRemaining !== null && hoursRemaining >= 0 && hoursRemaining < 24;
 
   return (
-    <div className="space-y-4">
-      {/* Cabeçalho */}
-      <div>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-          <div className="flex items-baseline gap-3">
-            <Link
-              href="/meds"
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              ← MEDs
-            </Link>
-            <h1 className="text-[20px] font-semibold tracking-[-0.01em]">{med.medId}</h1>
-            <StatusBadge status={med.status} />
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="@container/main flex flex-col gap-4 md:gap-6">
+      <PageHeader
+        title={med.medId}
+        parent={{ href: '/meds', label: 'MEDs' }}
+        actions={
+          <>
             {latestDefense ? (
-              <a
-                href={`/api/meds/${med.id}/pdf`}
-                className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
-              >
-                Baixar PDF
-              </a>
+              <Button asChild variant="outline">
+                <a href={`/api/meds/${med.id}/pdf`}>
+                  <Download data-icon="inline-start" />
+                  Baixar PDF
+                </a>
+              </Button>
             ) : null}
             {med.status === 'READY_TO_SUBMIT' ? (
               <form action={createSubmissionAction}>
                 <input type="hidden" name="medId" value={med.id} />
                 <input type="hidden" name="provider" value="generic-json" />
-                <button
-                  type="submit"
-                  className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
+                <Button type="submit">
+                  <Send data-icon="inline-start" />
                   Preparar envio
-                </button>
+                </Button>
               </form>
             ) : null}
-          </div>
-        </div>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-          <span className="tabular-nums font-medium text-foreground">
-            {formatAmount(med.amount, med.currency)}
+          </>
+        }
+        description={
+          <span className="flex flex-wrap items-center gap-x-2">
+            <StatusBadge status={med.status} />
+            <span className="font-medium text-foreground tabular-nums">
+              {formatAmount(med.amount, med.currency)}
+            </span>
+            <span aria-hidden>·</span>
+            {med.requestingInstitution ? (
+              <>
+                <span>{med.requestingInstitution}</span>
+                <span aria-hidden>·</span>
+              </>
+            ) : null}
+            <span>aberto em {formatDate(med.openedAt)}</span>
+            <span aria-hidden>·</span>
+            <span className={DEADLINE_COLOR[tone]}>{deadlineText(daysRemaining)}</span>
           </span>
-          <span aria-hidden>·</span>
-          {med.requestingInstitution ? (
-            <>
-              <span>{med.requestingInstitution}</span>
-              <span aria-hidden>·</span>
-            </>
-          ) : null}
-          <span>aberto em {formatDate(med.openedAt)}</span>
-          <span aria-hidden>·</span>
-          <span className={DEADLINE_COLOR[tone]}>{deadlineText(daysRemaining)}</span>
-        </p>
-      </div>
+        }
+      />
 
       {/* Faixa de métricas — quatro células iguais */}
       <MetricStrip>

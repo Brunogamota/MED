@@ -3,6 +3,7 @@ import { computeAutoFillStats } from '@/services/medService';
 import { CONNECTOR_GROUPS, CONNECTORS } from '@/lib/connectors';
 import { ConnectorCard } from '@/components/ConnectorCard';
 import { MetricCell, MetricStrip } from '@/components/ui';
+import { PageHeader } from '@/components/layout/page-header';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,14 +25,11 @@ export default async function IntegracoesPage() {
       : Math.round((stats.automaticEvidences / stats.totalEvidences) * 100);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-[20px] font-semibold tracking-[-0.01em]">Integrações</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Cada fonte conectada é um conjunto de campos que você deixa de digitar. O formulário é o
-          último recurso.
-        </p>
-      </div>
+    <div className="@container/main flex flex-col gap-4 md:gap-6">
+      <PageHeader
+        title="Integrações"
+        description="Cada fonte conectada é um conjunto de campos que você deixa de digitar. O formulário é o último recurso."
+      />
 
       <MetricStrip>
         <MetricCell label="Fontes conectadas" value={connected} unit={`de ${total}`} />
@@ -48,7 +46,7 @@ export default async function IntegracoesPage() {
         const items = CONNECTORS.filter((connector) => connector.group === group);
         return (
           <section key={group}>
-            <h2 className="mb-2 mt-6 text-sm font-semibold text-foreground">
+            <h2 className="mb-3 font-semibold text-base">
               {group}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

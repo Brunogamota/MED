@@ -8,6 +8,11 @@ import {
   type ImportPreviewState,
 } from '@/app/meds/actions';
 import { DateTimeField } from '@/components/fields';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 /**
  * Importacao em dois passos: analisar e depois confirmar.
@@ -33,12 +38,12 @@ const OUTCOME_TONE: Record<string, string> = {
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border bg-card">
-      <header className="flex h-11 items-center border-b border-border px-4">
-        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-      </header>
-      <div className="p-4">{children}</div>
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
 
@@ -61,58 +66,45 @@ export function ImportClient() {
     <div className="space-y-4">
       <form action={runPreview} className="space-y-4">
         <Panel title="1. Arquivo da adquirente">
-          <div className="grid gap-3 md:grid-cols-3">
-            <label className="block md:col-span-1">
-              <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Arquivo CSV
-              </span>
-              <input
-                type="file"
-                name="file"
-                accept=".csv,.tsv,.txt,text/csv"
-                className="mt-1 w-full rounded border bg-background px-2 py-1 text-xs"
-              />
-            </label>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="import-file">Arquivo CSV</Label>
+              <Input id="import-file" type="file" name="file" accept=".csv,.tsv,.txt,text/csv" />
+            </div>
+
             <DateTimeField
               label="Data de abertura do lote"
               name="defaultOpenedAt"
               hint="Usada só nas linhas em que o arquivo não traz a data."
             />
-            <label className="block">
-              <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Referência do lote
-              </span>
-              <input
-                type="text"
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="import-reference">Referência do lote</Label>
+              <Input
+                id="import-reference"
                 name="batchReference"
                 placeholder="lote-29-08 / arquivo da adquirente"
-                className="mt-1 w-full rounded border bg-background px-2 py-1.5 text-sm"
               />
-              <span className="mt-0.5 block text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Fica gravada na procedência das evidências importadas.
-              </span>
-            </label>
+              </p>
+            </div>
           </div>
 
-          <label className="mt-3 block">
-            <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Ou cole o conteúdo aqui
-            </span>
-            <textarea
+          <div className="mt-4 grid gap-1.5">
+            <Label htmlFor="import-csv">Ou cole o conteúdo aqui</Label>
+            <Textarea
+              id="import-csv"
               name="csv"
               rows={6}
+              className="font-mono text-xs"
               placeholder={'MED ID;Valor;Data da compra;Data abertura;Prazo;Motivo;Nome do cliente;CPF\nMED-001;R$ 349,90;10/08/2026 14:32;20/08/2026;05/09/2026;Produto não recebido;Maria Souza;12345678909'}
-              className="mt-1 w-full rounded border bg-background px-2 py-1.5 font-mono text-xs"
             />
-          </label>
+          </div>
 
-          <button
-            type="submit"
-            disabled={previewPending}
-            className="mt-3 inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
-          >
+          <Button type="submit" variant="outline" disabled={previewPending} className="mt-4">
             {previewPending ? 'Analisando…' : 'Analisar arquivo'}
-          </button>
+          </Button>
         </Panel>
       </form>
 

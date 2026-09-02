@@ -1,8 +1,7 @@
 'use client';
 
 import { useId, useMemo, useRef, useState } from 'react';
-import * as Popover from '@radix-ui/react-popover';
-import * as RadixSelect from '@radix-ui/react-select';
+import { Popover, Select as RadixSelect } from 'radix-ui';
 
 /**
  * Controles próprios do console (briefing 2.1): nenhum input nativo de data,

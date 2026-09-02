@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { MED_REASONS, PRODUCT_TYPES } from '@/domain/types';
 import { Panel } from '@/components/ui';
+import { PageHeader } from '@/components/layout/page-header';
 import { DateTimeField, Field, FormGrid, MoneyField, Select, SubmitButton } from '@/components/form';
 import { createMedAction } from '@/app/meds/actions';
 import { MED_REASON_LABEL, PRODUCT_TYPE_LABEL } from '@/lib/labels';
@@ -9,22 +9,12 @@ export const dynamic = 'force-dynamic';
 
 export default function NewMedPage() {
   return (
-    <div className="space-y-4">
-      <div>
-        <div className="flex items-baseline gap-3">
-          <Link
-            href="/meds"
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            ← MEDs
-          </Link>
-          <h1 className="text-[20px] font-semibold tracking-[-0.01em]">Novo MED</h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Campos em branco permanecem ausentes: o que não for informado será apontado como
-          evidência faltante, nunca preenchido por suposição.
-        </p>
-      </div>
+    <div className="@container/main flex flex-col gap-4 md:gap-6">
+      <PageHeader
+        title="Novo MED"
+        parent={{ href: '/meds', label: 'MEDs' }}
+        description="Campos em branco permanecem ausentes: o que não for informado será apontado como evidência faltante, nunca preenchido por suposição."
+      />
 
       <form action={createMedAction} className="space-y-4">
         <Panel title="Dados do MED">
