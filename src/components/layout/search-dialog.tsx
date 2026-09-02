@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 import {
   Command,
   CommandDialog,
@@ -14,7 +14,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import { NAV_GROUPS } from '@/navigation/sidebar-items';
+import { RAIL_SECTIONS } from '@/navigation/sidebar-sections';
 import { formatAmount } from '@/lib/format';
 
 /**
@@ -36,13 +36,22 @@ interface SearchRow {
   status: string;
 }
 
-const NAV_TARGETS = NAV_GROUPS.flatMap((group) =>
-  group.items
-    .filter((item) => item.url)
-    .map((item) => ({ id: item.id, group: group.label, title: item.title, url: item.url as string, icon: item.icon })),
+/** Toda tela que existe de verdade, achatada a partir da navegação. */
+const NAV_TARGETS = RAIL_SECTIONS.flatMap((section) =>
+  section.groups.flatMap((group) =>
+    group.items
+      .filter((item) => item.href && !item.href.includes('#'))
+      .map((item) => ({
+        id: `${section.id}-${item.id}`,
+        group: section.title,
+        title: item.label,
+        url: item.href as string,
+        icon: item.icon,
+      })),
+  ),
 );
 
-export function SearchDialog() {
+export function SearchTrigger({ collapsed = false }: { collapsed?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -94,17 +103,25 @@ export function SearchDialog() {
 
   return (
     <>
-      <Button
+      <button
+        type="button"
         onClick={() => setOpen(true)}
-        variant="link"
-        className="px-0! font-normal text-muted-foreground hover:no-underline"
+        aria-label="Buscar"
+        className={cn(
+          'flex h-10 items-center rounded-lg border border-neutral-800 text-neutral-400 transition-colors hover:border-neutral-700 hover:text-neutral-200',
+          collapsed ? 'w-10 min-w-10 justify-center' : 'w-full px-3',
+        )}
       >
-        <Search data-icon="inline-start" />
-        Buscar
-        <kbd className="ml-1 inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-medium text-[10px]">
-          <span className="text-xs">⌘</span>K
-        </kbd>
-      </Button>
+        <Search className="size-4 shrink-0" />
+        {collapsed ? null : (
+          <>
+            <span className="ml-2 flex-1 text-left text-sm">Buscar</span>
+            <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-neutral-800 px-1.5 font-medium text-[10px]">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </>
+        )}
+      </button>
 
       <CommandDialog
         open={open}
@@ -155,7 +172,7 @@ export function SearchDialog() {
               const Icon = target.icon;
               return (
                 <CommandItem key={target.id} value={target.id} onSelect={() => go(target.url)}>
-                  <Icon />
+                  {Icon ? <Icon size={16} /> : null}
                   <span>{target.title}</span>
                   <span className="ml-auto text-muted-foreground text-xs">{target.group}</span>
                 </CommandItem>

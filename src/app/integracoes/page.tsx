@@ -8,6 +8,20 @@ import { PageHeader } from '@/components/layout/page-header';
 export const dynamic = 'force-dynamic';
 
 /**
+ * Âncora de cada grupo, para a navegação lateral cair direto nele. Derivada do
+ * próprio rótulo: um id escrito à mão sairia do ar no dia em que o grupo for
+ * renomeado.
+ */
+function groupAnchor(group: string): string {
+  return group
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/**
  * Integrações — a segunda página mais importante do produto (briefing 3.7):
  * é daqui que sai o preenchimento automático. O indicador do topo é o
  * argumento de venda: quantas fontes conectadas e quanto do preenchimento
@@ -45,10 +59,8 @@ export default async function IntegracoesPage() {
       {CONNECTOR_GROUPS.map((group) => {
         const items = CONNECTORS.filter((connector) => connector.group === group);
         return (
-          <section key={group}>
-            <h2 className="mb-3 font-semibold text-base">
-              {group}
-            </h2>
+          <section key={group} id={groupAnchor(group)} className="scroll-mt-6">
+            <h2 className="mb-3 font-semibold text-base">{group}</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((connector) => (
                 <ConnectorCard key={connector.id} connector={connector} />
