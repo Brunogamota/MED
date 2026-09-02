@@ -3,16 +3,25 @@ import type { SVGProps } from 'react';
 /**
  * Marcas dos conectores, em SVG.
  *
- * Os traçados vêm do Simple Icons 16.29.0 (CC0), copiados para cá em vez de
- * virarem dependência: são três, e o pacote inteiro carrega alguns milhares.
- * Herdam `currentColor`, então acompanham o tema como qualquer outro ícone.
+ * Os traçados e as cores vêm do Simple Icons 16.29.0 (CC0), copiados para cá
+ * em vez de virarem dependência: são três, e o pacote inteiro carrega alguns
+ * milhares.
+ *
+ * Cada marca sai na própria cor, não em `currentColor`: é o que faz a lista
+ * de integrações ser reconhecível de relance. `fill` continua sobrescrevível
+ * por prop para quando a peça precisar ser monocromática.
  */
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-function BrandIcon({ path, title, ...props }: IconProps & { path: string; title: string }) {
+function BrandIcon({
+  path,
+  title,
+  brand,
+  ...props
+}: IconProps & { path: string; title: string; brand: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" role="img" aria-label={title} {...props}>
+    <svg viewBox="0 0 24 24" fill={brand} role="img" aria-label={title} {...props}>
       <path d={path} />
     </svg>
   );
@@ -28,13 +37,13 @@ const GMAIL_PATH =
   'M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z';
 
 export function WhatsAppIcon(props: IconProps) {
-  return <BrandIcon path={WHATSAPP_PATH} title="WhatsApp" {...props} />;
+  return <BrandIcon path={WHATSAPP_PATH} title="WhatsApp" brand="#25D366" {...props} />;
 }
 
 export function ClaudeIcon(props: IconProps) {
-  return <BrandIcon path={CLAUDE_PATH} title="Claude" {...props} />;
+  return <BrandIcon path={CLAUDE_PATH} title="Claude" brand="#D97757" {...props} />;
 }
 
 export function GmailIcon(props: IconProps) {
-  return <BrandIcon path={GMAIL_PATH} title="Gmail" {...props} />;
+  return <BrandIcon path={GMAIL_PATH} title="Gmail" brand="#EA4335" {...props} />;
 }

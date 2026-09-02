@@ -66,8 +66,9 @@ export function ConnectorRow({
     // irmão da linha, e dentro do Item ele disputaria espaço com as ações.
     <div className="rounded-lg border">
       <Item>
-        <ItemMedia variant="icon" className="size-9 rounded-lg border bg-muted">
-          <Icon className="text-muted-foreground" />
+        <ItemMedia variant="icon" className="size-9 rounded-lg border bg-background">
+          {/* A marca sai na cor dela; o ícone neutro segue a cor do texto. */}
+          <Icon className={connector.icon === 'chatgpt' ? 'text-muted-foreground' : undefined} />
         </ItemMedia>
 
         <ItemContent>
