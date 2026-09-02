@@ -1,33 +1,15 @@
 import Link from 'next/link';
-import { BellRing } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 import type { NextAction } from '@/lib/nextAction';
 import { formatDateTime } from '@/lib/format';
 import { ScoreBar, SubtleBadge } from '@/components/ui';
+import { PillAlert } from '@/components/ui/pill-alert';
 import { createSubmissionAction, generateDefenseAction } from '@/app/(console)/meds/actions';
 
 /**
  * Bloco "Próxima ação" — o novo centro da tela do caso (briefing 3.4).
  * Um estado por vez; cada item faltante leva o operador direto ao campo.
  */
-
-/**
- * Envio a partir do cartão vermelho: o botão é escuro sobre o vermelho, e não
- * o primário do sistema, que sumiria no fundo.
- */
-function CriticalSubmit({ medId, label }: { medId: string; label: string }) {
-  return (
-    <form action={createSubmissionAction}>
-      <input type="hidden" name="medId" value={medId} />
-      <input type="hidden" name="provider" value="generic-json" />
-      <button
-        type="submit"
-        className="inline-flex h-11 w-full items-center justify-center rounded-full bg-neutral-900 px-6 font-semibold text-neutral-50 text-sm shadow-sm transition-colors hover:bg-neutral-800"
-      >
-        {label}
-      </button>
-    </form>
-  );
-}
 
 function PrimarySubmit({ medId, label }: { medId: string; label: string }) {
   return (
@@ -76,36 +58,31 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
 
   if (action.kind === 'critical') {
     return (
-      // Vermelho cheio, e não a variante suave dos outros estados: quando
-      // faltam horas para o prazo, o cartão precisa interromper a leitura da
-      // página, não conviver com ela. Cor fixa nos dois temas — o alarme não
-      // muda de intensidade porque o operador prefere tema claro.
-      <section className="overflow-hidden rounded-2xl bg-[#f9575f] p-6 text-white shadow-lg">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="font-semibold text-2xl leading-tight tracking-tight">
-              Prazo crítico: menos de {action.hoursLeft + 1} h para responder
-            </h2>
-            <p className="mt-2 max-w-prose text-[15px] text-white/90 leading-snug">
-              {action.impact}
-            </p>
-          </div>
-          <span
-            aria-hidden
-            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white/15"
-          >
-            <BellRing className="size-5" />
-          </span>
-        </div>
+      // Mesma moldura dos outros estados: o que muda é a pílula no topo. O
+      // aviso precisa saltar aos olhos, e não expulsar da tela a lista do que
+      // falta e o botão de enviar — que é o que o operador veio fazer aqui.
+      <section className="rounded-lg border bg-card p-4">
+        <PillAlert
+          tone="danger"
+          icon={<TriangleAlert aria-hidden className="size-4" />}
+          label="Prazo crítico"
+        >
+          menos de {action.hoursLeft + 1} h para responder
+        </PillAlert>
+
+        <p className="mt-3 text-sm text-muted-foreground">{action.impact}</p>
 
         {action.missing.length > 0 ? (
-          <ul className="mt-5 divide-y divide-white/20 border-white/20 border-y">
+          <ul className="mt-3 divide-y divide-border border-border border-t">
             {action.missing.map((item) => (
-              <li key={item.label} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+              <li
+                key={item.label}
+                className="flex min-h-9 items-center justify-between gap-3 py-1.5 text-sm"
+              >
                 <span>{item.label}</span>
                 <Link
                   href={item.href}
-                  className="shrink-0 font-medium underline underline-offset-2 hover:no-underline"
+                  className="shrink-0 font-medium text-foreground hover:underline"
                 >
                   {item.actionLabel}
                 </Link>
@@ -114,8 +91,8 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
           </ul>
         ) : null}
 
-        <div className="mt-5">
-          <CriticalSubmit medId={medId} label="Preparar envio mesmo incompleto" />
+        <div className="mt-4">
+          <PrimarySubmit medId={medId} label="Preparar envio mesmo incompleto" />
         </div>
       </section>
     );
