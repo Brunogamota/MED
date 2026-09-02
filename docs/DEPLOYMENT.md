@@ -311,12 +311,8 @@ o aviso "modo demo - dados nao persistidos".
 Sem `DATABASE_URL` o deploy sobe em modo demo e e exploravel de imediato, com os
 dados de exemplo.
 
-Para valer, na Vercel: **Storage -> Create Database -> Postgres**, conectar ao
-projeto, e redeploy. As variaveis entram sozinhas e o proprio build aplica as
-migrations. A unica coisa que ainda pode faltar e a linha da organizacao — o
-`organizationId` das chaves de API precisa existir na tabela `Organization`:
-
-```sql
-insert into "Organization" (id, name, "createdAt")
-values ('org_demo', 'Minha organizacao', now());
-```
+Para valer, na Vercel: **Storage -> Create Database**, conectar ao projeto
+(marcando so **Production**, e sem prefixo nas variaveis) e redeploy. As
+variaveis entram sozinhas, o build aplica as migrations, e a linha da
+organizacao nasce junto com o primeiro MED — `createMed` usa `connectOrCreate`,
+entao nao ha SQL manual a rodar.
