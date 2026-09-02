@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useRef, useState } from 'react';
 import { Popover, Select as RadixSelect } from 'radix-ui';
+import { Label } from '@/components/ui/label';
 
 /**
  * Controles próprios do console (briefing 2.1): nenhum input nativo de data,
@@ -18,15 +19,18 @@ import { Popover, Select as RadixSelect } from 'radix-ui';
  *   AutoSaveForm disparando um evento `input` que borbulha.
  */
 
+/** Mesma superfície do `<Input>`: os controles próprios não podem destoar. */
 const FIELD_CLASS =
-  'h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30';
+  'h-8.5 w-full min-w-0 rounded-lg border border-input bg-background px-2.5 py-1 text-sm shadow-xs transition-[box-shadow,border-color] outline-none placeholder:text-muted-foreground/72 focus-visible:border-ring focus-visible:shadow-none focus-visible:ring-3 focus-visible:ring-ring/24 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-64 dark:bg-input/32 not-disabled:not-focus-visible:inset-shadow-[0_1px_rgb(0_0_0/0.04)] dark:not-disabled:not-focus-visible:inset-shadow-[0_-1px_rgb(255_255_255/0.06)]';
 
+/** O mesmo `<Label>` do `Field`: dois estilos de rótulo no mesmo formulário
+ * fazem o operador achar que os campos são de naturezas diferentes. */
 function LabelRow({ id, label, required }: { id: string; label: string; required?: boolean }) {
   return (
-    <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-muted-foreground">
+    <Label htmlFor={id} className="mb-1.5">
       {label}
       {required ? <span className="text-destructive"> *</span> : null}
-    </label>
+    </Label>
   );
 }
 

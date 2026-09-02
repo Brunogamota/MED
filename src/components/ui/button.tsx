@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Loader2 } from "lucide-react"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/cn"
@@ -9,9 +10,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        default:
+          "border-primary bg-primary text-primary-foreground shadow-xs shadow-primary/24 hover:bg-primary/90 not-disabled:inset-shadow-[0_1px_rgb(255_255_255/0.16)]",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-background shadow-xs hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
@@ -41,26 +43,66 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * `loading` mantém o rótulo no lugar, invisível, e sobrepõe o spinner: o botão
+ * não muda de largura ao enviar, então nada pula na tela. Também desabilita,
+ * o que impede o clique duplo que enviaria o formulário duas vezes.
+ */
 function Button({
   className,
   variant = "default",
   size = "default",
   asChild = false,
+  loading = false,
+  disabled,
+  children,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
+    loading?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
 
+  if (asChild) {
+    return (
+      <Comp
+        data-slot="button"
+        data-variant={variant}
+        data-size={size}
+        className={cn(buttonVariants({ variant, size, className }))}
+        {...props}
+      >
+        {children}
+      </Comp>
+    )
+  }
+
   return (
-    <Comp
+    <button
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      disabled={loading || disabled}
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        loading && "relative select-none",
+      )}
       {...props}
-    />
+    >
+      {loading ? (
+        <>
+          <span className="invisible inline-flex items-center gap-1.5">{children}</span>
+          <Loader2
+            role="status"
+            aria-label="Enviando"
+            className="pointer-events-none absolute animate-spin"
+          />
+        </>
+      ) : (
+        children
+      )}
+    </button>
   )
 }
 

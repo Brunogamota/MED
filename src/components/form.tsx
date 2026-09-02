@@ -15,6 +15,7 @@ import { cn } from '@/lib/cn';
  */
 
 export { DateTimeField, MoneyField, SelectField as Select } from '@/components/fields';
+export { SubmitButton } from '@/components/SubmitButton';
 
 export function Field({
   label,
@@ -61,11 +62,6 @@ export function Field({
 
 export function FormGrid({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-3 lg:grid-cols-4">{children}</div>;
-}
-
-/** Ação primária do formulário. */
-export function SubmitButton({ children }: { children: ReactNode }) {
-  return <Button type="submit">{children}</Button>;
 }
 
 /** Ação secundária. */
