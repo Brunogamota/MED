@@ -1,7 +1,8 @@
 'use client';
 
-import { useId, useMemo, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Popover, Select as RadixSelect } from 'radix-ui';
+import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 
 /**
@@ -74,94 +75,6 @@ function parseHuman(raw: string): Date | null {
   return null;
 }
 
-const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
-const MONTHS = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
-];
-
-function MonthGrid({
-  selected,
-  onPick,
-}: {
-  selected: Date | null;
-  onPick: (day: Date) => void;
-}) {
-  const [cursor, setCursor] = useState(() => {
-    const base = selected ?? new Date();
-    return new Date(base.getFullYear(), base.getMonth(), 1);
-  });
-
-  const cells = useMemo(() => {
-    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const start = first.getDay();
-    const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
-    const list: (Date | null)[] = [];
-    for (let index = 0; index < start; index += 1) list.push(null);
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      list.push(new Date(cursor.getFullYear(), cursor.getMonth(), day));
-    }
-    return list;
-  }, [cursor]);
-
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  const today = new Date();
-
-  return (
-    <div>
-      <div className="mb-2 flex items-center justify-between">
-        <button
-          type="button"
-          aria-label="Mês anterior"
-          onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent"
-        >
-          <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
-        </button>
-        <span className="text-sm font-medium">
-          {MONTHS[cursor.getMonth()]} de {cursor.getFullYear()}
-        </span>
-        <button
-          type="button"
-          aria-label="Próximo mês"
-          onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent"
-        >
-          <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
-        </button>
-      </div>
-      <div className="grid grid-cols-7 gap-0.5 text-center">
-        {WEEKDAYS.map((weekday, index) => (
-          <span key={`${weekday}-${index}`} className="h-6 text-xs leading-6 text-muted-foreground">
-            {weekday}
-          </span>
-        ))}
-        {cells.map((cell, index) =>
-          cell ? (
-            <button
-              key={cell.toISOString()}
-              type="button"
-              onClick={() => onPick(cell)}
-              className={`h-7 w-7 rounded-md text-xs tabular-nums ${
-                selected && isSameDay(cell, selected)
-                  ? 'bg-primary font-medium text-primary-foreground'
-                  : isSameDay(cell, today)
-                    ? 'bg-accent font-medium'
-                    : 'hover:bg-accent'
-              }`}
-            >
-              {cell.getDate()}
-            </button>
-          ) : (
-            <span key={`empty-${index}`} className="h-7 w-7" />
-          ),
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function DateTimeField({
   label,
   name,
@@ -185,10 +98,15 @@ export function DateTimeField({
   const [text, setText] = useState(validInitial ? toDisplay(validInitial) : '');
   const [invalid, setInvalid] = useState(false);
   const [open, setOpen] = useState(false);
+  // Mes visivel do calendario. Fica aqui, e nao dentro do popover, porque o
+  // popover desmonta ao fechar: sem isto, escolher 12/2025 e reabrir voltaria
+  // para o mes de hoje.
+  const [month, setMonth] = useState<Date>(validInitial ?? new Date());
   const hiddenRef = useRef<HTMLInputElement>(null);
 
   const commit = (next: Date | null) => {
     setValue(next);
+    if (next) setMonth(next);
     setText(next ? toDisplay(next) : '');
     setInvalid(false);
     // O hidden muda por script: avisa o AutoSaveForm que o formulário sujou.
@@ -272,7 +190,7 @@ export function DateTimeField({
             <Popover.Content
               align="end"
               sideOffset={4}
-              className="z-50 w-[248px] rounded-lg border bg-popover p-3 shadow-md"
+              className="z-50 w-auto rounded-lg border bg-popover p-3 shadow-md"
             >
               <div className="mb-2 flex gap-1.5">
                 {shortcuts.map((shortcut) => (
@@ -289,9 +207,13 @@ export function DateTimeField({
                   </button>
                 ))}
               </div>
-              <MonthGrid
-                selected={value}
-                onPick={(day) => {
+              <Calendar
+                mode="single"
+                selected={value ?? undefined}
+                month={month}
+                onMonthChange={setMonth}
+                onSelect={(day) => {
+                  if (!day) return;
                   commit(withTime(day));
                   setOpen(false);
                 }}
