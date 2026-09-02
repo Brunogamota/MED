@@ -138,3 +138,23 @@ reportada e ficar de fora, em vez de virar palpite. Motivo desconhecido vira
 `OTHER` com o texto original preservado, porque encaixar na categoria errada
 mudaria quais evidencias o sistema passa a exigir. Coluna nao reconhecida e
 listada para o operador, nunca encaixada a forca em algum campo.
+
+## 18. Sistema visual: shadcn/ui com tokens em oklch, claro e escuro
+
+A interface tinha um sistema proprio (neutros quentes, 13px, sem sombra em
+card). Ele era coerente, mas cada tela reimplementava botao, campo e cabecalho,
+e o modo escuro nao existia porque exigiria uma segunda paleta escrita a mao.
+
+A troca foi por shadcn/ui sobre Tailwind v4: as primitivas vivem em
+`src/components/ui/` e nao sao editadas por tela; a cor sai de variaveis em
+oklch declaradas uma vez, e o modo escuro so redefine as mesmas variaveis.
+`src/components/ui.tsx` continua existindo como a camada fina que traduz o
+vocabulario do dominio — score, origem do dado, forca de evidencia, status de
+requisito — para essas primitivas.
+
+A excecao deliberada sao os comprovantes (`ClientEmailView`,
+`PaymentReceiptCard`). Eles representam uma peca externa — o painel de envios do
+gateway, o comprovante do banco — e vao impressos. Seguir o tema do console
+faria a mesma evidencia sair diferente na tela clara, na escura e no PDF, o que
+enfraquece justamente o que ela deveria provar. Por isso a paleta deles e fixa,
+e o selo de reconstrucao continua obrigatorio.

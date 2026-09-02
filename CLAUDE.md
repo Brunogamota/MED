@@ -59,6 +59,10 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/services/importService.ts` | Importacao em lote, idempotente e com relatorio por linha. |
 | `src/app/api/` | REST. |
 | `src/app/meds/` | UI operacional. |
+| `src/components/ui/` | Primitivas do sistema visual (shadcn/ui). Não editar por tela. |
+| `src/components/layout/` | Shell do console: sidebar, cabeçalho, busca, tema. |
+| `src/components/ui.tsx` | Primitivos do domínio (Panel, KeyValueRow, ScoreBar) sobre `ui/`. |
+| `src/navigation/sidebar-items.ts` | Navegação como tabela de configuração. |
 
 ## Regras de codigo
 
@@ -67,6 +71,9 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 - Toda consulta ao repositorio recebe `organizationId` e filtra por ele, inclusive
   quando ja filtra por id (protecao contra IDOR).
 - Nada de `any`. O lint bloqueia.
+- Cor literal só nos comprovantes, que representam peça externa e vão impressos.
+  No resto da interface, tudo sai dos tokens de `globals.css` — é o que faz o
+  modo escuro funcionar sem uma segunda folha de estilo.
 - Dinheiro persiste em centavos (`Int`). Nunca float no banco.
 - Defense e imutavel e versionada: gerar de novo cria uma nova versao, nunca
   sobrescreve.

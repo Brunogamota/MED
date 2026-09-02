@@ -40,7 +40,7 @@ export default async function ComprovantePage({
       <div className="mb-3 flex items-center justify-between print:hidden">
         <Link
           href={`/meds/${id}?tab=evidencias`}
-          className="text-xs text-muted-foreground hover:text-foreground"
+          className="whitespace-nowrap text-xs text-muted-foreground hover:text-foreground"
         >
           ← Voltar ao MED
         </Link>
