@@ -265,8 +265,8 @@ export function StatusDot({ tone, children }: { tone: Tone; children: ReactNode 
   );
 }
 
-export function StatusBadge({ status }: { status: MedStatus }) {
-  return <MedStatusBadge status={status} />;
+export function StatusBadge({ status, size }: { status: MedStatus; size?: 'sm' | 'md' }) {
+  return <MedStatusBadge status={status} size={size} />;
 }
 
 /** Selo neutro: para versão, tipo, valor técnico. */

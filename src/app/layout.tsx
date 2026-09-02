@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { APP_CONFIG } from '@/config/app';
+import { MotionProvider } from '@/components/layout/motion-provider';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import './globals.css';
@@ -44,7 +45,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <TooltipProvider>{children}</TooltipProvider>
+          <MotionProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

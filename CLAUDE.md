@@ -64,7 +64,7 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/lib/password.ts` | Hash scrypt da senha do console (só Node). |
 | `src/app/meds/` | UI operacional. |
 | `src/components/ui/` | Primitivas do sistema visual (shadcn/ui). Não editar por tela. |
-| `src/components/layout/` | Shell do console: sidebar, cabeçalho, busca, tema. |
+| `src/components/layout/` | Shell do console: sidebar, cabeçalho, busca, tema, preferência de movimento. |
 | `src/components/ui.tsx` | Primitivos do domínio (Panel, KeyValueRow, ScoreBar) sobre `ui/`. |
 | `src/navigation/sidebar-items.ts` | Navegação como tabela de configuração. |
 
