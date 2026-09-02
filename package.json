@@ -13,9 +13,9 @@
     "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "node scripts/deploy-migrations.mjs",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
-    "vercel-build": "prisma generate && next build"
+    "vercel-build": "prisma generate && node scripts/deploy-migrations.mjs && next build"
   },
   "dependencies": {
     "@carbon/icons-react": "^11.87.0",

@@ -15,7 +15,8 @@
 O projeto ja esta pronto para a Vercel:
 
 - `vercel.json` — framework, regiao `gru1`, `maxDuration` de 60s nas rotas de API.
-- Build command `npm run vercel-build` = `prisma generate && next build`.
+- Build command `npm run vercel-build` = `prisma generate`, migrations pendentes
+  (quando ha banco) e `next build`.
   `prisma generate` nao precisa de banco, entao o build funciona mesmo sem
   `DATABASE_URL`.
 - Todas as rotas de API sao `force-dynamic`; nada que dependa de dados de tenant
@@ -241,8 +242,16 @@ Nenhum secret entra no repositorio. `.env` e `.env.local` estao no `.gitignore`.
 
 ```bash
 npm run db:migrate     # desenvolvimento: cria e aplica
-npm run db:deploy      # preview/producao: aplica migrations existentes
+npm run db:deploy      # aplica as pendentes; sem banco configurado, nao faz nada
 ```
+
+O `vercel-build` chama `db:deploy` antes do `next build`, entao **toda migration
+pendente e aplicada no deploy**. Sem `DATABASE_URL` o passo se anuncia e sai sem
+fazer nada, e o build segue em modo demo — o primeiro deploy funciona antes de
+existir banco.
+
+Migration que falha **derruba o build**, de proposito: publicar por cima de um
+banco em estado desconhecido e pior que nao publicar.
 
 ### Politica de operacoes destrutivas
 
@@ -288,5 +297,14 @@ Depois abra `/meds` e confirme que a listagem responde. Em modo demo a tela most
 o aviso "modo demo - dados nao persistidos".
 
 Sem `DATABASE_URL` o deploy sobe em modo demo e e exploravel de imediato, com os
-dados de exemplo. Para valer, configure `DATABASE_URL` no projeto Vercel e rode
-`npm run db:deploy` apontando para `DIRECT_DATABASE_URL`.
+dados de exemplo.
+
+Para valer, na Vercel: **Storage -> Create Database -> Postgres**, conectar ao
+projeto, e redeploy. As variaveis entram sozinhas e o proprio build aplica as
+migrations. A unica coisa que ainda pode faltar e a linha da organizacao — o
+`organizationId` das chaves de API precisa existir na tabela `Organization`:
+
+```sql
+insert into "Organization" (id, name, "createdAt")
+values ('org_demo', 'Minha organizacao', now());
+```
