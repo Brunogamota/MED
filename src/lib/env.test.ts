@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readDatabaseUrl, readDirectDatabaseUrl } from '@/lib/env';
+import { readDatabaseUrl, readDirectDatabaseUrl, readOrganizationId } from '@/lib/env';
 
 /**
  * Conectar um banco pela aba Storage da Vercel cria as variáveis com os nomes
@@ -41,5 +41,38 @@ describe('leitura da conexão', () => {
 
   it('sem conexão direta declarada, migration cai na comum', () => {
     expect(readDirectDatabaseUrl({ DATABASE_URL: 'unica' })).toBe('unica');
+  });
+});
+
+/**
+ * Ligar um banco sem também definir `API_KEYS` derrubava todas as telas do
+ * console com "Nenhuma API key configurada": o modo demo era o único caminho
+ * que funcionava sem chave, e conectar o banco tirava exatamente esse caminho.
+ */
+describe('organização do console', () => {
+  it('usa ORGANIZATION_ID quando existe', () => {
+    expect(readOrganizationId({ ORGANIZATION_ID: 'org_ironpay' }, [])).toBe('org_ironpay');
+  });
+
+  it('herda a da primeira chave de API quando ORGANIZATION_ID não existe', () => {
+    expect(readOrganizationId({}, [{ key: 'k', organizationId: 'org_a', role: 'OWNER' }])).toBe(
+      'org_a',
+    );
+  });
+
+  it('ORGANIZATION_ID vence a chave de API', () => {
+    expect(
+      readOrganizationId({ ORGANIZATION_ID: 'org_escolhida' }, [
+        { key: 'k', organizationId: 'org_da_chave', role: 'OWNER' },
+      ]),
+    ).toBe('org_escolhida');
+  });
+
+  it('sem nenhuma das duas, cai na demo em vez de falhar', () => {
+    expect(readOrganizationId({}, [])).toBe('org_demo');
+  });
+
+  it('ignora ORGANIZATION_ID em branco', () => {
+    expect(readOrganizationId({ ORGANIZATION_ID: '  ' }, [])).toBe('org_demo');
   });
 });

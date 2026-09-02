@@ -56,8 +56,30 @@ export {
 
 export const DEMO_ORGANIZATION_ID = 'org_demo';
 
+/**
+ * Organizacao que as telas do console operam.
+ *
+ * `ORGANIZATION_ID` manda. Sem ela, herda a da primeira chave de API, que era
+ * o comportamento antigo. Sem nenhuma das duas, cai na organizacao demo.
+ *
+ * Nao falha quando nada esta configurado: quem protege o console e o login, e
+ * nao a existencia de uma chave de API — que serve para acesso de maquina. Ate
+ * o commit que trouxe este comentario, ligar um banco sem tambem definir
+ * `API_KEYS` derrubava todas as telas com "Nenhuma API key configurada".
+ */
+export function readOrganizationId(
+  env: Record<string, string | undefined> = process.env,
+  apiKeys: ApiKeyGrant[] = [],
+): string {
+  return env.ORGANIZATION_ID?.trim() || apiKeys[0]?.organizationId || DEMO_ORGANIZATION_ID;
+}
+
 export interface AppConfig {
   appEnv: AppEnv;
+  /**
+   * Organizacao que o console opera. Ver `readOrganizationId`.
+   */
+  organizationId: string;
   /** True when no DATABASE_URL is configured: state is in-memory and ephemeral. */
   demoMode: boolean;
   databaseUrl: string | null;
@@ -86,6 +108,7 @@ export function getConfig(): AppConfig {
   if (cached) return cached;
 
   const databaseUrl = readDatabaseUrl();
+  const apiKeys = parseApiKeys(process.env.API_KEYS);
   const appEnv = readAppEnv();
   const vercelUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null;
 
@@ -93,7 +116,8 @@ export function getConfig(): AppConfig {
     appEnv,
     demoMode: databaseUrl === null,
     databaseUrl,
-    apiKeys: parseApiKeys(process.env.API_KEYS),
+    apiKeys,
+    organizationId: readOrganizationId(process.env, apiKeys),
     webhookSigningSecret: process.env.WEBHOOK_SIGNING_SECRET?.trim() || null,
     documentUrlSigningSecret: process.env.DOCUMENT_URL_SIGNING_SECRET?.trim() || null,
     llm: {

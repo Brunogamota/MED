@@ -63,20 +63,23 @@ export function authenticate(headers: Headers): AuthContext {
 }
 
 /**
- * Context for server-rendered pages. The UI has no session layer yet, só it
- * runs against the demo tenant in demo mode and against the single configured
- * organization otherwise. Interactive auth is a documented follow-up.
+ * Contexto das telas do console.
+ *
+ * Quem protege estas telas e o login (`src/lib/session.ts`), nao a existencia
+ * de uma chave de API — que serve para acesso de maquina, por outro caminho.
+ * Por isso aqui nao ha falha: a organizacao vem de `ORGANIZATION_ID`, ou da
+ * primeira chave configurada, ou da demo.
+ *
+ * Antes disto, ligar um banco sem tambem definir `API_KEYS` derrubava todas as
+ * telas do console com "Nenhuma API key configurada" — o modo demo era o unico
+ * caminho que funcionava sem chave, e conectar o banco tirava exatamente esse
+ * caminho.
  */
 export function serverPageContext(): AuthContext {
   const config = getConfig();
-  if (config.demoMode) {
-    return { organizationId: DEMO_ORGANIZATION_ID, role: 'OWNER', actor: 'demo' };
-  }
-  const firstGrant = config.apiKeys[0];
-  if (!firstGrant) throw new UnauthorizedError('Nenhuma API key configurada');
   return {
-    organizationId: firstGrant.organizationId,
-    role: firstGrant.role,
-    actor: 'ui',
+    organizationId: config.organizationId,
+    role: config.apiKeys[0]?.role ?? 'OWNER',
+    actor: config.demoMode ? 'demo' : 'ui',
   };
 }

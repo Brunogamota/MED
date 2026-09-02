@@ -5,6 +5,7 @@ import type { AppConfig } from '@/lib/env';
 function config(overrides: Partial<AppConfig> = {}): AppConfig {
   return {
     appEnv: 'production',
+    organizationId: 'org_a',
     demoMode: false,
     databaseUrl: 'postgres://x',
     apiKeys: [],

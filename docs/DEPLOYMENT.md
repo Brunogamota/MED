@@ -240,10 +240,20 @@ que a diferenca era so o nome da variavel.
 ```
 DATABASE_URL=postgresql://...   # pooled
 DIRECT_DATABASE_URL=postgresql://...   # direta, so para migrate
-API_KEYS=<key>:<organizationId>:OWNER
+ORGANIZATION_ID=org_...         # organizacao que as telas operam
+API_KEYS=<key>:<organizationId>:OWNER   # so para acesso de maquina
 WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
 DOCUMENT_URL_SIGNING_SECRET=<hex>
 ```
+
+`ORGANIZATION_ID` e opcional: sem ela o console herda a organizacao da primeira
+chave de API e, sem chave nenhuma, usa `org_demo`. Vale defini-la em producao
+para o nome nao depender de outra configuracao.
+
+`API_KEYS` tambem e opcional. Ela protege a **API**; as telas sao protegidas
+pelo login. Ligar um banco sem definir `API_KEYS` nao derruba mais o console —
+ate o commit que trouxe esta linha, derrubava, com "Nenhuma API key
+configurada" em todas as telas.
 
 Opcionais: `ANTHROPIC_API_KEY` + `LLM_MODEL` (reescrita de texto), credenciais de
 storage S3-compativel, tokens de provider.
