@@ -10,12 +10,15 @@ import {
   parseCommunicationReceipt,
   type CommunicationTemplate,
 } from '@/domain/communication/receipt';
+import { Mail, MailCheck } from 'lucide-react';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { EVIDENCE_SOURCE_LABEL } from '@/lib/labels';
-import { Panel, EmptyState } from '@/components/ui';
+import { Panel } from '@/components/ui';
+import { formatDateTimeSmart } from '@/lib/format';
 import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
-import { ReceiptStatusCard } from '@/components/med/ReceiptStatusCard';
 import { addCommunicationAction } from '@/app/(console)/meds/actions';
 
 /**
@@ -41,13 +44,12 @@ export function CommunicationPanel({
   reconstructions: Evidence[];
 }) {
   const draft = draftCommunication(medCase, template);
+  const latest = reconstructions[reconstructions.length - 1];
   const referenceField = REFERENCE_FIELD[template];
   const medId = medCase.med.id;
 
   return (
     <div className="space-y-4">
-      <ReceiptStatusCard medId={medId} reconstructions={reconstructions} />
-
       <Panel
         title="Comprovante de pagamento"
         footer="Reprodução do comprovante Pix na visão do cliente, montada a partir dos dados da transação registrados no caso. Sai com selo de reconstrução — não é captura do aplicativo ou banco do pagador."
@@ -170,12 +172,36 @@ export function CommunicationPanel({
       </Panel>
 
       <Panel title={`Comprovantes gerados (${reconstructions.length})`}>
-        {reconstructions.length === 0 ? (
-          <EmptyState title="Nenhum comprovante gerado">
-            Escolha um modelo acima, confira o conteúdo e gere o painel de envios para anexar à
-            defesa.
-          </EmptyState>
-        ) : (
+        {/* Estado da seção em uma linha: o que existe, e o atalho para abrir o
+            último sem precisar rolar até ele. */}
+        <Alert className="mb-4">
+          {latest ? <MailCheck /> : <Mail />}
+          <AlertTitle>
+            {latest
+              ? `${reconstructions.length} comprovante${reconstructions.length > 1 ? 's' : ''} registrado${reconstructions.length > 1 ? 's' : ''} como evidência`
+              : 'Nenhum comprovante gerado'}
+          </AlertTitle>
+          {latest ? (
+            <AlertAction>
+              <Button asChild size="xs" variant="outline">
+                <a
+                  href={`/meds/${medId}/comprovante/${latest.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir o último
+                </a>
+              </Button>
+            </AlertAction>
+          ) : null}
+          <AlertDescription>
+            {latest
+              ? `O último foi montado ${formatDateTimeSmart(latest.receivedAt) ?? 'sem data registrada'}. Cada peça sai com selo de reconstrução: representa o painel de envios, não é captura dele.`
+              : 'Escolha um modelo acima, confira o conteúdo e gere o painel de envios para anexar à defesa. A peça entra no caso como evidência documental.'}
+          </AlertDescription>
+        </Alert>
+
+        {reconstructions.length === 0 ? null : (
           <ul className="space-y-6">
             {reconstructions.map((evidence) => {
               const receipt = parseCommunicationReceipt(evidence.value);
