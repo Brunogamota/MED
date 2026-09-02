@@ -15,6 +15,7 @@ import { Panel, EmptyState } from '@/components/ui';
 import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
+import { ReceiptStatusCard } from '@/components/med/ReceiptStatusCard';
 import { addCommunicationAction } from '@/app/(console)/meds/actions';
 
 /**
@@ -45,6 +46,8 @@ export function CommunicationPanel({
 
   return (
     <div className="space-y-4">
+      <ReceiptStatusCard medId={medId} reconstructions={reconstructions} />
+
       <Panel
         title="Comprovante de pagamento"
         footer="Reprodução do comprovante Pix na visão do cliente, montada a partir dos dados da transação registrados no caso. Sai com selo de reconstrução — não é captura do aplicativo ou banco do pagador."
