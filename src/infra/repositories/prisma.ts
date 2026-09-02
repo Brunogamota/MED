@@ -292,11 +292,18 @@ const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
  * servidor derruba, e a tela mostra "nao foi possivel carregar" sem dizer por
  * que.
  *
+ * O modo e `no-verify`, e nao `require`: o certificado do pooler do Supabase
+ * nao encadeia numa autoridade que o Node conheca, e `require` derruba a
+ * conexao com "self-signed certificate in certificate chain". `no-verify`
+ * cifra o trafego, mas nao confere a identidade do servidor — protege contra
+ * escuta, nao contra um intermediario que consiga se pos entre os dois.
+ *
+ * Para verificacao completa, defina `sslmode=verify-full` e `sslrootcert` com
+ * o CA do provedor na propria URL: o `sslmode` que ja vier manda, e este
+ * padrao sai de cena.
+ *
  * Banco local fica de fora: `postgres` em maquina de desenvolvimento nao tem
  * certificado, e exigir TLS ali quebraria o `npm run dev`.
- *
- * O `sslmode` que ja vier na URL manda — inclusive `disable`, para quem tem
- * motivo para isso.
  */
 export function withRequiredSsl(connectionString: string): string {
   let url: URL;
@@ -309,7 +316,7 @@ export function withRequiredSsl(connectionString: string): string {
   if (url.searchParams.has('sslmode')) return connectionString;
   if (LOCAL_HOSTS.has(url.hostname)) return connectionString;
 
-  url.searchParams.set('sslmode', 'require');
+  url.searchParams.set('sslmode', 'no-verify');
   return url.toString();
 }
 

@@ -5,13 +5,17 @@ import { withRequiredSsl } from '@/infra/repositories/prisma';
  * A `POSTGRES_PRISMA_URL` que a integração do Supabase cria não traz
  * `sslmode`. O driver `pg` então conecta em claro, o pooler derruba, e a tela
  * mostra "não foi possível carregar" sem dizer por quê.
+ *
+ * O modo é `no-verify` e não `require`: o certificado do pooler do Supabase
+ * não encadeia numa autoridade conhecida, e `require` falha com "self-signed
+ * certificate in certificate chain".
  */
 describe('withRequiredSsl', () => {
-  it('exige TLS quando a URL não diz nada', () => {
+  it('exige TLS quando a URL não diz nada, sem exigir CA conhecida', () => {
     const url = withRequiredSsl(
       'postgres://user:pw@aws-0-sa-east-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
     );
-    expect(new URL(url).searchParams.get('sslmode')).toBe('require');
+    expect(new URL(url).searchParams.get('sslmode')).toBe('no-verify');
     // não perde o que já estava lá
     expect(new URL(url).searchParams.get('pgbouncer')).toBe('true');
   });

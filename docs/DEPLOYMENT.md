@@ -246,6 +246,15 @@ WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
 DOCUMENT_URL_SIGNING_SECRET=<hex>
 ```
 
+A conexao com banco remoto recebe `sslmode=no-verify` quando a URL nao traz um
+`sslmode` proprio: o trafego vai cifrado, mas a identidade do servidor nao e
+conferida. `require` nao serve como padrao — o certificado do pooler do
+Supabase nao encadeia numa autoridade que o Node conheca, e a conexao morre com
+"self-signed certificate in certificate chain".
+
+Para verificacao completa, ponha `sslmode=verify-full` e `sslrootcert` com o CA
+do provedor na propria URL: o `sslmode` declarado sempre vence o padrao.
+
 `ORGANIZATION_ID` e opcional: sem ela o console herda a organizacao da primeira
 chave de API e, sem chave nenhuma, usa `org_demo`. Vale defini-la em producao
 para o nome nao depender de outra configuracao.
