@@ -15,10 +15,19 @@
  */
 import { spawnSync } from 'node:child_process';
 
-const url = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL ?? '';
+// Os mesmos nomes que `src/lib/env.ts` aceita: o nosso e os que a Vercel
+// injeta ao conectar um banco (Vercel Postgres e Supabase usam os mesmos).
+const KEYS = [
+  'DIRECT_DATABASE_URL',
+  'POSTGRES_URL_NON_POOLING',
+  'DATABASE_URL',
+  'POSTGRES_PRISMA_URL',
+  'POSTGRES_URL',
+];
+const url = KEYS.map((key) => process.env[key]?.trim()).find(Boolean) ?? '';
 
 if (url.trim().length === 0) {
-  console.log('[migrations] Sem DATABASE_URL: modo demo, nada a migrar.');
+  console.log('[migrations] Nenhuma string de conexao no ambiente: modo demo, nada a migrar.');
   process.exit(0);
 }
 

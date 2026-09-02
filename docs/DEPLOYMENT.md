@@ -225,6 +225,18 @@ Referencia completa e comentada em `.env.example`. Minimo por ambiente:
 
 **Preview com banco / Producao:**
 
+Conectar um banco pela aba **Storage** da Vercel (Vercel Postgres ou a
+integracao do Supabase) cria as variaveis com os nomes do provedor, nao com os
+nossos. A aplicacao aceita os dois conjuntos, nesta ordem:
+
+| Papel | Nomes aceitos |
+| --- | --- |
+| Conexao da aplicacao | `DATABASE_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL` |
+| Migrations (sem pool) | `DIRECT_DATABASE_URL`, `POSTGRES_URL_NON_POOLING` |
+
+Sem isso o banco fica conectado e a tela segue em modo demo, sem nada dizendo
+que a diferenca era so o nome da variavel.
+
 ```
 DATABASE_URL=postgresql://...   # pooled
 DIRECT_DATABASE_URL=postgresql://...   # direta, so para migrate
