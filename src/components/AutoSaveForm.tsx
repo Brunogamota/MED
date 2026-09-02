@@ -22,14 +22,14 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'invalid';
 function StatusText({ state }: { state: SaveState }) {
   const { pending } = useFormStatus();
   if (pending || state === 'saving') {
-    return <span className="text-xs text-[var(--color-text-muted)]">Salvando…</span>;
+    return <span className="text-xs text-muted-foreground">Salvando…</span>;
   }
   if (state === 'saved') {
-    return <span className="text-xs text-[var(--color-success)]">Salvo</span>;
+    return <span className="text-xs text-emerald-700 dark:text-emerald-400">Salvo</span>;
   }
   if (state === 'invalid') {
     return (
-      <span className="text-xs text-[var(--color-warning)]">
+      <span className="text-xs text-amber-700 dark:text-amber-400">
         Preencha os campos obrigatórios para salvar
       </span>
     );

@@ -105,9 +105,9 @@ const LEGACY_TAB_MAP: Record<string, TabKey> = {
 };
 
 const DEADLINE_COLOR = {
-  neutral: 'text-[var(--color-text-muted)]',
-  warning: 'text-[var(--color-warning)]',
-  danger: 'text-[var(--color-danger)]',
+  neutral: 'text-muted-foreground',
+  warning: 'text-amber-700 dark:text-amber-400',
+  danger: 'text-destructive',
 } as const;
 
 interface RowSpec {
@@ -250,7 +250,7 @@ export default async function MedDetailPage({
           <div className="flex items-baseline gap-3">
             <Link
               href="/meds"
-              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               ← MEDs
             </Link>
@@ -261,7 +261,7 @@ export default async function MedDetailPage({
             {latestDefense ? (
               <a
                 href={`/api/meds/${med.id}/pdf`}
-                className="inline-flex h-8 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-3 text-[13px] font-medium hover:bg-[var(--color-surface-hover)]"
+                className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
               >
                 Baixar PDF
               </a>
@@ -272,7 +272,7 @@ export default async function MedDetailPage({
                 <input type="hidden" name="provider" value="generic-json" />
                 <button
                   type="submit"
-                  className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)]"
+                  className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
                   Preparar envio
                 </button>
@@ -280,8 +280,8 @@ export default async function MedDetailPage({
             ) : null}
           </div>
         </div>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px] text-[var(--color-text-muted)]">
-          <span className="tabular font-medium text-[var(--color-text)]">
+        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+          <span className="tabular-nums font-medium text-foreground">
             {formatAmount(med.amount, med.currency)}
           </span>
           <span aria-hidden>·</span>
@@ -339,17 +339,17 @@ export default async function MedDetailPage({
       </MetricStrip>
 
       {/* Abas — sublinhado 2px, sem caixa */}
-      <nav className="border-b border-[var(--color-border)]">
+      <nav className="border-b border-border">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
           {TABS.map((entry) => (
             <li key={entry.key}>
               <Link
                 href={`/meds/${med.id}?tab=${entry.key}`}
                 aria-current={entry.key === activeTab ? 'page' : undefined}
-                className={`inline-flex h-9 items-center whitespace-nowrap border-b-2 px-3 text-[13px] transition-colors duration-[120ms] ${
+                className={`inline-flex h-9 items-center whitespace-nowrap border-b-2 px-3 text-sm transition-colors duration-[120ms] ${
                   entry.key === activeTab
-                    ? 'border-[var(--color-text)] font-medium text-[var(--color-text)]'
-                    : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                    ? 'border-foreground font-medium text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {entry.label}
@@ -374,9 +374,9 @@ export default async function MedDetailPage({
                   Registre a entrega e os dados do caso para as evidências aparecerem aqui.
                 </EmptyState>
               ) : (
-                <ul className="divide-y divide-[var(--color-border)]">
+                <ul className="divide-y divide-border">
                   {availableItems.map((item) => (
-                    <li key={item.type} className="flex min-h-9 items-center justify-between gap-3 py-1.5 text-[13px]">
+                    <li key={item.type} className="flex min-h-9 items-center justify-between gap-3 py-1.5 text-sm">
                       <span>{item.label}</span>
                       <StrengthBadge strength={item.strength} />
                     </li>
@@ -391,12 +391,12 @@ export default async function MedDetailPage({
                   Todos os itens obrigatórios e recomendados estão disponíveis.
                 </EmptyState>
               ) : (
-                <ul className="divide-y divide-[var(--color-border)]">
+                <ul className="divide-y divide-border">
                   {assessment.missingEvidences.map((missing) => (
-                    <li key={missing.type} className="flex min-h-9 items-start justify-between gap-3 py-1.5 text-[13px]">
+                    <li key={missing.type} className="flex min-h-9 items-start justify-between gap-3 py-1.5 text-sm">
                       <span>
                         {missing.label}
-                        <span className="block text-xs text-[var(--color-text-muted)]">
+                        <span className="block text-xs text-muted-foreground">
                           {missing.rationale}
                         </span>
                       </span>
@@ -422,13 +422,13 @@ export default async function MedDetailPage({
               footer="O score mede completude e força documental segundo as regras internas. Não representa probabilidade de êxito."
             >
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-[13px] text-[var(--color-text-muted)]">Score documental</span>
+                <span className="text-sm text-muted-foreground">Score documental</span>
                 <ScoreBar value={assessment.score.total} max={assessment.score.max} width="w-32" />
               </div>
               <ul>
                 {assessment.score.components.map((component) => (
                   <li key={component.category} className="flex h-7 items-center justify-between gap-3">
-                    <span className="w-32 shrink-0 text-xs text-[var(--color-text-secondary)]">
+                    <span className="w-32 shrink-0 text-xs text-muted-foreground">
                       {CATEGORY_LABEL[component.category]}
                     </span>
                     <ScoreBar value={component.earned} max={component.max} width="w-[120px]" />
@@ -449,7 +449,7 @@ export default async function MedDetailPage({
               ) : (
                 <ul className="space-y-2.5">
                   {latestDefense.riskFlags.map((flag) => (
-                    <li key={flag.code} className="flex items-start gap-2 text-[13px]">
+                    <li key={flag.code} className="flex items-start gap-2 text-sm">
                       <SubtleBadge
                         tone={
                           flag.severity === 'HIGH'
@@ -461,7 +461,7 @@ export default async function MedDetailPage({
                       >
                         {SEVERITY_LABEL[flag.severity]}
                       </SubtleBadge>
-                      <span className="text-[var(--color-text-secondary)]">{flag.message}</span>
+                      <span className="text-muted-foreground">{flag.message}</span>
                     </li>
                   ))}
                 </ul>
@@ -477,7 +477,7 @@ export default async function MedDetailPage({
             <Panel title={`Requisitos (${assessment.items.length})`} flush>
               <div className="max-h-[480px] overflow-y-auto">
                 <table className="w-full">
-                  <thead className="sticky top-0 bg-white">
+                  <thead className="sticky top-0 bg-background">
                     <tr>
                       <Th>Evidência</Th>
                       <Th>Necessidade</Th>
@@ -490,11 +490,11 @@ export default async function MedDetailPage({
                       <tr key={item.type}>
                         <Td>
                           <span className="block">{item.label}</span>
-                          <span className="block text-xs text-[var(--color-text-muted)]">
+                          <span className="block text-xs text-muted-foreground">
                             {CATEGORY_LABEL[item.category]}
                           </span>
                         </Td>
-                        <Td className="text-xs text-[var(--color-text-secondary)]">
+                        <Td className="text-xs text-muted-foreground">
                           {NECESSITY_LABEL[item.necessity]}
                         </Td>
                         <Td>
@@ -556,7 +556,7 @@ export default async function MedDetailPage({
                               </span>
                             ) : null}
                           </Td>
-                          <Td className="text-xs text-[var(--color-text-secondary)]">
+                          <Td className="text-xs text-muted-foreground">
                             {VERIFICATION_STATUS_LABEL[evidence.verificationStatus]}
                           </Td>
                           <Td>
@@ -605,26 +605,26 @@ export default async function MedDetailPage({
                       return (
                         <tr key={document.id}>
                           <Td className="font-medium">{document.filename}</Td>
-                          <Td className="text-[var(--color-text-secondary)]">
+                          <Td className="text-muted-foreground">
                             {DOCUMENT_KIND_LABEL[document.kind]}
                           </Td>
-                          <Td className="text-[var(--color-text-secondary)]">
+                          <Td className="text-muted-foreground">
                             {EVIDENCE_SOURCE_LABEL[document.source]}
                           </Td>
-                          <Td className="tabular">{formatDateTimeSmart(document.uploadedAt)}</Td>
+                          <Td className="tabular-nums">{formatDateTimeSmart(document.uploadedAt)}</Td>
                           <Td className="text-right">
                             {link ? (
                               <a
                                 href={link}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="font-medium text-[var(--color-text)] hover:underline"
+                                className="font-medium text-foreground hover:underline"
                               >
                                 Abrir
                               </a>
                             ) : (
                               <span
-                                className="text-xs text-[var(--color-text-muted)]"
+                                className="text-xs text-muted-foreground"
                                 title="Configure a assinatura de links para gerar URLs de download"
                               >
                                 —
@@ -643,7 +643,7 @@ export default async function MedDetailPage({
           </div>
 
           <div className="space-y-4">
-            <p className="pt-2 text-xs text-[var(--color-text-muted)]">
+            <p className="pt-2 text-xs text-muted-foreground">
               Registros do caso — o que os conectores não trouxerem pode ser completado aqui. Campo
               em branco permanece ausente e é apontado como evidência faltante; o salvamento é
               automático ao sair do campo.
@@ -666,7 +666,7 @@ export default async function MedDetailPage({
                 <input type="hidden" name="medId" value={med.id} />
                 <button
                   type="submit"
-                  className="inline-flex h-7 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px] font-medium hover:bg-[var(--color-surface-hover)]"
+                  className="inline-flex h-7 items-center rounded-md border border-input bg-background px-2.5 text-sm font-medium hover:bg-accent"
                 >
                   Regerar
                 </button>
@@ -696,12 +696,12 @@ export default async function MedDetailPage({
                       <Td>
                         <SubtleBadge tone="neutral">v{defense.version}</SubtleBadge>
                       </Td>
-                      <Td className="tabular">{formatDateTimeSmart(defense.generatedAt)}</Td>
-                      <Td className="tabular text-right">{defense.claims.length}</Td>
+                      <Td className="tabular-nums">{formatDateTimeSmart(defense.generatedAt)}</Td>
+                      <Td className="tabular-nums text-right">{defense.claims.length}</Td>
                       <Td>
                         <ScoreBar value={defense.score.total} max={defense.score.max} width="w-16" />
                       </Td>
-                      <Td className="text-xs text-[var(--color-text-secondary)]">
+                      <Td className="text-xs text-muted-foreground">
                         {RENDERER_LABEL[defense.narrative.renderer]}
                       </Td>
                     </tr>
@@ -723,8 +723,8 @@ export default async function MedDetailPage({
                   <ul className="space-y-3">
                     {latestDefense.claims.map((claim) => (
                       <li key={claim.id}>
-                        <p className="text-[13px] font-medium">{claim.statement}</p>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-[var(--color-text-muted)]">
+                        <p className="text-sm font-medium">{claim.statement}</p>
+                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
                           <span>{CATEGORY_LABEL[claim.category]}</span>
                           <span aria-hidden>·</span>
                           <StrengthBadge strength={claim.strength} />
@@ -739,12 +739,12 @@ export default async function MedDetailPage({
 
               <Panel title="Texto da defesa">
                 {latestDefense.narrative.guardRejections?.length ? (
-                  <p className="mb-3 rounded-md bg-[var(--color-warning-subtle)] px-3 py-2 text-xs text-[var(--color-warning)]">
+                  <p className="mb-3 rounded-md bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                     A reescrita por IA foi descartada pela guarda de fatos:{' '}
                     {latestDefense.narrative.guardRejections[0]}
                   </p>
                 ) : null}
-                <div className="max-w-[70ch] whitespace-pre-line text-[14px] leading-relaxed text-[var(--color-text)]">
+                <div className="max-w-[70ch] whitespace-pre-line text-sm leading-relaxed text-foreground">
                   {latestDefense.narrative.body}
                 </div>
               </Panel>
@@ -764,14 +764,14 @@ export default async function MedDetailPage({
                 <button
                   type="submit"
                   disabled={!latestDefense}
-                  className="inline-flex h-7 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px] font-medium hover:bg-[var(--color-surface-hover)] disabled:opacity-40"
+                  className="inline-flex h-7 items-center rounded-md border border-input bg-background px-2.5 text-sm font-medium hover:bg-accent disabled:opacity-40"
                 >
                   Gerar payload
                 </button>
               </form>
             }
           >
-            <p className="text-xs text-[var(--color-text-muted)]">
+            <p className="text-xs text-muted-foreground">
               O pacote de evidências é universal; cada instituição recebe uma tradução própria.
               Nenhum envio automático é realizado: o payload fica disponível para conferência.
             </p>
@@ -814,7 +814,7 @@ export default async function MedDetailPage({
                       <Td>
                         <CopyId value={submission.defenseId} />
                       </Td>
-                      <Td className="tabular">{formatDateTimeSmart(submission.createdAt)}</Td>
+                      <Td className="tabular-nums">{formatDateTimeSmart(submission.createdAt)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -852,15 +852,15 @@ export default async function MedDetailPage({
                   <tbody>
                     {audit.map((entry) => (
                       <tr key={entry.id}>
-                        <Td className="tabular whitespace-nowrap">
+                        <Td className="tabular-nums whitespace-nowrap">
                           {formatDateTimeSmart(entry.occurredAt)}
                         </Td>
                         <Td>{AUDIT_ACTION_LABEL[entry.action]}</Td>
                         <Td>
                           <CopyId value={entry.entityId} />
                         </Td>
-                        <Td className="text-xs text-[var(--color-text-secondary)]">{entry.actor}</Td>
-                        <Td className="text-xs text-[var(--color-text-secondary)]">
+                        <Td className="text-xs text-muted-foreground">{entry.actor}</Td>
+                        <Td className="text-xs text-muted-foreground">
                           {EVIDENCE_SOURCE_LABEL[entry.source]}
                         </Td>
                       </tr>

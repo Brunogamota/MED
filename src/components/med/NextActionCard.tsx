@@ -16,7 +16,7 @@ function PrimarySubmit({ medId, label }: { medId: string; label: string }) {
       <input type="hidden" name="provider" value="generic-json" />
       <button
         type="submit"
-        className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-[var(--color-primary-fg)] transition-colors duration-[120ms] hover:bg-[var(--color-primary-hover)]"
+        className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         {label}
       </button>
@@ -27,27 +27,27 @@ function PrimarySubmit({ medId, label }: { medId: string; label: string }) {
 export function NextActionCard({ medId, action }: { medId: string; action: NextAction }) {
   if (action.kind === 'submitted') {
     return (
-      <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <p className="text-xs text-[var(--color-text-muted)]">Próxima ação</p>
-        <p className="mt-1 text-[14px] font-medium">
+      <section className="rounded-lg border bg-card p-4">
+        <p className="text-xs text-muted-foreground">Próxima ação</p>
+        <p className="mt-1 text-sm font-medium">
           Defesa enviada
           {action.submittedAt ? ` em ${formatDateTime(action.submittedAt)}` : ''}
           {action.provider ? ` · destino ${action.provider}` : ''}
         </p>
-        <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">{action.expectation}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{action.expectation}</p>
       </section>
     );
   }
 
   if (action.kind === 'expired') {
     return (
-      <section className="rounded-lg border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] p-4">
-        <p className="text-xs text-[var(--color-danger)]">Próxima ação</p>
-        <p className="mt-1 text-[14px] font-medium text-[var(--color-danger)]">
+      <section className="rounded-lg border border-destructive bg-destructive/10 p-4">
+        <p className="text-xs text-destructive">Próxima ação</p>
+        <p className="mt-1 text-sm font-medium text-destructive">
           Prazo de resposta vencido
           {action.deadlineAt ? ` em ${formatDateTime(action.deadlineAt)}` : ''}
         </p>
-        <p className="mt-1 text-[13px] text-[var(--color-text-secondary)]">
+        <p className="mt-1 text-sm text-muted-foreground">
           O MED não aceita mais defesa. Registre o desfecho para o histórico do caso.
         </p>
       </section>
@@ -56,27 +56,27 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
 
   if (action.kind === 'critical') {
     return (
-      <section className="rounded-lg border border-[var(--color-danger)] bg-[var(--color-danger-subtle)] p-4">
+      <section className="rounded-lg border border-destructive bg-destructive/10 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="flex items-center gap-2 text-xs text-[var(--color-danger)]">
+            <p className="flex items-center gap-2 text-xs text-destructive">
               Próxima ação
               <SubtleBadge tone="danger">urgente</SubtleBadge>
             </p>
-            <p className="mt-1 text-[14px] font-medium text-[var(--color-danger)]">
+            <p className="mt-1 text-sm font-medium text-destructive">
               Prazo crítico: menos de {action.hoursLeft + 1} h para responder
             </p>
           </div>
           <PrimarySubmit medId={medId} label="Preparar envio mesmo incompleto" />
         </div>
-        <p className="mt-2 text-[13px] text-[var(--color-text-secondary)]">{action.impact}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{action.impact}</p>
         <ul className="mt-3 space-y-2">
           {action.missing.map((item) => (
-            <li key={item.label} className="flex items-center justify-between gap-3 text-[13px]">
-              <span className="text-[var(--color-text)]">{item.label}</span>
+            <li key={item.label} className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-foreground">{item.label}</span>
               <Link
                 href={item.href}
-                className="shrink-0 font-medium text-[var(--color-text)] underline underline-offset-2"
+                className="shrink-0 font-medium text-foreground underline underline-offset-2"
               >
                 {item.actionLabel}
               </Link>
@@ -89,11 +89,11 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
 
   if (action.kind === 'ready') {
     return (
-      <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <section className="rounded-lg border bg-card p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs text-[var(--color-text-muted)]">Próxima ação</p>
-            <p className="mt-1 flex items-center gap-3 text-[14px] font-medium">
+            <p className="text-xs text-muted-foreground">Próxima ação</p>
+            <p className="mt-1 flex items-center gap-3 text-sm font-medium">
               Pronto para enviar
               <ScoreBar value={action.score} max={action.max} width="w-24" />
             </p>
@@ -104,7 +104,7 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
                 <input type="hidden" name="medId" value={medId} />
                 <button
                   type="submit"
-                  className="inline-flex h-8 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-3 text-[13px] font-medium hover:bg-[var(--color-surface-hover)]"
+                  className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
                 >
                   Regerar com as evidências novas
                 </button>
@@ -113,7 +113,7 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
             <PrimarySubmit medId={medId} label="Preparar envio" />
           </div>
         </div>
-        <p className="mt-2 text-[13px] text-[var(--color-text-secondary)]">
+        <p className="mt-2 text-sm text-muted-foreground">
           {action.summary}
           {action.stale
             ? ' Evidência nova entrou depois desta minuta — regere antes de enviar.'
@@ -124,16 +124,16 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
   }
 
   return (
-    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-      <p className="text-xs text-[var(--color-text-muted)]">Próxima ação</p>
-      <p className="mt-1 text-[14px] font-medium">
+    <section className="rounded-lg border bg-card p-4">
+      <p className="text-xs text-muted-foreground">Próxima ação</p>
+      <p className="mt-1 text-sm font-medium">
         {action.requiredCount === 1
           ? 'Falta 1 evidência obrigatória'
           : `Faltam ${action.requiredCount} evidências obrigatórias`}
       </p>
-      <ul className="mt-3 divide-y divide-[var(--color-border)]">
+      <ul className="mt-3 divide-y divide-border">
         {action.items.map((item) => (
-          <li key={item.label} className="flex min-h-9 items-center justify-between gap-3 py-1.5 text-[13px]">
+          <li key={item.label} className="flex min-h-9 items-center justify-between gap-3 py-1.5 text-sm">
             <span className="flex items-center gap-2">
               <SubtleBadge tone={item.necessity === 'REQUIRED' ? 'danger' : 'warning'}>
                 {item.necessity === 'REQUIRED' ? 'Obrigatória' : 'Recomendada'}
@@ -142,7 +142,7 @@ export function NextActionCard({ medId, action }: { medId: string; action: NextA
             </span>
             <Link
               href={item.href}
-              className="shrink-0 font-medium text-[var(--color-text)] hover:underline"
+              className="shrink-0 font-medium text-foreground hover:underline"
             >
               {item.actionLabel}
             </Link>

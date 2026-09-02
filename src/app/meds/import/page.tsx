@@ -10,13 +10,13 @@ export default function ImportPage() {
         <div className="flex items-baseline gap-3">
           <Link
             href="/meds"
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             ← MEDs
           </Link>
           <h1 className="text-[20px] font-semibold tracking-[-0.01em]">Importar MEDs em lote</h1>
         </div>
-        <p className="mt-1 max-w-[75ch] text-[13px] text-[var(--color-text-muted)]">
+        <p className="mt-1 max-w-[75ch] text-sm text-muted-foreground">
           Suba o arquivo que a adquirente envia. O sistema reconhece cabeçalhos em português,
           aceita separador por ponto e vírgula ou vírgula, e interpreta datas no formato
           brasileiro. Linha com dado ilegível é reportada e não entra: importar um valor adivinhado

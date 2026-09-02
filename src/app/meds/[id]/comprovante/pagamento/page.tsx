@@ -34,11 +34,11 @@ export default async function ComprovantePagamentoPage({
       <div className="mb-3 flex items-center justify-between print:hidden">
         <Link
           href={`/meds/${id}?tab=evidencias`}
-          className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
           ← Voltar ao MED
         </Link>
-        <span className="text-xs text-[var(--color-text-muted)]">
+        <span className="text-xs text-muted-foreground">
           Use Imprimir (Ctrl/Cmd+P) para salvar em PDF, ou capture a tela.
         </span>
       </div>

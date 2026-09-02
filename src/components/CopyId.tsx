@@ -24,14 +24,14 @@ export function CopyId({ value }: { value: string }) {
 
   return (
     <span className="group inline-flex items-center gap-1">
-      <span className="font-mono text-xs text-[var(--color-text-secondary)]" title={value}>
+      <span className="font-mono text-xs text-muted-foreground" title={value}>
         {display}
       </span>
       <button
         type="button"
         onClick={copy}
         aria-label={copied ? 'Copiado' : `Copiar ${value}`}
-        className="rounded p-0.5 text-[var(--color-text-muted)] opacity-0 transition-opacity duration-[120ms] hover:text-[var(--color-text)] focus-visible:opacity-100 group-hover:opacity-100"
+        className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity duration-[120ms] hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
       >
         {copied ? (
           <svg aria-hidden width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

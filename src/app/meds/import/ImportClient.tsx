@@ -25,17 +25,17 @@ const OUTCOME_LABEL: Record<string, string> = {
 };
 
 const OUTCOME_TONE: Record<string, string> = {
-  CREATED: 'bg-[var(--color-success-subtle)] text-[var(--color-success)]',
-  DUPLICATE: 'bg-[var(--color-surface-active)] text-[var(--color-text-secondary)]',
-  SKIPPED: 'bg-[var(--color-warning-subtle)] text-[var(--color-warning)]',
-  FAILED: 'bg-[var(--color-danger-subtle)] text-[var(--color-danger)]',
+  CREATED: 'bg-emerald-600/10 text-emerald-700 dark:text-emerald-400',
+  DUPLICATE: 'bg-accent text-muted-foreground',
+  SKIPPED: 'bg-amber-600/10 text-amber-700 dark:text-amber-400',
+  FAILED: 'bg-destructive/10 text-destructive',
 };
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
-      <header className="flex h-11 items-center border-b border-[var(--color-border)] px-4">
-        <h2 className="text-[13px] font-semibold text-[var(--color-text)]">{title}</h2>
+    <section className="rounded-lg border bg-card">
+      <header className="flex h-11 items-center border-b border-border px-4">
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
       </header>
       <div className="p-4">{children}</div>
     </section>
@@ -63,14 +63,14 @@ export function ImportClient() {
         <Panel title="1. Arquivo da adquirente">
           <div className="grid gap-3 md:grid-cols-3">
             <label className="block md:col-span-1">
-              <span className="block text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+              <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Arquivo CSV
               </span>
               <input
                 type="file"
                 name="file"
                 accept=".csv,.tsv,.txt,text/csv"
-                className="mt-1 w-full rounded border border-[var(--color-border)] bg-white px-2 py-1 text-xs"
+                className="mt-1 w-full rounded border bg-background px-2 py-1 text-xs"
               />
             </label>
             <DateTimeField
@@ -79,37 +79,37 @@ export function ImportClient() {
               hint="Usada só nas linhas em que o arquivo não traz a data."
             />
             <label className="block">
-              <span className="block text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+              <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Referência do lote
               </span>
               <input
                 type="text"
                 name="batchReference"
                 placeholder="lote-29-08 / arquivo da adquirente"
-                className="mt-1 w-full rounded border border-[var(--color-border)] bg-white px-2 py-1.5 text-sm"
+                className="mt-1 w-full rounded border bg-background px-2 py-1.5 text-sm"
               />
-              <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">
+              <span className="mt-0.5 block text-xs text-muted-foreground">
                 Fica gravada na procedência das evidências importadas.
               </span>
             </label>
           </div>
 
           <label className="mt-3 block">
-            <span className="block text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+            <span className="block text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Ou cole o conteúdo aqui
             </span>
             <textarea
               name="csv"
               rows={6}
               placeholder={'MED ID;Valor;Data da compra;Data abertura;Prazo;Motivo;Nome do cliente;CPF\nMED-001;R$ 349,90;10/08/2026 14:32;20/08/2026;05/09/2026;Produto não recebido;Maria Souza;12345678909'}
-              className="mt-1 w-full rounded border border-[var(--color-border)] bg-white px-2 py-1.5 font-mono text-xs"
+              className="mt-1 w-full rounded border bg-background px-2 py-1.5 font-mono text-xs"
             />
           </label>
 
           <button
             type="submit"
             disabled={previewPending}
-            className="mt-3 inline-flex h-8 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-3 text-[13px] font-medium hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
+            className="mt-3 inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent disabled:opacity-50"
           >
             {previewPending ? 'Analisando…' : 'Analisar arquivo'}
           </button>
@@ -117,22 +117,22 @@ export function ImportClient() {
       </form>
 
       {state?.error ? (
-        <p className="rounded-md bg-[var(--color-danger-subtle)] px-3 py-2 text-[13px] text-[var(--color-danger)]">{state.error}</p>
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.error}</p>
       ) : null}
 
       {parsed?.fatalError ? (
-        <p className="rounded-md bg-[var(--color-danger-subtle)] px-3 py-2 text-[13px] text-[var(--color-danger)]">{parsed.fatalError}</p>
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{parsed.fatalError}</p>
       ) : null}
 
       {parsed && !parsed.fatalError ? (
         <Panel title="2. Conferencia">
           <div className="space-y-3 text-sm">
             <div>
-              <span className="text-[var(--color-text-muted)]">Colunas reconhecidas: </span>
+              <span className="text-muted-foreground">Colunas reconhecidas: </span>
               {parsed.recognized.map((entry) => (
                 <span
                   key={entry.field}
-                  className="mr-1 inline-block rounded bg-[var(--color-success-subtle)] px-1.5 py-0.5 text-[11px] text-[var(--color-success)]"
+                  className="mr-1 inline-block rounded bg-emerald-600/10 px-1.5 py-0.5 text-xs text-emerald-700 dark:text-emerald-400"
                 >
                   {entry.header} &rarr; {entry.field}
                 </span>
@@ -140,21 +140,21 @@ export function ImportClient() {
             </div>
             {parsed.ignored.length > 0 ? (
               <div>
-                <span className="text-[var(--color-text-muted)]">Colunas ignoradas: </span>
+                <span className="text-muted-foreground">Colunas ignoradas: </span>
                 {parsed.ignored.map((header) => (
                   <span
                     key={header}
-                    className="mr-1 inline-block rounded bg-[var(--color-surface-active)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-secondary)]"
+                    className="mr-1 inline-block rounded bg-accent px-1.5 py-0.5 text-xs text-muted-foreground"
                   >
                     {header}
                   </span>
                 ))}
-                <span className="block text-[11px] text-[var(--color-text-muted)]">
+                <span className="block text-xs text-muted-foreground">
                   Colunas não reconhecidas são ignoradas em vez de encaixadas em algum campo.
                 </span>
               </div>
             ) : null}
-            <p className="text-[var(--color-text-muted)]">
+            <p className="text-muted-foreground">
               {parsed.rows.length} linha(s) lida(s), {importable} pronta(s) para importar,{' '}
               {parsed.rows.length - importable} com pendência.
             </p>
@@ -162,7 +162,7 @@ export function ImportClient() {
 
           <div className="mt-3 max-h-96 overflow-auto">
             <table className="w-full text-xs">
-              <thead className="sticky top-0 bg-[var(--color-surface)]">
+              <thead className="sticky top-0 bg-card">
                 <tr>
                   <Th>Linha</Th>
                   <Th>MED</Th>
@@ -178,13 +178,13 @@ export function ImportClient() {
                   const result = report?.results.find((entry) => entry.line === row.line);
                   const outcome = result?.outcome ?? (row.errors.length > 0 ? 'SKIPPED' : null);
                   return (
-                    <tr key={row.line} className={row.errors.length > 0 ? 'bg-[var(--color-warning-subtle)]' : ''}>
+                    <tr key={row.line} className={row.errors.length > 0 ? 'bg-amber-600/10' : ''}>
                       <Td>{row.line}</Td>
                       <Td>
                         {result?.id ? (
                           <Link
                             href={`/meds/${result.id}`}
-                            className="text-[var(--color-primary)] hover:underline"
+                            className="font-medium hover:underline"
                           >
                             {row.medId}
                           </Link>
@@ -217,12 +217,12 @@ export function ImportClient() {
                             {OUTCOME_LABEL[outcome]}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-[var(--color-text-muted)]">pronta</span>
+                          <span className="text-[10px] text-muted-foreground">pronta</span>
                         )}
                         {(result?.messages ?? row.errors).map((message) => (
                           <span
                             key={message}
-                            className="block text-[10px] text-[var(--color-text-muted)]"
+                            className="block text-[10px] text-muted-foreground"
                           >
                             {message}
                           </span>
@@ -243,7 +243,7 @@ export function ImportClient() {
               <button
                 type="submit"
                 disabled={confirmPending || importable === 0}
-                className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)] disabled:opacity-40"
+                className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
               >
                 {confirmPending ? 'Importando…' : `Importar ${importable} MED(s)`}
               </button>
@@ -260,7 +260,7 @@ export function ImportClient() {
           </p>
           <Link
             href="/meds"
-            className="mt-2 inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)]"
+            className="mt-2 inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Ver os MEDs
           </Link>
@@ -272,7 +272,7 @@ export function ImportClient() {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <th className="h-9 border-b border-[var(--color-border)] px-2 text-left text-xs font-medium text-[var(--color-text-muted)]">
+    <th className="h-9 border-b border-border px-2 text-left text-xs font-medium text-muted-foreground">
       {children}
     </th>
   );
@@ -280,7 +280,7 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return (
-    <td className="border-b border-[var(--color-border)] px-2 py-1.5 align-top">
+    <td className="border-b border-border px-2 py-1.5 align-top">
       {children}
     </td>
   );

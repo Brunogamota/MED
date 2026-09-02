@@ -17,7 +17,7 @@ export function HiddenFields({ count, children }: { count: number; children: Rea
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="mt-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        className="mt-1 text-xs text-muted-foreground hover:text-foreground"
       >
         {open
           ? 'Ocultar campos vazios'

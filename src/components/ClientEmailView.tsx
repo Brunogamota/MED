@@ -73,11 +73,11 @@ function TemplateIcon({ template }: { template: CommunicationTemplate }) {
 function ActionButton({ action }: { action: ClientEmailAction }) {
   if (action.kind === 'NOTE') {
     return (
-      <div className="mt-5 rounded-xl border border-[var(--color-border)] bg-white px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+      <div className="mt-5 rounded-xl border border-[#e5e5e5] bg-white px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-[#71717a]">
           {action.valueLabel}
         </p>
-        <p className="mt-1 break-all font-mono text-[14px] text-[var(--color-text)]">
+        <p className="mt-1 break-all font-mono text-[14px] text-[#18181b]">
           {action.value}
         </p>
       </div>
@@ -85,7 +85,7 @@ function ActionButton({ action }: { action: ClientEmailAction }) {
   }
 
   const buttonClass =
-    'inline-flex h-11 items-center justify-center rounded-lg bg-[var(--color-primary)] px-6 text-[14px] font-semibold text-white no-underline';
+    'inline-flex h-11 items-center justify-center rounded-lg bg-[#18181b] px-6 text-[14px] font-semibold text-white no-underline';
 
   return (
     <div className="mt-5">
@@ -96,9 +96,9 @@ function ActionButton({ action }: { action: ClientEmailAction }) {
       ) : (
         <span className={buttonClass}>{action.label}</span>
       )}
-      <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">
+      <p className="mt-2 text-[11px] text-[#71717a]">
         {action.valueLabel}:{' '}
-        <span className="break-all font-mono text-[var(--color-text-secondary)]">
+        <span className="break-all font-mono text-[#52525b]">
           {action.value}
         </span>
       </p>
@@ -109,9 +109,9 @@ function ActionButton({ action }: { action: ClientEmailAction }) {
 function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] text-[var(--color-text-muted)]">{label}</dt>
+      <dt className="text-[11px] text-[#71717a]">{label}</dt>
       <dd
-        className={`mt-0.5 truncate text-[13px] text-[var(--color-text)] ${mono ? 'font-mono text-xs' : ''}`}
+        className={`mt-0.5 truncate text-[13px] text-[#18181b] ${mono ? 'font-mono text-xs' : ''}`}
       >
         {value}
       </dd>
@@ -130,9 +130,9 @@ export function ClientEmailView({
   const view = buildClientEmailView(receipt);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-strong)] bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-[#d4d4d8] bg-white shadow-sm">
       {/* Selo de reconstrução — inseparável da peça */}
-      <div className="flex items-start gap-2 border-b border-[var(--color-warning)] bg-[var(--color-warning-subtle)] px-5 py-2.5 text-[11px] leading-snug text-[var(--color-warning)]">
+      <div className="flex items-start gap-2 border-b border-[#e5e5e5] bg-[#fafafa] px-5 py-2.5 text-[11px] leading-snug text-[#8a8a92]">
         <svg
           width={13}
           height={13}
@@ -149,36 +149,36 @@ export function ClientEmailView({
       </div>
 
       {/* Barra do painel — identidade do gateway + status do envio */}
-      <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-5 py-3.5">
+      <div className="flex items-center justify-between gap-3 border-b border-[#e5e5e5] bg-[#fafafa] px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
             aria-hidden
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--color-primary)] text-[13px] font-bold text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#18181b] text-[13px] font-bold text-white"
           >
             {view.fromInitial}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-[13px] font-semibold text-[var(--color-text)]">
+            <p className="truncate text-[13px] font-semibold text-[#18181b]">
               {view.from}
             </p>
-            <p className="truncate text-[11px] text-[var(--color-text-muted)]">Painel de envios</p>
+            <p className="truncate text-[11px] text-[#71717a]">Painel de envios</p>
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[var(--color-success-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-success)]">
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#ecfdf3] px-2.5 py-1 text-[11px] font-medium text-[#15803d]">
+          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-[#15803d]" />
           Enviado
         </span>
       </div>
 
       {/* Grade de metadados do registro de envio */}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-[var(--color-border)] px-5 py-4 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-[#e5e5e5] px-5 py-4 sm:grid-cols-4">
         <div className="min-w-0">
-          <dt className="text-[11px] text-[var(--color-text-muted)]">Destinatário</dt>
-          <dd className="mt-0.5 truncate text-[13px] text-[var(--color-text)]">
+          <dt className="text-[11px] text-[#71717a]">Destinatário</dt>
+          <dd className="mt-0.5 truncate text-[13px] text-[#18181b]">
             {view.toName || view.to || 'não informado'}
           </dd>
           {view.toName && view.to ? (
-            <dd className="truncate text-[11px] text-[var(--color-text-muted)]">{view.to}</dd>
+            <dd className="truncate text-[11px] text-[#71717a]">{view.to}</dd>
           ) : null}
         </div>
         <Field label="Canal" value="E-mail" />
@@ -193,20 +193,20 @@ export function ClientEmailView({
 
       {/* Prévia da mensagem enviada */}
       <div className="px-5 py-5">
-        <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+        <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-[#71717a]">
           Prévia da mensagem
         </p>
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-5">
+        <div className="rounded-xl border border-[#e5e5e5] bg-[#fafafa] p-5">
           <span
-            className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[var(--color-text-secondary)]"
+            className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#52525b]"
             aria-hidden
           >
             <TemplateIcon template={view.template} />
           </span>
-          <h2 className="text-[16px] font-semibold leading-snug text-[var(--color-text)]">
+          <h2 className="text-[16px] font-semibold leading-snug text-[#18181b]">
             {view.subject || 'Sem assunto'}
           </h2>
-          <div className="mt-3 space-y-3 text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+          <div className="mt-3 space-y-3 text-[13px] leading-relaxed text-[#52525b]">
             {view.paragraphs.length > 0 ? (
               view.paragraphs.map((paragraph, index) => (
                 <p key={index} className="whitespace-pre-line">
@@ -214,7 +214,7 @@ export function ClientEmailView({
                 </p>
               ))
             ) : (
-              <p className="text-[var(--color-text-muted)]">Sem conteúdo.</p>
+              <p className="text-[#71717a]">Sem conteúdo.</p>
             )}
           </div>
           {view.action ? <ActionButton action={view.action} /> : null}

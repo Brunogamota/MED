@@ -1,20 +1,20 @@
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/cn';
 
 /**
- * Campos do padrao console: 32px de altura, borda 1px strong, raio 6px,
- * rotulo acima em 12px/500 sentence case.
+ * Campos dos formulários do caso, sobre shadcn/ui.
  *
- * Data/hora, dinheiro e select vem de components/fields.tsx (controles
- * proprios — nenhum input nativo cru chega a tela). Numero generico vira
- * texto com inputMode numerico: sem spinner, teclado certo no toque.
+ * Data/hora, dinheiro e select vêm de `components/fields.tsx` (controles
+ * próprios — nenhum input nativo cru chega à tela). Número genérico vira
+ * texto com `inputMode` numérico: sem spinner, teclado certo no toque.
  *
  * Campo em branco continua produzindo dado ausente, nunca default.
  */
 
 export { DateTimeField, MoneyField, SelectField as Select } from '@/components/fields';
-
-const FIELD_CLASS =
-  'h-8 w-full rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]';
 
 export function Field({
   label,
@@ -37,16 +37,14 @@ export function Field({
 }) {
   const id = `field-${name}`;
   const numeric = type === 'number';
+
   return (
-    <div className={className}>
-      <label
-        htmlFor={id}
-        className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)]"
-      >
+    <div className={cn('grid gap-1.5', className)}>
+      <Label htmlFor={id}>
         {label}
-        {required ? <span className="text-[var(--color-danger)]"> *</span> : null}
-      </label>
-      <input
+        {required ? <span className="text-destructive"> *</span> : null}
+      </Label>
+      <Input
         id={id}
         name={name}
         type={numeric ? 'text' : type}
@@ -54,32 +52,23 @@ export function Field({
         required={required}
         placeholder={placeholder}
         defaultValue={defaultValue}
-        className={`${FIELD_CLASS}${numeric ? ' tabular' : ''}`}
+        className={numeric ? 'tabular-nums' : undefined}
       />
-      {hint ? (
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>
-      ) : null}
+      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
     </div>
   );
 }
 
 export function FormGrid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-2 gap-x-4 gap-y-3 md:grid-cols-3 lg:grid-cols-4">{children}</div>;
+  return <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-3 lg:grid-cols-4">{children}</div>;
 }
 
-/** Acao primaria: preta, 32px. Uma por tela. */
+/** Ação primária do formulário. */
 export function SubmitButton({ children }: { children: ReactNode }) {
-  return (
-    <button
-      type="submit"
-      className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-[var(--color-primary-fg)] transition-colors duration-[120ms] hover:bg-[var(--color-primary-hover)]"
-    >
-      {children}
-    </button>
-  );
+  return <Button type="submit">{children}</Button>;
 }
 
-/** Acao secundaria: branca com borda strong. */
+/** Ação secundária. */
 export function SecondaryButton({
   children,
   type = 'submit',
@@ -88,11 +77,8 @@ export function SecondaryButton({
   type?: 'submit' | 'button';
 }) {
   return (
-    <button
-      type={type}
-      className="inline-flex h-8 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-3 text-[13px] font-medium text-[var(--color-text)] transition-colors duration-[120ms] hover:bg-[var(--color-surface-hover)]"
-    >
+    <Button type={type} variant="outline">
       {children}
-    </button>
+    </Button>
   );
 }

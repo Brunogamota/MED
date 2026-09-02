@@ -24,35 +24,35 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
         : 'neutral';
 
   return (
-    <div className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+    <div className="flex flex-col rounded-lg border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <span
             aria-hidden
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-[var(--color-surface-active)] text-[13px] font-semibold text-[var(--color-text-secondary)]"
+            className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-sm font-semibold text-muted-foreground"
           >
             {connector.name[0]}
           </span>
           <div>
-            <p className="text-[13px] font-semibold">{connector.name}</p>
+            <p className="text-sm font-semibold">{connector.name}</p>
             <StatusDot tone={tone}>{CONNECTOR_STATE_LABEL[connector.state]}</StatusDot>
           </div>
         </div>
       </div>
 
-      <p className="mt-3 flex-1 text-xs text-[var(--color-text-secondary)]">
-        <span className="text-[var(--color-text-muted)]">Preenche: </span>
+      <p className="mt-3 flex-1 text-xs text-muted-foreground">
+        <span className="text-muted-foreground">Preenche: </span>
         {connector.fills}
       </p>
 
       {connector.state === 'CONNECTED' ? (
-        <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+        <p className="mt-3 text-xs text-muted-foreground">
           {connector.lastSyncAt
             ? `Última sincronização ${formatDateTime(connector.lastSyncAt)}`
             : 'Ativo — recebe dados conforme chegam'}
         </p>
       ) : submitted ? (
-        <p className="mt-3 rounded-md bg-[var(--color-warning-subtle)] px-3 py-2 text-xs text-[var(--color-warning)]">
+        <p className="mt-3 rounded-md bg-amber-600/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
           Credenciais validadas. A sincronização automática deste conector ainda não está
           disponível — nada foi armazenado. Você será avisado quando a conexão for liberada.
         </p>
@@ -68,7 +68,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
             <div key={credential.name}>
               <label
                 htmlFor={`${connector.id}-${credential.name}`}
-                className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]"
+                className="mb-1 block text-xs font-medium text-muted-foreground"
               >
                 {credential.label}
               </label>
@@ -78,21 +78,21 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
                 type={credential.kind === 'secret' ? 'password' : 'text'}
                 required
                 autoComplete="off"
-                className="h-8 w-full rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px]"
+                className="h-8 w-full rounded-md border border-input bg-background px-2.5 text-sm"
               />
             </div>
           ))}
           <div className="flex items-center gap-2 pt-1">
             <button
               type="submit"
-              className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-[var(--color-primary-fg)] hover:bg-[var(--color-primary-hover)]"
+              className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               Validar conexão
             </button>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="inline-flex h-8 items-center rounded-md px-2 text-[13px] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]"
+              className="inline-flex h-8 items-center rounded-md px-2 text-sm text-muted-foreground hover:bg-accent"
             >
               Cancelar
             </button>
@@ -102,7 +102,7 @@ export function ConnectorCard({ connector }: { connector: Connector }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="mt-3 inline-flex h-8 w-fit items-center rounded-md border border-[var(--color-border-strong)] bg-white px-3 text-[13px] font-medium hover:bg-[var(--color-surface-hover)]"
+          className="mt-3 inline-flex h-8 w-fit items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
         >
           Conectar
         </button>

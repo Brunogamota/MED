@@ -27,7 +27,7 @@ export default async function IntegracoesPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-[20px] font-semibold tracking-[-0.01em]">Integrações</h1>
-        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
+        <p className="mt-1 text-sm text-muted-foreground">
           Cada fonte conectada é um conjunto de campos que você deixa de digitar. O formulário é o
           último recurso.
         </p>
@@ -48,7 +48,7 @@ export default async function IntegracoesPage() {
         const items = CONNECTORS.filter((connector) => connector.group === group);
         return (
           <section key={group}>
-            <h2 className="mb-2 mt-6 text-[13px] font-semibold text-[var(--color-text)]">
+            <h2 className="mb-2 mt-6 text-sm font-semibold text-foreground">
               {group}
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

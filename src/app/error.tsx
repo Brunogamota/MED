@@ -9,10 +9,10 @@ import Link from 'next/link';
 export default function AppError({ reset }: { error: Error; reset: () => void }) {
   return (
     <div className="mx-auto flex max-w-[420px] flex-col items-center gap-3 py-24 text-center">
-      <p className="text-[14px] font-semibold text-[var(--color-text)]">
+      <p className="text-sm font-semibold text-foreground">
         Não foi possível carregar esta tela
       </p>
-      <p className="text-[13px] text-[var(--color-text-muted)]">
+      <p className="text-sm text-muted-foreground">
         Algo falhou ao buscar os dados. Nada foi perdido — os registros do caso continuam
         intactos.
       </p>
@@ -20,13 +20,13 @@ export default function AppError({ reset }: { error: Error; reset: () => void })
         <button
           type="button"
           onClick={reset}
-          className="inline-flex h-8 items-center rounded-md bg-[var(--color-primary)] px-3 text-[13px] font-medium text-white hover:bg-[var(--color-primary-hover)]"
+          className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
           Tentar de novo
         </button>
         <Link
           href="/meds"
-          className="inline-flex h-8 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-3 text-[13px] font-medium hover:bg-[var(--color-surface-hover)]"
+          className="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent"
         >
           Voltar à fila
         </Link>

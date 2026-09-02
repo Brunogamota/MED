@@ -54,7 +54,7 @@ export function CommunicationPanel({
             href={`/meds/${medId}/comprovante/pagamento`}
             target="_blank"
             rel="noreferrer"
-            className="text-[13px] font-medium text-[var(--color-text)] hover:underline"
+            className="text-sm font-medium text-foreground hover:underline"
           >
             Abrir para imprimir / anexar
           </a>
@@ -74,10 +74,10 @@ export function CommunicationPanel({
             <Link
               key={option}
               href={`/meds/${medId}?tab=evidencias&modelo=${option}`}
-              className={`inline-flex h-8 items-center rounded-md border px-3 text-[13px] font-medium transition-colors duration-[120ms] ${
+              className={`inline-flex h-8 items-center rounded-md border px-3 text-sm font-medium transition-colors duration-[120ms] ${
                 option === template
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-white'
-                  : 'border-[var(--color-border-strong)] bg-white text-[var(--color-text)] hover:bg-[var(--color-surface-hover)]'
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-input bg-background text-foreground hover:bg-accent'
               }`}
             >
               {COMMUNICATION_TEMPLATE_LABEL[option]}
@@ -114,9 +114,9 @@ export function CommunicationPanel({
           <div>
             <label
               htmlFor="comm-body"
-              className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)]"
+              className="mb-1.5 block text-xs font-medium text-muted-foreground"
             >
-              Mensagem enviada <span className="text-[var(--color-danger)]">*</span>
+              Mensagem enviada <span className="text-destructive">*</span>
             </label>
             <textarea
               id="comm-body"
@@ -124,9 +124,9 @@ export function CommunicationPanel({
               required
               rows={6}
               defaultValue={draft.body}
-              className="w-full rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 py-2 text-[13px] leading-relaxed"
+              className="w-full rounded-md border border-input bg-background px-2.5 py-2 text-sm leading-relaxed"
             />
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            <p className="mt-1 text-xs text-muted-foreground">
               Escreva o que foi realmente enviado. Não invente conteúdo que o cliente não recebeu.
             </p>
           </div>
@@ -141,8 +141,8 @@ export function CommunicationPanel({
           />
 
           {/* Procedência: importa para a defesa, mas não para quem só preenche. */}
-          <details className="rounded-md border border-[var(--color-border)] px-3 py-2">
-            <summary className="cursor-pointer text-xs text-[var(--color-text-muted)]">
+          <details className="rounded-md border px-3 py-2">
+            <summary className="cursor-pointer text-xs text-muted-foreground">
               Opções avançadas
             </summary>
             <div className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
@@ -180,14 +180,14 @@ export function CommunicationPanel({
               return (
                 <li key={evidence.id} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-medium">
+                    <span className="text-sm font-medium">
                       {COMMUNICATION_TEMPLATE_LABEL[receipt.template]} · {receipt.to}
                     </span>
                     <a
                       href={`/meds/${medId}/comprovante/${evidence.id}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[13px] font-medium text-[var(--color-text)] hover:underline"
+                      className="text-sm font-medium text-foreground hover:underline"
                     >
                       Abrir para imprimir / anexar
                     </a>

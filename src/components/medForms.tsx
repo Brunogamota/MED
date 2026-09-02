@@ -340,23 +340,23 @@ export function DocumentUploadForm({
             <div>
               <label
                 htmlFor="upload-file"
-                className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)]"
+                className="mb-1.5 block text-xs font-medium text-muted-foreground"
               >
-                Arquivo <span className="text-[var(--color-danger)]">*</span>
+                Arquivo <span className="text-destructive">*</span>
               </label>
               <input
                 id="upload-file"
                 type="file"
                 name="file"
                 required
-                className="block w-full text-xs text-[var(--color-text-secondary)] file:mr-2 file:h-8 file:cursor-pointer file:rounded-md file:border file:border-[var(--color-border-strong)] file:bg-white file:px-3 file:text-[13px] file:font-medium file:text-[var(--color-text)]"
+                className="block w-full text-xs text-muted-foreground file:mr-2 file:h-8 file:cursor-pointer file:rounded-md file:border file:border-input file:bg-background file:px-3 file:text-sm file:font-medium file:text-foreground"
               />
             </div>
           </FormGrid>
           <SubmitButton>Enviar arquivo</SubmitButton>
         </form>
       ) : (
-        <p className="text-[13px] text-[var(--color-text-secondary)]">
+        <p className="text-sm text-muted-foreground">
           O armazenamento de documentos não está configurado neste ambiente. Registre abaixo apenas
           a referência do documento: aceitar um upload que se perderia destruiria evidência, então o
           envio fica desabilitado em vez de falhar em silêncio.

@@ -14,13 +14,13 @@ export default function NewMedPage() {
         <div className="flex items-baseline gap-3">
           <Link
             href="/meds"
-            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             ← MEDs
           </Link>
           <h1 className="text-[20px] font-semibold tracking-[-0.01em]">Novo MED</h1>
         </div>
-        <p className="mt-1 text-[13px] text-[var(--color-text-muted)]">
+        <p className="mt-1 text-sm text-muted-foreground">
           Campos em branco permanecem ausentes: o que não for informado será apontado como
           evidência faltante, nunca preenchido por suposição.
         </p>
@@ -61,7 +61,7 @@ export default function NewMedPage() {
             <Field label="IP" name="payerIp" />
             <Field label="Dispositivo" name="payerDevice" />
           </FormGrid>
-          <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+          <div className="mt-4 border-t border-border pt-4">
             <FormGrid>
               <Field label="Logradouro" name="payerAddressStreet" />
               <Field label="Número" name="payerAddressNumber" />

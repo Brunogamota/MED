@@ -14,10 +14,10 @@ import { EmptyState, SubtleBadge } from '@/components/ui';
  */
 
 function dotClass(event: TimelineEvent): string {
-  if (event.type === 'med.deadline') return 'bg-[var(--color-warning)]';
-  if (event.source === 'MANUAL') return 'bg-[var(--color-primary)]';
-  if (event.evidenceIds.length > 0) return 'bg-[var(--color-success)]';
-  return 'bg-[var(--color-border-strong)]';
+  if (event.type === 'med.deadline') return 'bg-amber-600';
+  if (event.source === 'MANUAL') return 'bg-primary';
+  if (event.evidenceIds.length > 0) return 'bg-emerald-600';
+  return 'bg-border';
 }
 
 export function CaseTimeline({ timeline }: { timeline: TimelineEvent[] }) {
@@ -33,18 +33,18 @@ export function CaseTimeline({ timeline }: { timeline: TimelineEvent[] }) {
     <ol>
       {timeline.map((event, index) => (
         <li key={`${event.type}-${event.occurredAt}-${index}`} className="flex gap-4">
-          <span className="tabular w-[140px] shrink-0 pt-0.5 text-right text-xs text-[var(--color-text-muted)]">
+          <span className="tabular-nums w-[140px] shrink-0 pt-0.5 text-right text-xs text-muted-foreground">
             {formatDateTimeSmart(event.occurredAt)}
           </span>
           <span className="flex flex-col items-center">
             <span aria-hidden className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dotClass(event)}`} />
             {index < timeline.length - 1 ? (
-              <span aria-hidden className="w-px flex-1 bg-[var(--color-border)]" />
+              <span aria-hidden className="w-px flex-1 bg-border" />
             ) : null}
           </span>
           <span className="pb-5">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px]">{event.description}</span>
+              <span className="text-sm">{event.description}</span>
               <SubtleBadge tone={event.source === 'MANUAL' ? 'warning' : 'neutral'}>
                 {EVIDENCE_SOURCE_LABEL[event.source]}
               </SubtleBadge>

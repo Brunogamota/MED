@@ -20,13 +20,13 @@ import * as RadixSelect from '@radix-ui/react-select';
  */
 
 const FIELD_CLASS =
-  'h-8 w-full rounded-md border border-[var(--color-border-strong)] bg-white px-2.5 text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]';
+  'h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30';
 
 function LabelRow({ id, label, required }: { id: string; label: string; required?: boolean }) {
   return (
-    <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-[var(--color-text-secondary)]">
+    <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-muted-foreground">
       {label}
-      {required ? <span className="text-[var(--color-danger)]"> *</span> : null}
+      {required ? <span className="text-destructive"> *</span> : null}
     </label>
   );
 }
@@ -112,25 +112,25 @@ function MonthGrid({
           type="button"
           aria-label="Mês anterior"
           onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--color-surface-hover)]"
+          className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent"
         >
           <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
         </button>
-        <span className="text-[13px] font-medium">
+        <span className="text-sm font-medium">
           {MONTHS[cursor.getMonth()]} de {cursor.getFullYear()}
         </span>
         <button
           type="button"
           aria-label="Próximo mês"
           onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-          className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--color-surface-hover)]"
+          className="flex h-6 w-6 items-center justify-center rounded hover:bg-accent"
         >
           <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6" /></svg>
         </button>
       </div>
       <div className="grid grid-cols-7 gap-0.5 text-center">
         {WEEKDAYS.map((weekday, index) => (
-          <span key={`${weekday}-${index}`} className="h-6 text-[11px] leading-6 text-[var(--color-text-muted)]">
+          <span key={`${weekday}-${index}`} className="h-6 text-xs leading-6 text-muted-foreground">
             {weekday}
           </span>
         ))}
@@ -140,12 +140,12 @@ function MonthGrid({
               key={cell.toISOString()}
               type="button"
               onClick={() => onPick(cell)}
-              className={`h-7 w-7 rounded-md text-[12px] tabular ${
+              className={`h-7 w-7 rounded-md text-xs tabular-nums ${
                 selected && isSameDay(cell, selected)
-                  ? 'bg-[var(--color-primary)] font-medium text-white'
+                  ? 'bg-primary font-medium text-primary-foreground'
                   : isSameDay(cell, today)
-                    ? 'bg-[var(--color-surface-active)] font-medium'
-                    : 'hover:bg-[var(--color-surface-hover)]'
+                    ? 'bg-accent font-medium'
+                    : 'hover:bg-accent'
               }`}
             >
               {cell.getDate()}
@@ -249,7 +249,7 @@ export function DateTimeField({
           placeholder="dia/mês/ano hora:min"
           aria-invalid={invalid || undefined}
           aria-describedby={invalid ? `${id}-error` : hint ? `${id}-hint` : undefined}
-          className={`${FIELD_CLASS} tabular pr-9 ${invalid ? 'border-[var(--color-danger)]' : ''}`}
+          className={`${FIELD_CLASS} tabular-nums pr-9 ${invalid ? 'border-destructive' : ''}`}
         />
         <input ref={hiddenRef} type="hidden" name={name} value={value ? value.toISOString() : ''} />
         <Popover.Root open={open} onOpenChange={setOpen}>
@@ -257,7 +257,7 @@ export function DateTimeField({
             <button
               type="button"
               aria-label={`Abrir calendário de ${label}`}
-              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded text-[var(--color-text-muted)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text)]"
+              className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                 <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -269,7 +269,7 @@ export function DateTimeField({
             <Popover.Content
               align="end"
               sideOffset={4}
-              className="z-50 w-[248px] rounded-lg border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-popover)]"
+              className="z-50 w-[248px] rounded-lg border bg-popover p-3 shadow-md"
             >
               <div className="mb-2 flex gap-1.5">
                 {shortcuts.map((shortcut) => (
@@ -280,7 +280,7 @@ export function DateTimeField({
                       commit(shortcut.make());
                       setOpen(false);
                     }}
-                    className="inline-flex h-6 items-center rounded-md border border-[var(--color-border-strong)] bg-white px-2 text-[12px] font-medium hover:bg-[var(--color-surface-hover)]"
+                    className="inline-flex h-6 items-center rounded-lg border border-input bg-background px-2 text-xs font-medium hover:bg-accent"
                   >
                     {shortcut.label}
                   </button>
@@ -293,8 +293,8 @@ export function DateTimeField({
                   setOpen(false);
                 }}
               />
-              <div className="mt-2 flex items-center gap-2 border-t border-[var(--color-border)] pt-2">
-                <label htmlFor={`${id}-time`} className="text-[11px] text-[var(--color-text-muted)]">
+              <div className="mt-2 flex items-center gap-2 border-t pt-2">
+                <label htmlFor={`${id}-time`} className="text-xs text-muted-foreground">
                   Hora
                 </label>
                 <input
@@ -315,7 +315,7 @@ export function DateTimeField({
                       commit(next);
                     }
                   }}
-                  className="h-6 w-16 rounded-md border border-[var(--color-border-strong)] px-1.5 text-center text-[12px] tabular"
+                  className="h-6 w-16 rounded-md border border-input px-1.5 text-center text-xs tabular-nums"
                 />
               </div>
             </Popover.Content>
@@ -323,11 +323,11 @@ export function DateTimeField({
         </Popover.Root>
       </div>
       {invalid ? (
-        <p id={`${id}-error`} className="mt-1 text-xs text-[var(--color-danger)]">
+        <p id={`${id}-error`} className="mt-1 text-xs text-destructive">
           Data não reconhecida — use dia/mês/ano, com hora opcional.
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>
+        <p id={`${id}-hint`} className="mt-1 text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );
@@ -402,7 +402,7 @@ export function MoneyField({
       <div className="relative">
         <span
           aria-hidden
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-[var(--color-text-muted)]"
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
         >
           R$
         </span>
@@ -416,7 +416,7 @@ export function MoneyField({
           onBlur={onBlur}
           placeholder="0,00"
           aria-invalid={invalid || undefined}
-          className={`${FIELD_CLASS} tabular pl-8 text-right ${invalid ? 'border-[var(--color-danger)]' : ''}`}
+          className={`${FIELD_CLASS} tabular-nums pl-8 text-right ${invalid ? 'border-destructive' : ''}`}
         />
         <input
           ref={hiddenRef}
@@ -426,11 +426,11 @@ export function MoneyField({
         />
       </div>
       {invalid ? (
-        <p className="mt-1 text-xs text-[var(--color-danger)]">
+        <p className="mt-1 text-xs text-destructive">
           Valor não reconhecido — use vírgula para centavos.
         </p>
       ) : hint ? (
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">{hint}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );
@@ -482,13 +482,13 @@ export function SelectField({
           ref={triggerRef}
           id={id}
           aria-label={label}
-          className={`${FIELD_CLASS} flex items-center justify-between gap-2 text-left data-[placeholder]:text-[var(--color-text-muted)]`}
+          className={`${FIELD_CLASS} flex items-center justify-between gap-2 text-left data-[placeholder]:text-muted-foreground`}
         >
           <span className="truncate">
             {value === '' ? '—' : (labels?.[value] ?? value)}
           </span>
           <RadixSelect.Icon>
-            <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-text-muted)]">
+            <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground">
               <path d="m6 9 6 6 6-6" />
             </svg>
           </RadixSelect.Icon>
@@ -497,13 +497,13 @@ export function SelectField({
           <RadixSelect.Content
             position="popper"
             sideOffset={4}
-            className="z-50 max-h-[280px] min-w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-lg border border-[var(--color-border)] bg-white p-1 shadow-[var(--shadow-popover)]"
+            className="z-50 max-h-[280px] min-w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-lg border bg-popover p-1 shadow-md"
           >
             <RadixSelect.Viewport>
               {includeBlank ? (
                 <RadixSelect.Item
                   value="__blank__"
-                  className="flex h-8 cursor-default items-center rounded-md px-2.5 text-[13px] text-[var(--color-text-muted)] outline-none data-[highlighted]:bg-[var(--color-surface-hover)]"
+                  className="flex h-8 cursor-default items-center rounded-md px-2.5 text-sm text-muted-foreground outline-none data-[highlighted]:bg-accent"
                 >
                   <RadixSelect.ItemText>—</RadixSelect.ItemText>
                 </RadixSelect.Item>
@@ -512,7 +512,7 @@ export function SelectField({
                 <RadixSelect.Item
                   key={option}
                   value={option}
-                  className="flex h-8 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-[13px] outline-none data-[highlighted]:bg-[var(--color-surface-hover)] data-[state=checked]:font-medium"
+                  className="flex h-8 cursor-default items-center justify-between gap-2 rounded-md px-2.5 text-sm outline-none data-[highlighted]:bg-accent data-[state=checked]:font-medium"
                 >
                   <RadixSelect.ItemText>{labels?.[option] ?? option}</RadixSelect.ItemText>
                   <RadixSelect.ItemIndicator>

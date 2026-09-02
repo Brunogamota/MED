@@ -83,8 +83,8 @@ export function ShipmentPanel({ medCase }: { medCase: MedCase }) {
           />
         </FormGrid>
 
-        <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="mb-3 text-xs font-medium text-[var(--color-text-secondary)]">
+        <div className="border-t border-border pt-4">
+          <p className="mb-3 text-xs font-medium text-muted-foreground">
             Quando cada etapa aconteceu
           </p>
           <FormGrid>
@@ -174,8 +174,8 @@ export function DigitalDeliveryPanel({ medCase }: { medCase: MedCase }) {
           />
         </FormGrid>
 
-        <div className="border-t border-[var(--color-border)] pt-4">
-          <p className="mb-3 text-xs font-medium text-[var(--color-text-secondary)]">
+        <div className="border-t border-border pt-4">
+          <p className="mb-3 text-xs font-medium text-muted-foreground">
             Uso pelo comprador (quando você tiver)
           </p>
           <FormGrid>
