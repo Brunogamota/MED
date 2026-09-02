@@ -1,7 +1,8 @@
 import { serverPageContext } from '@/infra/auth/context';
 import { computeAutoFillStats } from '@/services/medService';
 import { CONNECTOR_GROUPS, CONNECTORS } from '@/lib/connectors';
-import { ConnectorCard } from '@/components/ConnectorCard';
+import { ConnectorRow } from '@/components/ConnectorRow';
+import { ItemGroup } from '@/components/ui/item';
 import { MetricCell, MetricStrip } from '@/components/ui';
 import { PageHeader } from '@/components/layout/page-header';
 
@@ -61,11 +62,11 @@ export default async function IntegracoesPage() {
         return (
           <section key={group} id={groupAnchor(group)} className="scroll-mt-6">
             <h2 className="mb-3 font-semibold text-base">{group}</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ItemGroup className="gap-3">
               {items.map((connector) => (
-                <ConnectorCard key={connector.id} connector={connector} />
+                <ConnectorRow key={connector.id} connector={connector} />
               ))}
-            </div>
+            </ItemGroup>
           </section>
         );
       })}

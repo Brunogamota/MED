@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+/*
+ * Variantes que as primitivas do shadcn usam e o Tailwind não conhece sozinho:
+ * `data-checked:`, `data-open:`, `data-closed:`, `data-active:` e companhia.
+ * Sem este import elas não casam com nada e a classe simplesmente não aplica —
+ * foi o que deixou o Switch com fundo transparente e sem animação de abrir e
+ * fechar em popover, dropdown e diálogo.
+ */
+@import 'shadcn/tailwind.css';
 
 /*
  * Sistema visual: shadcn/ui sobre Tailwind v4, neutros em oklch, claro e
