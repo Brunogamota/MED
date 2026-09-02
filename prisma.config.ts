@@ -1,5 +1,5 @@
 import { defineConfig } from 'prisma/config';
-import { readDirectDatabaseUrl } from './src/lib/env';
+import { readDirectDatabaseUrl } from './src/lib/databaseUrl';
 
 /**
  * Prisma CLI configuration (migrate / introspect / generate).

@@ -24,17 +24,42 @@ const KEYS = [
   'POSTGRES_PRISMA_URL',
   'POSTGRES_URL',
 ];
-const url = KEYS.map((key) => process.env[key]?.trim()).find(Boolean) ?? '';
+const chosen = KEYS.find((key) => process.env[key]?.trim());
 
-if (url.trim().length === 0) {
+if (!chosen) {
   console.log('[migrations] Nenhuma string de conexao no ambiente: modo demo, nada a migrar.');
+  console.log(`[migrations] Nomes procurados: ${KEYS.join(', ')}`);
   process.exit(0);
 }
 
+/**
+ * O nome da variavel e o host aparecem no log; a URL inteira, nunca — ela
+ * carrega a senha do banco, e log de build fica gravado.
+ *
+ * Sem isto, uma falha de conexao no build nao dizia *qual* conexao falhou, e
+ * a diferenca importa: no Supabase a URL direta pode ser so IPv6, enquanto o
+ * pooler responde em IPv4.
+ */
+function hostOf(url) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname}:${parsed.port || '5432'}`;
+  } catch {
+    return 'host ilegivel';
+  }
+}
+
+console.log(`[migrations] Usando ${chosen} (${hostOf(process.env[chosen].trim())}).`);
 console.log('[migrations] Aplicando migracoes pendentes...');
 const result = spawnSync('npx', ['prisma', 'migrate', 'deploy'], { stdio: 'inherit' });
 
 if (result.status !== 0) {
-  console.error('[migrations] Falhou. O build para aqui em vez de publicar sobre um banco incerto.');
+  console.error(
+    `[migrations] Falhou usando ${chosen}. O build para aqui em vez de publicar sobre um banco incerto.`,
+  );
+  console.error(
+    '[migrations] Se o erro for de conexao: no Supabase a URL direta pode ser so IPv6. ' +
+      'Nesse caso, defina DIRECT_DATABASE_URL com a do "Session pooler" (porta 5432 no host do pooler).',
+  );
   process.exit(result.status ?? 1);
 }
