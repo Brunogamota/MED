@@ -12,9 +12,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
  * O mesmo `signOutAction` do menu do rodapé — a diferença é só onde fica. Sair
  * estava a três cliques dentro de um menu, e é a primeira coisa que se procura
  * no canto superior direito.
- *
- * Só é renderizado quando existe login configurado: sem sessão não há de onde
- * sair, e um botão que não faz nada é pior que botão nenhum.
  */
 
 function Trigger() {

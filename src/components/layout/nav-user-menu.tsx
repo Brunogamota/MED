@@ -23,13 +23,10 @@ export function NavUserMenu({
   organization,
   demoMode,
   collapsed,
-  authEnabled,
 }: {
   organization: string;
   demoMode: boolean;
   collapsed: boolean;
-  /** Sem login configurado não há de onde sair: o item some. */
-  authEnabled: boolean;
 }) {
   const avatar = (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-50">
@@ -77,18 +74,14 @@ export function NavUserMenu({
             <DropdownMenuItem disabled>Conta</DropdownMenuItem>
             <DropdownMenuItem disabled>Preferências</DropdownMenuItem>
           </DropdownMenuGroup>
-          {authEnabled ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <form action={signOutAction}>
-                  <button type="submit" className="w-full text-left">
-                    Sair
-                  </button>
-                </form>
-              </DropdownMenuItem>
-            </>
-          ) : null}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <form action={signOutAction}>
+              <button type="submit" className="w-full text-left">
+                Sair
+              </button>
+            </form>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

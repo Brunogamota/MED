@@ -49,7 +49,6 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           counts={counts}
           organization={config.demoMode ? 'Organização demo' : 'Minha organização'}
           demoMode={config.demoMode}
-          authEnabled={config.auth.enabled}
           defaultCollapsed={false}
         />
       </Suspense>
@@ -68,7 +67,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             </Badge>
           ) : null}
           <ThemeSwitcher />
-          {config.auth.enabled ? <SignOutButton /> : null}
+          <SignOutButton />
         </header>
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
