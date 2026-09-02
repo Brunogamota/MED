@@ -10,6 +10,7 @@ import {
 import { DateTimeField } from '@/components/fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileDropField } from '@/components/ui/file-drop';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,12 +67,15 @@ export function ImportClient() {
     <div className="space-y-4">
       <form action={runPreview} className="space-y-4">
         <Panel title="1. Arquivo da adquirente">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="import-file">Arquivo CSV</Label>
-              <Input id="import-file" type="file" name="file" accept=".csv,.tsv,.txt,text/csv" />
-            </div>
+          <FileDropField
+            name="file"
+            label="Arquivo CSV"
+            extensions={['.csv', '.tsv', '.txt']}
+            maxBytes={5 * 1024 * 1024}
+            hint="Até 5 MB. CSV, TSV ou TXT — planilha do Excel (.xlsx) precisa ser exportada como CSV antes, porque o sistema lê o arquivo como texto."
+          />
 
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
             <DateTimeField
               label="Data de abertura do lote"
               name="defaultOpenedAt"

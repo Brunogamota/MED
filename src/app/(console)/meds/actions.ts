@@ -382,10 +382,38 @@ export async function batchPrepareSubmissionsAction(form: FormData): Promise<voi
  * Le o arquivo colado ou enviado. A analise nao grava nada: o operador confere
  * o que foi reconhecido antes de qualquer escrita.
  */
-async function readImportText(form: FormData): Promise<string> {
+/**
+ * Leitura do arquivo do lote, ou o motivo de nao dar para ler.
+ *
+ * Resultado, e nao excecao: este modulo e `use server`, e ali so podem sair
+ * funcoes async — exportar uma classe de erro derruba o modulo inteiro.
+ */
+type ImportRead = { ok: true; csv: string } | { ok: false; error: string };
+
+/** Byte nulo nao existe em CSV e existe em todo formato binario de planilha. */
+function looksBinary(content: string): boolean {
+  return content.includes('\u0000');
+}
+
+/**
+ * O parser le o arquivo como texto. Um .xlsx e um zip, e `file.text()` devolve
+ * bytes ilegiveis que o parser trataria como um cabecalho enorme e sem sentido
+ * — dezenas de "coluna ignorada" no lugar de dizer o que aconteceu. A tela ja
+ * recusa a extensao errada; isto cobre quem chega pela API.
+ */
+async function readImportText(form: FormData): Promise<ImportRead> {
   const file = form.get('file');
-  if (file instanceof File && file.size > 0) return file.text();
-  return text(form, 'csv') ?? '';
+  if (file instanceof File && file.size > 0) {
+    const content = await file.text();
+    if (looksBinary(content)) {
+      return {
+        ok: false,
+        error: 'O arquivo não é texto. Exporte a planilha como CSV — .xlsx e .xls não são lidos aqui.',
+      };
+    }
+    return { ok: true, csv: content };
+  }
+  return { ok: true, csv: text(form, 'csv') ?? '' };
 }
 
 export interface ImportPreviewState {
@@ -401,9 +429,21 @@ export async function previewImportAction(
   _previous: ImportPreviewState | null,
   form: FormData,
 ): Promise<ImportPreviewState> {
-  const csv = await readImportText(form);
   const defaultOpenedAt = dateTime(form, 'defaultOpenedAt') ?? null;
   const batchReference = text(form, 'batchReference') ?? null;
+
+  const read = await readImportText(form);
+  if (!read.ok) {
+    return {
+      csv: '',
+      defaultOpenedAt,
+      batchReference,
+      parsed: null,
+      report: null,
+      error: read.error,
+    };
+  }
+  const csv = read.csv;
 
   if (csv.trim().length === 0) {
     return {
