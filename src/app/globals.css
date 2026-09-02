@@ -1,104 +1,154 @@
 @import 'tailwindcss';
+@import 'tw-animate-css';
 
 /*
- * Direcao estetica: padrao console, neutros quentes (versao final do briefing).
- * O branco e a interface; separacao e hairline; a acao primaria e preta;
- * cor saturada aparece apenas em status real. Nenhum valor solto em componente.
- *
- * Espacamento: 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 64. Interface roda em
- * 13px, pesos 400/500/600 (nunca 700). Card nao tem sombra — so popover,
- * dropdown, modal e toast.
+ * Sistema visual: shadcn/ui sobre Tailwind v4, neutros em oklch, claro e
+ * escuro. Nenhum valor de cor solto em componente — tudo sai das variaveis
+ * abaixo, e o modo escuro so redefine as mesmas variaveis.
  */
-@theme {
-  /* neutros quentes */
-  --color-bg:              #ffffff;
-  --color-bg-subtle:       #faf9f7;
-  --color-surface:         #ffffff;
-  --color-surface-hover:   #f7f6f4;
-  --color-surface-active:  #f0efec;
-  --color-border:          #e8e6e1;
-  --color-border-strong:   #d6d3cd;
-  --color-text:            #1c1b19;
-  --color-text-secondary:  #57544e;
-  --color-text-muted:      #8a867e;
-  --color-primary:         #1c1b19;
-  --color-primary-hover:   #35322e;
-  --color-primary-fg:      #ffffff;
 
-  /* estados semanticos — apenas status real */
-  --color-success:         #17803d;
-  --color-success-subtle:  #edf7ee;
-  --color-warning:         #a35c00;
-  --color-warning-subtle:  #fdf3e3;
-  --color-danger:          #b42318;
-  --color-danger-subtle:   #fdf0ef;
-  --color-info:            #57544e;
-  --color-info-subtle:     #f0efec;
+@custom-variant dark (&:is(.dark *));
 
-  /* accent — ponto de status, nada mais */
-  --color-accent:          #17803d;
-  --color-accent-subtle:   #edf7ee;
-
-  --color-ring:            #1c1b19;
-
-  /* tipografia */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
-
-  --text-2xs: 11px;
-  --text-xs:  12px;
-  --text-sm:  13px;
-  --text-base: 14px;
-  --text-md:  16px;
-  --text-lg:  20px;
-  --text-xl:  28px;
-
-  /* forma */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-
-  /* sombra — apenas o que flutua */
-  --shadow-popover: 0 8px 24px -8px rgb(28 27 25 / 0.12),
-                    0 2px 6px -2px rgb(28 27 25 / 0.06);
-
-  /* movimento */
-  --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 :root {
-  color-scheme: light;
-  --sidebar-width: 280px;
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
 }
 
-body[data-sidebar='collapsed'] {
-  --sidebar-width: 44px;
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    @apply font-sans;
+    overscroll-behavior: none;
+  }
 }
 
-/* Numeros tabulares onde ha dado numerico alinhado */
+/* Numeros de dinheiro, data e id alinham por coluna. */
 table,
 .tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/* Campo: foco sem glow azul */
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-/* Spinner de input numerico removido — a setinha dupla e feiosa e inutil */
+/* A setinha dupla do input numerico e inutil aqui: valor entra formatado. */
 input[type='number'] {
   appearance: textfield;
   -moz-appearance: textfield;
@@ -109,25 +159,9 @@ input[type='number']::-webkit-inner-spin-button {
   margin: 0;
 }
 
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: none;
-  border-color: var(--color-text);
-  box-shadow: 0 0 0 3px rgb(28 27 25 / 0.08);
-}
-
-button:focus-visible,
-a:focus-visible,
-[role='option']:focus-visible,
-[tabindex]:focus-visible {
-  outline: 2px solid var(--color-ring);
-  outline-offset: 2px;
-}
-
 /*
- * Skeleton: forma do conteudo, sem brilho deslizante. Fica invisivel nos
- * primeiros 300ms — carregamento rapido nao pisca skeleton nenhum.
+ * Skeleton fica invisivel nos primeiros 300ms: carregamento rapido nao
+ * chega a piscar forma nenhuma.
  */
 @keyframes skeleton-appear {
   to {
@@ -140,16 +174,18 @@ a:focus-visible,
   animation: skeleton-appear 0s 300ms forwards;
 }
 
-.skeleton-block {
-  border-radius: var(--radius-md);
-  background: var(--color-surface-active);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Comprovantes impressos: sem cromo do console na folha. */
+@media print {
+  [data-print-hide] {
+    display: none !important;
   }
 }
