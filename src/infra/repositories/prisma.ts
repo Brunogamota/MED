@@ -280,10 +280,43 @@ function mapAudit(row: AuditRow): AuditLogEntry {
   };
 }
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+
+/**
+ * Garante TLS na conexao com banco remoto.
+ *
+ * O driver `pg` so liga TLS quando a URL pede. Postgres hospedado — Supabase,
+ * Neon, RDS — recusa conexao sem TLS, e algumas dessas URLs vem sem
+ * `sslmode`: a `POSTGRES_PRISMA_URL` que a integracao do Supabase cria traz
+ * `pgbouncer=true` e mais nada. Sem isto, a aplicacao conecta em claro, o
+ * servidor derruba, e a tela mostra "nao foi possivel carregar" sem dizer por
+ * que.
+ *
+ * Banco local fica de fora: `postgres` em maquina de desenvolvimento nao tem
+ * certificado, e exigir TLS ali quebraria o `npm run dev`.
+ *
+ * O `sslmode` que ja vier na URL manda — inclusive `disable`, para quem tem
+ * motivo para isso.
+ */
+export function withRequiredSsl(connectionString: string): string {
+  let url: URL;
+  try {
+    url = new URL(connectionString);
+  } catch {
+    return connectionString;
+  }
+
+  if (url.searchParams.has('sslmode')) return connectionString;
+  if (LOCAL_HOSTS.has(url.hostname)) return connectionString;
+
+  url.searchParams.set('sslmode', 'require');
+  return url.toString();
+}
+
 export function createPrismaClient(connectionString: string): PrismaClient {
   // The pg driver adapter keeps the client compatible with Vercel's serverless
   // runtime; point DATABASE_URL at a pooled connection string.
-  const adapter = new PrismaPg({ connectionString });
+  const adapter = new PrismaPg({ connectionString: withRequiredSsl(connectionString) });
   return new PrismaClient({ adapter });
 }
 
