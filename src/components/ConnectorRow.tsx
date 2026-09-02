@@ -14,8 +14,7 @@ import {
   ItemMedia,
   ItemTitle,
 } from '@/components/ui/item';
-import { Sparkles } from 'lucide-react';
-import { ClaudeIcon, GmailIcon, WhatsAppIcon } from '@/components/ui/brand-icons';
+import { ClaudeIcon, GmailIcon, OpenAiIcon, WhatsAppIcon } from '@/components/ui/brand-icons';
 import {
   CONNECTOR_STATE_LABEL,
   type Connector,
@@ -35,16 +34,11 @@ import { formatDateTime } from '@/lib/format';
  * do backend: a sincronização automática ainda não existe (TODO(api) em
  * docs/api-gaps.md) e nenhuma credencial é armazenada até lá.
  */
-/**
- * Marca de verdade onde ela existe. O ChatGPT fica com um ícone neutro: o
- * Simple Icons removeu a marca da OpenAI do acervo, e desenhar uma marca que
- * foi retirada por questão de licença não é coisa que a gente faça sozinho.
- */
 const ICONS: Record<ConnectorIcon, (props: { className?: string }) => ReactNode> = {
   whatsapp: WhatsAppIcon,
   claude: ClaudeIcon,
   gmail: GmailIcon,
-  chatgpt: Sparkles,
+  chatgpt: OpenAiIcon,
 };
 
 export function ConnectorRow({
@@ -67,8 +61,8 @@ export function ConnectorRow({
     <div className="rounded-lg border">
       <Item>
         <ItemMedia variant="icon" className="size-9 rounded-lg border bg-background">
-          {/* A marca sai na cor dela; o ícone neutro segue a cor do texto. */}
-          <Icon className={connector.icon === 'chatgpt' ? 'text-muted-foreground' : undefined} />
+          {/* Marca colorida sai na própria cor; a monocromática segue o tema. */}
+          <Icon className={connector.icon === 'chatgpt' ? 'text-foreground' : undefined} />
         </ItemMedia>
 
         <ItemContent>
