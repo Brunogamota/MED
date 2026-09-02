@@ -21,7 +21,35 @@ O projeto ja esta pronto para a Vercel:
 - Todas as rotas de API sao `force-dynamic`; nada que dependa de dados de tenant
   e pre-renderizado.
 
-### Estado atual: secrets cadastrados, mas apontando para o projeto errado
+### Caminho em uso: integracao Git da Vercel
+
+O deploy roda pela integracao Git da Vercel: o repositorio esta importado no
+projeto, e cada push na branch de producao publica sozinho. Nao ha secret
+envolvido, e o conector MCP da Vercel nao serve aqui — ele exige um `teamId`, e
+uma conta Hobby nao tem time nenhum.
+
+Dois pontos de configuracao no projeto da Vercel:
+
+- **Settings -> Git -> Production Branch** aponta para a branch padrao deste
+  repositorio. Apontar para uma branch que nao recebe push congela a producao
+  na ultima versao dela, enquanto o resto vira so preview.
+- Nenhuma variavel de ambiente e obrigatoria para subir: sem `DATABASE_URL` a
+  aplicacao roda em **modo demo**, com repositorio em memoria e dados de
+  exemplo. Isso e deliberado, para o primeiro deploy funcionar antes de existir
+  banco. Producao de verdade exige as variaveis da secao "Variaveis de
+  ambiente", abaixo.
+
+O que se perde em relacao ao caminho A: a Vercel publica **antes** de saber se o
+CI passou. O job `deploy` do `ci.yml` continua no repositorio, dormente, e volta
+a ser o caminho no dia em que essa garantia importar mais que a simplicidade.
+
+> Enquanto os tres secrets do Vercel existirem no GitHub apontando para um
+> projeto que o token nao alcanca, o job `deploy` falha a cada push e pinta o CI
+> de vermelho a toa. Apague `VERCEL_TOKEN`, `VERCEL_ORG_ID` e
+> `VERCEL_PROJECT_ID` em **Settings -> Secrets and variables -> Actions**: sem
+> eles o job pula limpo, com um aviso no resumo.
+
+### Caminho A (dormente): secrets cadastrados apontando para o projeto errado
 
 O CI passa (lint, typecheck, testes e build verdes) e o job `deploy` chega a
 rodar, mas para no primeiro comando da Vercel:
