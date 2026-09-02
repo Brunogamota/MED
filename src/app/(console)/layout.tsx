@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { getConfig } from '@/lib/env';
+import { SignOutButton } from '@/components/layout/sign-out-button';
 import { ThemeSwitcher } from '@/components/layout/theme-switcher';
 import { TwoLevelSidebar, type NavCounts } from '@/components/layout/two-level-sidebar';
 import { Badge } from '@/components/ui/badge';
@@ -67,6 +68,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             </Badge>
           ) : null}
           <ThemeSwitcher />
+          {config.auth.enabled ? <SignOutButton /> : null}
         </header>
 
         <main className="min-w-0 flex-1 overflow-x-hidden p-4 md:p-6">{children}</main>
