@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { buildConsentUrl } from '@/infra/adapters/gmail';
 import { getConfig } from '@/lib/env';
 import { jsonError } from '@/lib/api';
-import { gmailRedirectUri, GMAIL_STATE_COOKIE } from '@/lib/gmail';
+import { GMAIL_STATE_COOKIE, GMAIL_STATE_MAX_AGE_SECONDS, gmailRedirectUri } from '@/lib/gmail';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     sameSite: 'lax',
     secure: config.appEnv !== 'development',
     path: '/',
-    maxAge: 10 * 60,
+    maxAge: GMAIL_STATE_MAX_AGE_SECONDS,
   });
 
   return NextResponse.redirect(

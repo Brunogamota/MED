@@ -38,8 +38,21 @@ export async function GET(request: Request) {
 
   const store = await cookies();
   const expected = store.get(GMAIL_STATE_COOKIE)?.value;
-  if (!expected || !sameState(expected, state)) {
-    return jsonError(400, 'State inválido: recomece a conexão pela tela de Integrações.');
+  // Os dois casos falham igual, mas se consertam diferente: sem cookie e
+  // demora ou aba antiga; cookie diferente e outra autorizacao por cima desta.
+  if (!expected) {
+    return jsonError(
+      400,
+      'A autorização expirou ou começou em outra aba. Volte a Integrações, clique em ' +
+        'Conectar e conclua sem sair do fluxo (a janela é de 30 minutos).',
+    );
+  }
+  if (!sameState(expected, state)) {
+    return jsonError(
+      400,
+      'Esta autorização foi substituída por outra mais recente. Use a aba mais nova, ' +
+        'ou recomece pela tela de Integrações.',
+    );
   }
   store.delete(GMAIL_STATE_COOKIE);
 
