@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import {
   Command,
   CommandDialog,
@@ -51,7 +50,7 @@ const NAV_TARGETS = RAIL_SECTIONS.flatMap((section) =>
   ),
 );
 
-export function SearchTrigger({ collapsed = false }: { collapsed?: boolean }) {
+export function SearchTrigger() {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -107,20 +106,13 @@ export function SearchTrigger({ collapsed = false }: { collapsed?: boolean }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Buscar"
-        className={cn(
-          'flex h-10 items-center rounded-lg border border-neutral-800 text-neutral-400 transition-colors hover:border-neutral-700 hover:text-neutral-200',
-          collapsed ? 'w-10 min-w-10 justify-center' : 'w-full px-3',
-        )}
+        className="flex h-10 w-full items-center rounded-lg border border-neutral-800 px-3 text-neutral-400 transition-colors hover:border-neutral-700 hover:text-neutral-200"
       >
         <Search className="size-4 shrink-0" />
-        {collapsed ? null : (
-          <>
-            <span className="ml-2 flex-1 text-left text-sm">Buscar</span>
-            <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-neutral-800 px-1.5 font-medium text-[10px]">
-              <span className="text-xs">⌘</span>K
-            </kbd>
-          </>
-        )}
+        <span className="ml-2 flex-1 text-left text-sm">Buscar</span>
+        <kbd className="inline-flex h-5 select-none items-center gap-1 rounded border border-neutral-800 px-1.5 font-medium text-[10px]">
+          <span className="text-xs">⌘</span>K
+        </kbd>
       </button>
 
       <CommandDialog
