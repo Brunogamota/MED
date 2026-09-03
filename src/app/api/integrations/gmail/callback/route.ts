@@ -90,6 +90,12 @@ export async function GET(request: Request) {
         '',
         'Esta página não guardou o token em lugar nenhum. Se fechar sem copiar,',
         'refaça a conexão pela tela de Integrações.',
+        '',
+        'ATENÇÃO: a linha acima dá acesso de leitura à caixa de e-mail, e vale',
+        'até ser revogada. Não tire print desta página, não cole o valor em',
+        'chat, ticket ou commit. Vá daqui direto para a Vercel.',
+        'Se ele escapar, revogue em myaccount.google.com/permissions e refaça',
+        'a conexão — o token antigo morre na hora.',
       ].join('\n'),
       { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } },
     );
