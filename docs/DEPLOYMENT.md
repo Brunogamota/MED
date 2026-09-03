@@ -245,8 +245,6 @@ GMAIL_CLIENT_ID=...             # cliente OAuth do Google Cloud
 GMAIL_CLIENT_SECRET=...
 GMAIL_REFRESH_TOKEN=...         # sai da tela de retorno da autorizacao
 GMAIL_QUERY=from:med@banco...   # a mesma sintaxe da busca do Gmail
-PRIVACY_CONTROLLER_NAME=...     # razao social que assina a politica
-PRIVACY_CONTACT_EMAIL=...       # contato para pedidos de titular
 API_KEYS=<key>:<organizationId>:OWNER   # so para acesso de maquina
 WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
 DOCUMENT_URL_SIGNING_SECRET=<hex>
@@ -296,10 +294,15 @@ servida por `/privacidade`, que fica fora da protecao de sessao no middleware
 justamente porque o Google a busca sem login. Cadastre
 `<NEXT_PUBLIC_APP_URL>/privacidade` e o botao **Publicar app** destrava.
 
-Defina `PRIVACY_CONTROLLER_NAME` e `PRIVACY_CONTACT_EMAIL` antes disso: sem
-elas a pagina publica declara, no topo, que o responsavel nao foi configurado.
-Nome de empresa nao e inventado para preencher espaco. Como a pagina e estatica,
-os valores entram no build — mudar as variaveis exige um novo deploy.
+Quem assina a politica esta em `src/config/legal.ts` — razao social, encarregado
+e contato. Fica no repositorio porque nada ali e segredo: e exatamente o que a
+pagina publica imprime, e uma variavel de ambiente so acrescentaria uma
+configuracao a mais para publicar. `PRIVACY_CONTROLLER_NAME`,
+`PRIVACY_CONTACT_NAME`, `PRIVACY_CONTACT_EMAIL` e `PRIVACY_CONTROLLER_DOCUMENT`
+continuam valendo como sobrescrita, para rodar sob outra razao social sem tocar
+no fonte. O CNPJ so sai impresso quando alguem informa o verdadeiro; nenhum
+numero e inventado para preencher a linha. Como a pagina e estatica, qualquer
+mudanca exige um novo deploy.
 
 Publicado sem verificacao do Google, a tela "O Google nao verificou este app"
 continua aparecendo (Avancado -> Acessar). Ela so some com a verificacao, que

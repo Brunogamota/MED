@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { APP_CONFIG } from '@/config/app';
+import { LEGAL_CONFIG } from '@/config/legal';
 import { BrandMark } from '@/components/layout/brand-mark';
 import { GMAIL_SCOPE } from '@/infra/adapters/gmail';
 
@@ -19,8 +20,8 @@ export const metadata: Metadata = {
  *
  * O texto descreve o sistema como ele é, campo a campo, e não um modelo
  * genérico. O mesmo princípio que vale para a defesa vale aqui: nada de
- * afirmação sem lastro. Razão social e contato vêm do ambiente; quando não
- * estão configurados a página **diz isso**, em vez de inventar uma empresa.
+ * afirmação sem lastro — o CNPJ, por exemplo, só aparece quando alguém informa
+ * o verdadeiro em `config/legal.ts`.
  */
 
 /** Data em que este texto foi escrito. Trocar ao alterar o conteúdo. */
@@ -36,8 +37,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function PrivacidadePage() {
-  const controller = process.env.PRIVACY_CONTROLLER_NAME?.trim() || null;
-  const contact = process.env.PRIVACY_CONTACT_EMAIL?.trim() || null;
+  const { controllerName, controllerDocument, contactName, contactEmail } = LEGAL_CONFIG;
 
   return (
     <main className="mx-auto max-w-[75ch] px-6 py-12 text-foreground">
@@ -51,23 +51,11 @@ export default function PrivacidadePage() {
         de defesa de MED (Mecanismo Especial de Devolução do Pix).
       </p>
 
-      {contact === null || controller === null ? (
-        <p className="mt-6 rounded-lg border border-amber-600/30 bg-amber-600/10 px-4 py-3 text-amber-700 text-sm dark:text-amber-400">
-          Configuração pendente: defina{' '}
-          {controller === null ? <code>PRIVACY_CONTROLLER_NAME</code> : null}
-          {controller === null && contact === null ? ' e ' : null}
-          {contact === null ? <code>PRIVACY_CONTACT_EMAIL</code> : null} no ambiente para que esta
-          política identifique o responsável. Sem isso ela fica incompleta — e nenhum nome é
-          inventado no lugar.
-        </p>
-      ) : null}
-
       <div className="mt-4 text-[15px] leading-relaxed">
         <Section title="1. Quem trata os dados">
           <p>
-            O {APP_CONFIG.name} é operado por{' '}
-            {controller ?? <em className="text-muted-foreground">(responsável não configurado)</em>}
-            , adiante “nós”.
+            O {APP_CONFIG.name} é operado por <strong>{controllerName}</strong>
+            {controllerDocument ? `, CNPJ ${controllerDocument}` : null}, adiante “nós”.
           </p>
           <p>
             A plataforma é usada por lojistas para responder a contestações de Pix. Em relação aos
@@ -225,15 +213,11 @@ export default function PrivacidadePage() {
 
         <Section title="9. Contato">
           <p>
-            {contact ? (
-              <a className="underline" href={`mailto:${contact}`}>
-                {contact}
-              </a>
-            ) : (
-              <em className="text-muted-foreground">
-                (endereço de contato não configurado — ver aviso no topo desta página)
-              </em>
-            )}
+            Encarregado pelo tratamento de dados pessoais (LGPD, art. 41): {contactName} —{' '}
+            <a className="underline" href={`mailto:${contactEmail}`}>
+              {contactEmail}
+            </a>
+            .
           </p>
         </Section>
 
