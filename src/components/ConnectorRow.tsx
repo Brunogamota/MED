@@ -44,10 +44,16 @@ const ICONS: Record<ConnectorIcon, (props: { className?: string }) => ReactNode>
 export function ConnectorRow({
   connector,
   state,
+  blockedReason,
 }: {
   connector: Connector;
   /** Estado resolvido no servidor — pode vir do ambiente, não do catálogo. */
   state: ConnectorState;
+  /**
+   * Por que ainda não dá para conectar, quando não dá. Dizer o que falta na
+   * própria linha evita o botão que leva a um erro para explicar a mesma coisa.
+   */
+  blockedReason?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -83,6 +89,17 @@ export function ConnectorRow({
         </ItemContent>
 
         <ItemActions>
+          {connector.authPath && !connected ? (
+            blockedReason ? (
+              <span className="max-w-64 text-right text-muted-foreground text-xs">
+                {blockedReason}
+              </span>
+            ) : (
+              <Button asChild size="sm">
+                <a href={connector.authPath}>Conectar</a>
+              </Button>
+            )
+          ) : (
           <Switch
             checked={connected || open || submitted}
             disabled={connected}
@@ -100,6 +117,7 @@ export function ConnectorRow({
                 : undefined
             }
           />
+          )}
         </ItemActions>
       </Item>
 

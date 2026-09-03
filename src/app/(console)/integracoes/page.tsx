@@ -18,7 +18,12 @@ export const dynamic = 'force-dynamic';
 export default async function IntegracoesPage() {
   const auth = serverPageContext();
   const stats = await computeAutoFillStats(auth);
-  const runtime = { llmConfigured: getConfig().llm.apiKey !== null };
+  const config = getConfig();
+  const runtime = {
+    llmConfigured: config.llm.apiKey !== null,
+    gmailConfigured: config.gmail.configured,
+    gmailConnected: config.gmail.connected,
+  };
 
   const connected = CONNECTORS.filter(
     (connector) => resolveState(connector, runtime) === 'CONNECTED',
@@ -58,6 +63,11 @@ export default async function IntegracoesPage() {
                   key={connector.id}
                   connector={connector}
                   state={resolveState(connector, runtime)}
+                  blockedReason={
+                    connector.runtime === 'gmail' && !config.gmail.configured
+                      ? 'Falta GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET no ambiente.'
+                      : undefined
+                  }
                 />
               ))}
             </ItemGroup>

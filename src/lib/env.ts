@@ -87,6 +87,22 @@ export interface AppConfig {
   webhookSigningSecret: string | null;
   documentUrlSigningSecret: string | null;
   llm: { apiKey: string | null; model: string };
+  /**
+   * Gmail. `refreshToken` e o que sobrevive entre deploys — sem ele o
+   * conector existe mas nao le nada. `query` e a mesma sintaxe da busca do
+   * Gmail, para o operador poder conferir na propria caixa o que a ferramenta
+   * enxerga.
+   */
+  gmail: {
+    clientId: string | null;
+    clientSecret: string | null;
+    refreshToken: string | null;
+    query: string | null;
+    /** Da para iniciar o consentimento: as duas metades do app existem. */
+    configured: boolean;
+    /** Ja autorizado: existe refresh token guardado. */
+    connected: boolean;
+  };
   appUrl: string;
   /**
    * Login do console. Só existe quando as duas variáveis estão presentes —
@@ -94,6 +110,23 @@ export interface AppConfig {
    * meia configuração vale como nenhuma.
    */
   auth: { passwordHash: string | null; sessionSecret: string | null; enabled: boolean };
+}
+
+function buildGmailConfig(): AppConfig['gmail'] {
+  const clientId = process.env.GMAIL_CLIENT_ID?.trim() || null;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET?.trim() || null;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN?.trim() || null;
+  const configured = clientId !== null && clientSecret !== null;
+  return {
+    clientId,
+    clientSecret,
+    refreshToken,
+    query: process.env.GMAIL_QUERY?.trim() || null,
+    configured,
+    // Meia configuracao nao conecta ninguem: um refresh token sem o app que o
+    // emitiu nao serve para nada.
+    connected: configured && refreshToken !== null,
+  };
 }
 
 function buildAuthConfig(): AppConfig['auth'] {
@@ -126,6 +159,7 @@ export function getConfig(): AppConfig {
     },
     appUrl: process.env.NEXT_PUBLIC_APP_URL?.trim() || vercelUrl || 'http://localhost:3000',
     auth: buildAuthConfig(),
+    gmail: buildGmailConfig(),
   };
 
   return cached;

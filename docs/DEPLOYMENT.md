@@ -241,6 +241,10 @@ que a diferenca era so o nome da variavel.
 DATABASE_URL=postgresql://...   # pooled
 DIRECT_DATABASE_URL=postgresql://...   # direta, so para migrate
 ORGANIZATION_ID=org_...         # organizacao que as telas operam
+GMAIL_CLIENT_ID=...             # cliente OAuth do Google Cloud
+GMAIL_CLIENT_SECRET=...
+GMAIL_REFRESH_TOKEN=...         # sai da tela de retorno da autorizacao
+GMAIL_QUERY=from:med@banco...   # a mesma sintaxe da busca do Gmail
 API_KEYS=<key>:<organizationId>:OWNER   # so para acesso de maquina
 WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
 DOCUMENT_URL_SIGNING_SECRET=<hex>
@@ -260,6 +264,17 @@ nunca e reescrito:
 
 Quem declarar `sslmode=verify-full` (com `sslrootcert` apontando para o CA do
 provedor) continua com verificacao completa: nada aqui mexe nesse caso.
+
+As quatro variaveis do Gmail sao opcionais e entram em duas etapas. Com
+`GMAIL_CLIENT_ID` e `GMAIL_CLIENT_SECRET`, a tela de Integracoes mostra o botao
+**Conectar**; a autorizacao termina numa pagina que imprime a linha
+`GMAIL_REFRESH_TOKEN=...` para colar aqui e redeployar. O refresh token nao e
+gravado sozinho de proposito: segredo de longa duracao mora em variavel de
+ambiente neste projeto, nao em banco.
+
+A URL de retorno cadastrada no Google Cloud tem de ser exatamente
+`<NEXT_PUBLIC_APP_URL>/api/integrations/gmail/callback`. Divergiu, o Google
+recusa com `redirect_uri_mismatch` sem dizer qual das duas estava errada.
 
 `ORGANIZATION_ID` e opcional: sem ela o console herda a organizacao da primeira
 chave de API e, sem chave nenhuma, usa `org_demo`. Vale defini-la em producao

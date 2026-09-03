@@ -24,14 +24,20 @@ export interface Connector {
   fills: string;
   /** Estado declarado. Pode ser sobrescrito pelo ambiente — ver `resolveState`. */
   state: ConnectorState;
-  /** Campos pedidos no fluxo de conexão. */
+  /** Campos pedidos no fluxo de conexão. Vazio quando a conexão é por autorização. */
   credentials: { name: string; label: string; kind: 'text' | 'secret' }[];
+  /**
+   * Rota que inicia a autorização, para conector que conecta pelo provedor em
+   * vez de por chave colada. Quem tem isto nao mostra formulario: o operador
+   * autoriza na tela do proprio provedor.
+   */
+  authPath?: string;
   /**
    * Estado que vem da configuração em vez do catálogo. Hoje só `llm`, que lê
    * `ANTHROPIC_API_KEY`: dizer "disponível" para algo que já está funcionando
    * seria tão errado quanto o contrário.
    */
-  runtime?: 'llm';
+  runtime?: 'llm' | 'gmail';
   /** Última sincronização — só para conectores realmente ativos. */
   lastSyncAt?: string | null;
 }
@@ -46,9 +52,9 @@ export const CONNECTORS: Connector[] = [
     group: 'Fontes de dados',
     fills: 'MED que chega por e-mail vira caso, com a mensagem original anexada como evidência',
     state: 'AVAILABLE',
-    credentials: [
-      { name: 'inbox', label: 'Endereço de recebimento', kind: 'text' },
-    ],
+    runtime: 'gmail',
+    credentials: [],
+    authPath: '/api/integrations/gmail/connect',
   },
   {
     id: 'whatsapp',
@@ -92,11 +98,16 @@ export const CONNECTOR_STATE_LABEL: Record<ConnectorState, string> = {
 export interface ConnectorRuntime {
   /** `ANTHROPIC_API_KEY` presente. */
   llmConfigured: boolean;
+  /** As duas metades do app do Google existem: da para pedir consentimento. */
+  gmailConfigured: boolean;
+  /** Ja autorizado: existe refresh token guardado. */
+  gmailConnected: boolean;
 }
 
 /** Estado real do conector: o do catálogo, ou o que o ambiente diz. */
 export function resolveState(connector: Connector, runtime: ConnectorRuntime): ConnectorState {
   if (connector.runtime === 'llm') return runtime.llmConfigured ? 'CONNECTED' : 'AVAILABLE';
+  if (connector.runtime === 'gmail') return runtime.gmailConnected ? 'CONNECTED' : 'AVAILABLE';
   return connector.state;
 }
 

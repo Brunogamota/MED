@@ -14,6 +14,14 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
     llm: { apiKey: null, model: 'claude-sonnet-5' },
     appUrl: 'https://example.test',
     auth: { passwordHash: 'scrypt:aa:bb', sessionSecret: 'cc', enabled: true },
+    gmail: {
+      clientId: null,
+      clientSecret: null,
+      refreshToken: null,
+      query: null,
+      configured: false,
+      connected: false,
+    },
     ...overrides,
   };
 }
