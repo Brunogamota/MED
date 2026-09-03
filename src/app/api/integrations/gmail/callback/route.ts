@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { exchangeCode, GmailError } from '@/infra/adapters/gmail';
 import { getConfig } from '@/lib/env';
@@ -41,10 +41,20 @@ export async function GET(request: Request) {
   // Os dois casos falham igual, mas se consertam diferente: sem cookie e
   // demora ou aba antiga; cookie diferente e outra autorizacao por cima desta.
   if (!expected) {
+    // Diz o host que respondeu e o host configurado. Quando diferem, a causa
+    // e essa e nao o prazo — e sem isto impresso a distincao e invisivel.
+    const headerStore = await headers();
+    const answeringHost = headerStore.get('x-forwarded-host') ?? headerStore.get('host') ?? '?';
+    const canonicalHost = new URL(config.appUrl).host;
+    const hostNote =
+      answeringHost === canonicalHost
+        ? ''
+        : ` O fluxo terminou em ${answeringHost}, mas NEXT_PUBLIC_APP_URL aponta para ` +
+          `${canonicalHost}: o cookie ficou no outro host.`;
     return jsonError(
       400,
       'A autorização expirou ou começou em outra aba. Volte a Integrações, clique em ' +
-        'Conectar e conclua sem sair do fluxo (a janela é de 30 minutos).',
+        `Conectar e conclua sem sair do fluxo (a janela é de 30 minutos).${hostNote}`,
     );
   }
   if (!sameState(expected, state)) {

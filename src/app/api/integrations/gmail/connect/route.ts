@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { buildConsentUrl } from '@/infra/adapters/gmail';
 import { getConfig } from '@/lib/env';
@@ -49,6 +49,33 @@ export async function GET(request: Request) {
       503,
       'Gmail não configurado: defina GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET.',
     );
+  }
+
+  /**
+   * O consentimento tem de comecar no mesmo host em que termina.
+   *
+   * O cookie do `state` e gravado no host que responde a este pedido, mas o
+   * Google volta sempre para o host de `NEXT_PUBLIC_APP_URL`. Comecar pelo
+   * endereco do deploy (`med-xxxx.vercel.app`, que e o link do painel da
+   * Vercel) e terminar no endereco fixo deixa o cookie do lado de la: a volta
+   * nao acha nada e acusa autorizacao expirada, quando o que houve foi troca
+   * de host.
+   *
+   * Entao mandamos o operador para o host canonico antes de comecar. O marcador
+   * `canonico` impede um segundo salto caso o host visto aqui nunca coincida
+   * com o configurado — melhor falhar adiante, com mensagem, do que em laco.
+   */
+  const requestUrl = new URL(request.url);
+  const headerStore = await headers();
+  const currentHost = headerStore.get('x-forwarded-host') ?? headerStore.get('host');
+  if (
+    !requestUrl.searchParams.has('canonico') &&
+    currentHost &&
+    new URL(config.appUrl).host !== currentHost
+  ) {
+    const canonical = new URL('/api/integrations/gmail/connect', config.appUrl);
+    canonical.searchParams.set('canonico', '1');
+    return NextResponse.redirect(canonical);
   }
 
   const state = randomBytes(16).toString('hex');
