@@ -276,6 +276,12 @@ A URL de retorno cadastrada no Google Cloud tem de ser exatamente
 `<NEXT_PUBLIC_APP_URL>/api/integrations/gmail/callback`. Divergiu, o Google
 recusa com `redirect_uri_mismatch` sem dizer qual das duas estava errada.
 
+**`NEXT_PUBLIC_APP_URL` e obrigatoria para o Gmail funcionar.** Sem ela o
+`appUrl` cai no `VERCEL_URL`, que e o endereco *daquele deploy* — muda a cada
+build e nunca bate com a URL cadastrada.
+`/api/integrations/gmail/connect?mostrar=1` imprime a URL que o deploy esta
+enviando, para comparar com a cadastrada sem adivinhar.
+
 `ORGANIZATION_ID` e opcional: sem ela o console herda a organizacao da primeira
 chave de API e, sem chave nenhuma, usa `org_demo`. Vale defini-la em producao
 para o nome nao depender de outra configuracao.
