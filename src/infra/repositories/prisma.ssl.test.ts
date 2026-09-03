@@ -28,6 +28,39 @@ describe('withRequiredSsl', () => {
     expect(withRequiredSsl(verify)).toBe(verify);
   });
 
+  /**
+   * A `POSTGRES_URL` do Supabase traz `sslmode=require`. O `pg` trata `require`
+   * como `verify-full`, e o certificado do pooler não encadeia numa autoridade
+   * conhecida — a conexão morre com "self-signed certificate in certificate
+   * chain". `uselibpqcompat=true` é o próprio driver dizendo como pedir a
+   * interpretação padrão do modo.
+   */
+  it('pede a interpretação padrão de require, sem reescrever o modo', () => {
+    const url = withRequiredSsl(
+      'postgres://user:pw@aws-0-sa-east-1.pooler.supabase.com:5432/postgres?sslmode=require',
+    );
+    const params = new URL(url).searchParams;
+    expect(params.get('sslmode')).toBe('require');
+    expect(params.get('uselibpqcompat')).toBe('true');
+  });
+
+  it('vale para os três modos que o driver trata como verify-full', () => {
+    for (const mode of ['prefer', 'require', 'verify-ca']) {
+      const url = withRequiredSsl(`postgres://u:p@host.example:5432/db?sslmode=${mode}`);
+      expect(new URL(url).searchParams.get('uselibpqcompat')).toBe('true');
+    }
+  });
+
+  it('não mexe em verify-full: quem pediu verificação completa continua com ela', () => {
+    const url = 'postgres://u:p@host.example:5432/db?sslmode=verify-full';
+    expect(withRequiredSsl(url)).toBe(url);
+  });
+
+  it('não duplica uselibpqcompat que já veio na URL', () => {
+    const url = 'postgres://u:p@host.example:5432/db?sslmode=require&uselibpqcompat=false';
+    expect(withRequiredSsl(url)).toBe(url);
+  });
+
   it('não exige TLS de banco local, que não tem certificado', () => {
     const local = 'postgresql://postgres@127.0.0.1:5432/med';
     expect(withRequiredSsl(local)).toBe(local);

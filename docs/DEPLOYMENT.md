@@ -246,14 +246,20 @@ WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
 DOCUMENT_URL_SIGNING_SECRET=<hex>
 ```
 
-A conexao com banco remoto recebe `sslmode=no-verify` quando a URL nao traz um
-`sslmode` proprio: o trafego vai cifrado, mas a identidade do servidor nao e
-conferida. `require` nao serve como padrao — o certificado do pooler do
-Supabase nao encadeia numa autoridade que o Node conheca, e a conexao morre com
-"self-signed certificate in certificate chain".
+O TLS da conexao com banco remoto e ajustado em dois casos, e o modo declarado
+nunca e reescrito:
 
-Para verificacao completa, ponha `sslmode=verify-full` e `sslrootcert` com o CA
-do provedor na propria URL: o `sslmode` declarado sempre vence o padrao.
+- **URL sem `sslmode`** (a `POSTGRES_PRISMA_URL` do Supabase) recebe
+  `sslmode=no-verify`. Sem isso o driver conecta em claro e o servidor derruba.
+- **URL com `sslmode=require`, `prefer` ou `verify-ca`** (a `POSTGRES_URL` do
+  Supabase) recebe `uselibpqcompat=true`. O `pg` trata esses tres modos como
+  `verify-full`, e o certificado do pooler nao encadeia numa autoridade que o
+  Node conheca: "self-signed certificate in certificate chain". O parametro
+  pede a interpretacao padrao do modo — cifrar sem exigir cadeia conhecida — e
+  de quebra silencia o aviso que o driver imprime a cada conexao.
+
+Quem declarar `sslmode=verify-full` (com `sslrootcert` apontando para o CA do
+provedor) continua com verificacao completa: nada aqui mexe nesse caso.
 
 `ORGANIZATION_ID` e opcional: sem ela o console herda a organizacao da primeira
 chave de API e, sem chave nenhuma, usa `org_demo`. Vale defini-la em producao

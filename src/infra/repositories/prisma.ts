@@ -283,24 +283,34 @@ function mapAudit(row: AuditRow): AuditLogEntry {
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 /**
- * Garante TLS na conexao com banco remoto.
+ * Modos que este driver interpreta fora do padrao.
  *
- * O driver `pg` so liga TLS quando a URL pede. Postgres hospedado — Supabase,
- * Neon, RDS — recusa conexao sem TLS, e algumas dessas URLs vem sem
- * `sslmode`: a `POSTGRES_PRISMA_URL` que a integracao do Supabase cria traz
- * `pgbouncer=true` e mais nada. Sem isto, a aplicacao conecta em claro, o
- * servidor derruba, e a tela mostra "nao foi possivel carregar" sem dizer por
- * que.
+ * `pg` trata `prefer`, `require` e `verify-ca` como apelidos de `verify-full`,
+ * e avisa isso em toda conexao. No libpq — e no que qualquer provedor quer
+ * dizer ao escrever `require` na URL — `require` significa "cifre", nao
+ * "cifre e valide a cadeia".
+ */
+const LIBPQ_ALIASED_MODES = new Set(['prefer', 'require', 'verify-ca']);
+
+/**
+ * Ajusta o TLS da conexao com banco remoto.
  *
- * O modo e `no-verify`, e nao `require`: o certificado do pooler do Supabase
- * nao encadeia numa autoridade que o Node conheca, e `require` derruba a
- * conexao com "self-signed certificate in certificate chain". `no-verify`
- * cifra o trafego, mas nao confere a identidade do servidor — protege contra
- * escuta, nao contra um intermediario que consiga se pos entre os dois.
+ * Sao dois problemas distintos, e o segundo so apareceu depois de resolver o
+ * primeiro:
  *
- * Para verificacao completa, defina `sslmode=verify-full` e `sslrootcert` com
- * o CA do provedor na propria URL: o `sslmode` que ja vier manda, e este
- * padrao sai de cena.
+ * 1. URL sem `sslmode` nenhum — a `POSTGRES_PRISMA_URL` que a integracao do
+ *    Supabase cria traz `pgbouncer=true` e mais nada. O `pg` conecta em claro,
+ *    o servidor derruba. Entra `sslmode=no-verify`.
+ *
+ * 2. URL com `sslmode=require`, que e o caso da `POSTGRES_URL` do Supabase.
+ *    Aqui o modo declarado manda — mas `pg` o trata como `verify-full`, e o
+ *    certificado do pooler nao encadeia numa autoridade que o Node conheca:
+ *    "self-signed certificate in certificate chain". Entra
+ *    `uselibpqcompat=true`, que e o proprio driver dizendo como pedir a
+ *    interpretacao padrao do modo — cifrar sem exigir cadeia conhecida.
+ *
+ * Em nenhum dos dois o modo declarado e reescrito: quem puser `verify-full`
+ * continua com verificacao completa, e quem puser `disable` continua sem TLS.
  *
  * Banco local fica de fora: `postgres` em maquina de desenvolvimento nao tem
  * certificado, e exigir TLS ali quebraria o `npm run dev`.
@@ -313,11 +323,21 @@ export function withRequiredSsl(connectionString: string): string {
     return connectionString;
   }
 
-  if (url.searchParams.has('sslmode')) return connectionString;
   if (LOCAL_HOSTS.has(url.hostname)) return connectionString;
 
-  url.searchParams.set('sslmode', 'no-verify');
-  return url.toString();
+  const mode = url.searchParams.get('sslmode');
+
+  if (!mode) {
+    url.searchParams.set('sslmode', 'no-verify');
+    return url.toString();
+  }
+
+  if (LIBPQ_ALIASED_MODES.has(mode) && !url.searchParams.has('uselibpqcompat')) {
+    url.searchParams.set('uselibpqcompat', 'true');
+    return url.toString();
+  }
+
+  return connectionString;
 }
 
 export function createPrismaClient(connectionString: string): PrismaClient {
