@@ -245,6 +245,8 @@ GMAIL_CLIENT_ID=...             # cliente OAuth do Google Cloud
 GMAIL_CLIENT_SECRET=...
 GMAIL_REFRESH_TOKEN=...         # sai da tela de retorno da autorizacao
 GMAIL_QUERY=from:med@banco...   # a mesma sintaxe da busca do Gmail
+PRIVACY_CONTROLLER_NAME=...     # razao social que assina a politica
+PRIVACY_CONTACT_EMAIL=...       # contato para pedidos de titular
 API_KEYS=<key>:<organizationId>:OWNER   # so para acesso de maquina
 WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
 DOCUMENT_URL_SIGNING_SECRET=<hex>
@@ -281,6 +283,27 @@ recusa com `redirect_uri_mismatch` sem dizer qual das duas estava errada.
 build e nunca bate com a URL cadastrada.
 `/api/integrations/gmail/connect?mostrar=1` imprime a URL que o deploy esta
 enviando, para comparar com a cadastrada sem adivinhar.
+
+### Publicar o app OAuth (tirar do modo de testes)
+
+Enquanto o app estiver em **Testes** no Google Auth Platform, so as contas
+listadas em *Usuarios de teste* conseguem autorizar (`Erro 403: access_denied`),
+e o refresh token **expira em 7 dias** — a conexao cai toda semana sozinha.
+
+Para publicar, o Google exige no *Branding* o nome do app, o e-mail de suporte,
+a URL da pagina inicial e a **URL da politica de privacidade**. Esta ultima e
+servida por `/privacidade`, que fica fora da protecao de sessao no middleware
+justamente porque o Google a busca sem login. Cadastre
+`<NEXT_PUBLIC_APP_URL>/privacidade` e o botao **Publicar app** destrava.
+
+Defina `PRIVACY_CONTROLLER_NAME` e `PRIVACY_CONTACT_EMAIL` antes disso: sem
+elas a pagina publica declara, no topo, que o responsavel nao foi configurado.
+Nome de empresa nao e inventado para preencher espaco. Como a pagina e estatica,
+os valores entram no build — mudar as variaveis exige um novo deploy.
+
+Publicado sem verificacao do Google, a tela "O Google nao verificou este app"
+continua aparecendo (Avancado -> Acessar). Ela so some com a verificacao, que
+so faz sentido para distribuir o app a terceiros.
 
 `ORGANIZATION_ID` e opcional: sem ela o console herda a organizacao da primeira
 chave de API e, sem chave nenhuma, usa `org_demo`. Vale defini-la em producao

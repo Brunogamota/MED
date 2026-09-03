@@ -22,7 +22,11 @@ import { SESSION_COOKIE, verifySession } from '@/lib/session';
  * da requisição; em produção isso não acontece e a proteção fica íntegra.
  */
 
-const PUBLIC_PREFIXES = ['/login', '/api', '/_next'];
+// `/privacidade` fica aberta de proposito: o Google busca a URL da politica
+// sem sessao ao publicar o app OAuth, e um redirect para /login faria a
+// verificacao falhar. E, de todo modo, politica de privacidade atras de login
+// nao e politica publica.
+const PUBLIC_PREFIXES = ['/login', '/privacidade', '/api', '/_next'];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

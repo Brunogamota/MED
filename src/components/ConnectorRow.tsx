@@ -89,7 +89,11 @@ export function ConnectorRow({
         </ItemContent>
 
         <ItemActions>
-          {connector.authPath && !connected ? (
+          {connector.managePath && connected ? (
+            <Button asChild size="sm" variant="outline">
+              <a href={connector.managePath}>Ver caixa</a>
+            </Button>
+          ) : connector.authPath && !connected ? (
             blockedReason ? (
               <span className="max-w-64 text-right text-muted-foreground text-xs">
                 {blockedReason}

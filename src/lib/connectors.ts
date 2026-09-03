@@ -33,6 +33,11 @@ export interface Connector {
    */
   authPath?: string;
   /**
+   * Tela do conector ja conectado. Depois de autorizar, o operador precisa ver
+   * o que a ferramenta enxerga — senao "Conectado" e uma promessa sem prova.
+   */
+  managePath?: string;
+  /**
    * Estado que vem da configuração em vez do catálogo. Hoje só `llm`, que lê
    * `ANTHROPIC_API_KEY`: dizer "disponível" para algo que já está funcionando
    * seria tão errado quanto o contrário.
@@ -55,6 +60,7 @@ export const CONNECTORS: Connector[] = [
     runtime: 'gmail',
     credentials: [],
     authPath: '/api/integrations/gmail/connect',
+    managePath: '/integracoes/gmail',
   },
   {
     id: 'whatsapp',

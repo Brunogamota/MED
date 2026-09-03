@@ -195,4 +195,17 @@ describe('fetchRawMessage', () => {
     await fetchRawMessage({ accessToken: 'a', messageId: 'm1' }, doFetch);
     expect(doFetch.calls[0]?.url).toContain('format=raw');
   });
+
+  // O id entra na URL por interpolacao: um valor com travessia mudaria o
+  // endereco chamado e levaria o token de acesso para outro caminho.
+  it.each(['../../../drafts/d1', 'm1/attachments/a1', 'm1?alt=media', ''])(
+    'recusa id fora do formato: %j',
+    async (messageId) => {
+      const doFetch = fakeFetch([{ match: '/messages/', body: { raw: 'YQ' } }]);
+      await expect(fetchRawMessage({ accessToken: 'a', messageId }, doFetch)).rejects.toBeInstanceOf(
+        GmailError,
+      );
+      expect(doFetch.calls).toHaveLength(0);
+    },
+  );
 });

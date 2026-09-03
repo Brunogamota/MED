@@ -17,6 +17,15 @@ const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 
+/**
+ * Formato do id de mensagem do Gmail.
+ *
+ * O id entra numa URL por interpolacao; um valor com `../` mudaria o endpoint
+ * chamado, levando o token para um caminho que nao e este. Validar aqui, na
+ * fronteira que monta a URL, cobre todo mundo que chamar.
+ */
+const MESSAGE_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
 /** Só leitura. Não pedimos mais do que precisamos. */
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
@@ -212,6 +221,9 @@ export async function fetchRawMessage(
   input: { accessToken: string; messageId: string },
   doFetch: Fetch = fetch,
 ): Promise<string> {
+  if (!MESSAGE_ID.test(input.messageId)) {
+    throw new GmailError('Identificador de mensagem inválido.', 400);
+  }
   const url = new URL(`${API_BASE}/messages/${input.messageId}`);
   url.searchParams.set('format', 'raw');
   const response = await doFetch(url.toString(), {
