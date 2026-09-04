@@ -1,0 +1,82 @@
+MIME-Version: 1.0
+From: Banco Exemplo S.A. <avisos@bancoexemplo.test>
+Date: Fri, 4 Sep 2026 04:12:50 -0300
+Message-ID: <CAExemploMensagemDeTeste@mail.example.test>
+Subject: =?UTF-8?B?W1RFU1RFXSBBYmVydHVyYSBkZSBNRUQgLSBTb2xpY2l0YcOnw6NvIGRlIGRldm9sdcOn?=
+	=?UTF-8?B?w6NvIFBpeCAtIE1FRC0yMDI2LTAwMDQ4MQ==?=
+To: "lojista@exemplo.test" <lojista@exemplo.test>
+Content-Type: multipart/alternative; boundary="000000000000c1edbc065aa2ff6c"
+
+--000000000000c1edbc065aa2ff6c
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+Prezado(a) lojista,
+
+Informamos a abertura de uma solicita=C3=A7=C3=A3o de devolu=C3=A7=C3=A3o (=
+MED - Mecanismo
+Especial de Devolu=C3=A7=C3=A3o) referente =C3=A0 transa=C3=A7=C3=A3o Pix a=
+baixo.
+
+DADOS DA SOLICITA=C3=87=C3=83O
+ID do MED: MED-2026-000481
+Institui=C3=A7=C3=A3o solicitante: Banco Exemplo S.A.
+Data de abertura: 03/09/2026 14:32
+Prazo para resposta: 10/09/2026 23:59
+Motivo: Produto n=C3=A3o recebido
+Descri=C3=A7=C3=A3o: O comprador alega que efetuou o pagamento em 28/08/202=
+6 e
+n=C3=A3o recebeu o produto at=C3=A9 a presente data.
+
+DADOS DA TRANSA=C3=87=C3=83O
+ID da transa=C3=A7=C3=A3o: TXN-8842010397
+End-to-End ID: E00000000202608281047ABCDEF12345
+Chave Pix: 11999998888
+Valor: R$ 349,90
+Data da transa=C3=A7=C3=A3o: 28/08/2026 10:47
+
+DADOS DO PAGADOR
+Nome: Maria Aparecida Souza
+CPF: 111.111.111-11
+E-mail: maria.souza@exemplo.com
+Telefone: (11) 99999-8888
+
+DADOS DO RECEBEDOR
+Raz=C3=A3o social: Ironpay Tecnologia Servicos e Pagamentos LTDA
+Tipo de produto: F=C3=ADsico
+
+INFORMA=C3=87=C3=95ES ADICIONAIS
+Pedido n=C2=BA 10482. Envio declarado pelo lojista em 29/08/2026.
+
+Esta =C3=A9 uma mensagem autom=C3=A1tica. A aus=C3=AAncia de resposta dentr=
+o do prazo
+implica na devolu=C3=A7=C3=A3o autom=C3=A1tica do valor ao pagador.
+
+Banco Exemplo S.A.
+
+--000000000000c1edbc065aa2ff6c
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">Prezado(a) lojista,<br><br>Informamos a abertura de uma so=
+licita=C3=A7=C3=A3o de devolu=C3=A7=C3=A3o (MED - Mecanismo<br>Especial de =
+Devolu=C3=A7=C3=A3o) referente =C3=A0 transa=C3=A7=C3=A3o Pix abaixo.<br><b=
+r>DADOS DA SOLICITA=C3=87=C3=83O<br>ID do MED: MED-2026-000481<br>Institui=
+=C3=A7=C3=A3o solicitante: Banco Exemplo S.A.<br>Data de abertura: 03/09/20=
+26 14:32<br>Prazo para resposta: 10/09/2026 23:59<br>Motivo: Produto n=C3=
+=A3o recebido<br>Descri=C3=A7=C3=A3o: O comprador alega que efetuou o pagam=
+ento em 28/08/2026 e<br>n=C3=A3o recebeu o produto at=C3=A9 a presente data=
+.<br><br>DADOS DA TRANSA=C3=87=C3=83O<br>ID da transa=C3=A7=C3=A3o: TXN-884=
+2010397<br>End-to-End ID: E00000000202608281047ABCDEF12345<br>Chave Pix: 11=
+999998888<br>Valor: R$ 349,90<br>Data da transa=C3=A7=C3=A3o: 28/08/2026 10=
+:47<br><br>DADOS DO PAGADOR<br>Nome: Maria Aparecida Souza<br>CPF: 111.111.=
+111-11<br>E-mail: <a href=3D"mailto:maria.souza@exemplo.com">maria.souza@ex=
+emplo.com</a><br>Telefone: (11) 99999-8888<br><br>DADOS DO RECEBEDOR<br>Raz=
+=C3=A3o social: Ironpay Tecnologia Servicos e Pagamentos LTDA<br>Tipo de pr=
+oduto: F=C3=ADsico<br><br>INFORMA=C3=87=C3=95ES ADICIONAIS<br>Pedido n=C2=
+=BA 10482. Envio declarado pelo lojista em 29/08/2026.<br><br>Esta =C3=A9 u=
+ma mensagem autom=C3=A1tica. A aus=C3=AAncia de resposta dentro do prazo<br=
+>implica na devolu=C3=A7=C3=A3o autom=C3=A1tica do valor ao pagador.<br><br=
+>Banco Exemplo S.A.</div>
+
+--000000000000c1edbc065aa2ff6c--

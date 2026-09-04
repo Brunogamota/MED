@@ -44,6 +44,8 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/domain/evidence/derive.ts` | Projeta registros estruturados em evidencias, preservando origem. |
 | `src/domain/evidence/engine.ts` | Evidence Engine: disponivel / faltante / score. |
 | `src/domain/timeline/engine.ts` | Timeline Engine: une eventos de fontes distintas e desduplica por autoridade da origem. |
+| `src/domain/email/mime.ts` | Leitura de RFC 822: quoted-printable, RFC 2047, escolha da parte text/plain. |
+| `src/domain/email/medNotice.ts` | Aviso de MED por e-mail -> rascunho. O que falta fica faltando. |
 | `src/domain/import/csv.ts` | Leitura do arquivo da adquirente: cabecalhos pt-BR, datas e valores. |
 | `src/domain/defense/claims.ts` | Templates de afirmacao e suas evidencias obrigatorias. |
 | `src/domain/defense/risks.ts` | Risk flags operacionais. |
