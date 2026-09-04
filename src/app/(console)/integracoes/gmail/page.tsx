@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/layout/page-header';
 import { serverPageContext } from '@/infra/auth/context';
+import { createMedFromMessageAction } from './actions';
 import { Panel } from '@/components/ui';
 import { formatDateTimeSmart } from '@/lib/format';
 import { DEFAULT_GMAIL_QUERY, readInbox } from '@/services/gmailService';
@@ -30,9 +31,9 @@ export const dynamic = 'force-dynamic';
 export default async function GmailInboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; erro?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, erro } = await searchParams;
   const auth = serverPageContext();
   const result = await readInbox(auth.organizationId, q);
 
@@ -43,6 +44,13 @@ export default async function GmailInboxPage({
         title="Caixa do Gmail"
         description="O que a ferramenta enxerga na caixa conectada. Nada aqui vira MED ainda: baixe a mensagem crua de um aviso real e ela vira o insumo do leitor."
       />
+
+      {erro ? (
+        <Alert variant="destructive">
+          <AlertTitle>Não deu para criar o MED</AlertTitle>
+          <AlertDescription>{erro}</AlertDescription>
+        </Alert>
+      ) : null}
 
       <Panel title="Busca">
         <form className="flex flex-wrap items-center gap-2" method="get">
@@ -77,7 +85,7 @@ export default async function GmailInboxPage({
           <Panel
             flush
             title={`${result.messages.length} mensagem${result.messages.length === 1 ? '' : 's'}`}
-            footer="Mais novas primeiro. Baixar o .eml de um aviso real é o que permite escrever o leitor contra o formato de verdade."
+            footer="Mais novas primeiro. Criar MED lê o aviso e abre o caso; se faltar algum campo obrigatório, a tela diz qual em vez de preencher sozinha."
           >
             <Table>
               <TableHeader>
@@ -85,7 +93,7 @@ export default async function GmailInboxPage({
                   <TableHead>Recebida</TableHead>
                   <TableHead>De</TableHead>
                   <TableHead>Assunto</TableHead>
-                  <TableHead className="text-right">Original</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -99,13 +107,21 @@ export default async function GmailInboxPage({
                       <span className="block truncate font-medium">{message.subject ?? '—'}</span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button asChild variant="outline" size="sm">
-                        <a
-                          href={`/api/integrations/gmail/message?id=${encodeURIComponent(message.id)}`}
-                        >
-                          Baixar .eml
-                        </a>
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button asChild variant="ghost" size="sm">
+                          <a
+                            href={`/api/integrations/gmail/message?id=${encodeURIComponent(message.id)}`}
+                          >
+                            Baixar .eml
+                          </a>
+                        </Button>
+                        <form action={createMedFromMessageAction}>
+                          <input type="hidden" name="messageId" value={message.id} />
+                          <Button type="submit" size="sm" variant="outline">
+                            Criar MED
+                          </Button>
+                        </form>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

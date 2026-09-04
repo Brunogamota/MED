@@ -58,6 +58,7 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/infra/pdf/` | Geracao do MED Defense Report. |
 | `src/services/` | Casos de uso: autorizacao, auditoria, transicao de status. |
 | `src/services/fulfillmentService.ts` | Registro de entrega: status + marcos datados (fisico) e envio do acesso (digital). |
+| `src/services/emailIntakeService.ts` | Aviso por e-mail -> MED. So cria com os campos obrigatorios presentes. |
 | `src/services/importService.ts` | Importacao em lote, idempotente e com relatorio por linha. |
 | `src/app/api/` | REST. |
 | `src/app/(console)/` | Telas autenticadas: painel, MEDs, integrações. |

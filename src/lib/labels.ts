@@ -184,6 +184,7 @@ export const RENDERER_LABEL: Record<NarrativeRenderer, string> = {
 
 export const AUDIT_ACTION_LABEL: Record<AuditAction, string> = {
   MED_CREATED: 'MED criado',
+  MED_INTAKE_FROM_EMAIL: 'Recebido por e-mail',
   MED_UPDATED: 'MED atualizado',
   MED_DELETED: 'MED excluído',
   MED_STATUS_CHANGED: 'Status alterado',

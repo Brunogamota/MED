@@ -616,6 +616,8 @@ export interface DefenseSubmission {
 
 export const AUDIT_ACTIONS = [
   'MED_CREATED',
+  /** Caso que nasceu de um aviso por e-mail; guarda o id da mensagem. */
+  'MED_INTAKE_FROM_EMAIL',
   'MED_UPDATED',
   'MED_DELETED',
   'MED_STATUS_CHANGED',
