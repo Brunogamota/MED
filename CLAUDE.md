@@ -65,6 +65,7 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/app/login/` | Entrada no console. |
 | `src/lib/session.ts` | Cookie de sessão assinado (Web Crypto — roda no middleware). |
 | `src/lib/password.ts` | Hash scrypt da senha do console (só Node). |
+| `src/services/loginThrottle.ts` | Limite de tentativas de login, contado no banco. |
 | `src/lib/secretBox.ts` | Cifra AES-256-GCM das credenciais guardadas no banco. |
 | `src/services/credentialService.ts` | Credencial de conector por organizacao: unica camada que ve o valor claro. |
 | `src/lib/team.ts` | Acessos configurados: login do console e chaves de API, com papel e permissões. |
@@ -93,7 +94,11 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 - Log nao carrega PII desnecessaria. Use os helpers de mascara em `src/lib/format.ts`.
 - Login errado devolve uma mensagem só, igual para usuário inexistente, senha
   errada e login desligado. Distinguir os casos entrega informação a quem está
-  adivinhando.
+  adivinhando. A exceção é o bloqueio por excesso de tentativas: ele não diz
+  nada sobre a credencial, e quem é da casa precisa entender por que a senha
+  certa parou de funcionar.
+- Em produção, console sem login configurado não abre. Fora de produção abre.
+  Deploy mal configurado servindo dado de comprador é pior que deploy fora do ar.
 - Status de entrega sozinho nao e afirmacao: todo marco exige a data correspondente.
   Dado digitado pelo operador e valido, desde que gravado com `source: MANUAL`.
 

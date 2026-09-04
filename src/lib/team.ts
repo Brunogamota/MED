@@ -62,7 +62,7 @@ export function buildAccessList(config: AppConfig, organizationId: string): Acce
     active: config.auth.enabled,
     inactiveReason: config.auth.enabled
       ? null
-      : 'Falta ADMIN_PASSWORD_HASH ou SESSION_SECRET — o console abre sem pedir senha.',
+      : 'Falta ADMIN_PASSWORD_HASH ou SESSION_SECRET. Fora de produção o console abre sem pedir senha; em produção ele não abre.',
     permissions: permissionsOf('OWNER'),
     foreignOrganization: false,
   };

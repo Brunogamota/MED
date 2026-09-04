@@ -409,3 +409,39 @@ organizacao reconecta o conector pela tela.
 ambiente aqui e ela criava um estado que a interface nao sabia desfazer:
 conectado, sem credencial para apagar, logo sem como desconectar. Existe um
 caminho so — conectar e desconectar pela tela. Apague a variavel do provedor.
+
+## Login do console
+
+Em producao o console **nao abre** sem login configurado: sem
+`ADMIN_PASSWORD_HASH` e `SESSION_SECRET`, toda rota do console vai para
+`/login`, que diz o que falta. Fora de producao nada e bloqueado — exigir
+configuracao para rodar `next dev` so atrapalha.
+
+Gere as credenciais:
+
+```
+npm run gerar-senha
+```
+
+Ele pergunta a senha no terminal, com eco desligado. A senha nao entra como
+argumento de proposito: argumento fica no historico do shell e aparece em `ps`.
+
+Saem duas linhas, para criar como variaveis de ambiente do tipo Secret:
+
+```
+ADMIN_PASSWORD_HASH=scrypt:...
+SESSION_SECRET=...
+```
+
+Opcionalmente, `ADMIN_USER=seu.usuario` passa a exigir tambem o nome digitado.
+Sem essa variavel qualquer nome e aceito e serve so para identificar quem esta
+no teclado na auditoria — o que autentica e a senha.
+
+**Limite de tentativas.** Oito falhas da mesma origem em 15 minutos bloqueiam
+novas tentativas ate a janela passar. A contagem fica no banco (`LoginAttempt`),
+e nao em memoria: cada instancia serverless tem a propria memoria, e um contador
+que zera sozinho nao segura forca bruta contra uma senha unica.
+
+Trocar a senha e trocar `ADMIN_PASSWORD_HASH` e publicar de novo. Trocar
+`SESSION_SECRET` invalida todas as sessoes abertas — e o jeito de derrubar todo
+mundo de uma vez.

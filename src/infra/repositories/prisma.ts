@@ -29,6 +29,8 @@ import type {
   MedRepository,
   IntegrationCredentialRecord,
   IntegrationCredentialRepository,
+  LoginAttemptRecord,
+  LoginThrottleRepository,
 } from '@/infra/repositories/types';
 
 /**
@@ -350,7 +352,11 @@ export function createPrismaClient(connectionString: string): PrismaClient {
 }
 
 export class PrismaMedRepository
-  implements MedRepository, IdempotencyStore, IntegrationCredentialRepository
+  implements
+    MedRepository,
+    IdempotencyStore,
+    IntegrationCredentialRepository,
+    LoginThrottleRepository
 {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -841,5 +847,31 @@ export class PrismaMedRepository
       where: { organizationId, provider },
     });
     return result.count > 0;
+  }
+
+  async getLoginAttempt(key: string): Promise<LoginAttemptRecord | null> {
+    const row = await this.prisma.loginAttempt.findUnique({ where: { key } });
+    if (!row) return null;
+    return {
+      key: row.key,
+      count: row.count,
+      windowStartedAt: row.windowStartedAt.toISOString(),
+    };
+  }
+
+  async saveLoginAttempt(record: LoginAttemptRecord): Promise<void> {
+    await this.prisma.loginAttempt.upsert({
+      where: { key: record.key },
+      create: {
+        key: record.key,
+        count: record.count,
+        windowStartedAt: new Date(record.windowStartedAt),
+      },
+      update: { count: record.count, windowStartedAt: new Date(record.windowStartedAt) },
+    });
+  }
+
+  async clearLoginAttempt(key: string): Promise<void> {
+    await this.prisma.loginAttempt.deleteMany({ where: { key } });
   }
 }

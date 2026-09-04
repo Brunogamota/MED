@@ -106,7 +106,13 @@ export interface AppConfig {
    * senha sem segredo de sessão (ou o contrário) não autentica ninguém, então
    * meia configuração vale como nenhuma.
    */
-  auth: { passwordHash: string | null; sessionSecret: string | null; enabled: boolean };
+  auth: {
+    passwordHash: string | null;
+    sessionSecret: string | null;
+    /** Quando definido, o nome digitado tambem precisa bater. */
+    user: string | null;
+    enabled: boolean;
+  };
 }
 
 function buildGmailConfig(): AppConfig['gmail'] {
@@ -124,7 +130,12 @@ function buildGmailConfig(): AppConfig['gmail'] {
 function buildAuthConfig(): AppConfig['auth'] {
   const passwordHash = process.env.ADMIN_PASSWORD_HASH?.trim() || null;
   const sessionSecret = process.env.SESSION_SECRET?.trim() || null;
-  return { passwordHash, sessionSecret, enabled: passwordHash !== null && sessionSecret !== null };
+  return {
+    passwordHash,
+    sessionSecret,
+    user: process.env.ADMIN_USER?.trim() || null,
+    enabled: passwordHash !== null && sessionSecret !== null,
+  };
 }
 
 let cached: AppConfig | null = null;

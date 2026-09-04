@@ -394,6 +394,17 @@ model IntegrationCredential {
   @@id([organizationId, provider])
 }
 
+/// Tentativas de login falhas, por origem.
+///
+/// Vive no banco, e nao em memoria: cada instancia serverless tem a sua, e um
+/// contador que zera a cada instancia nao segura forca bruta nenhuma contra uma
+/// senha unica exposta na internet.
+model LoginAttempt {
+  key             String   @id
+  count           Int
+  windowStartedAt DateTime
+}
+
 model IdempotencyRecord {
   organizationId String
   scope          String

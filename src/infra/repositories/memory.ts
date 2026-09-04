@@ -19,6 +19,8 @@ import type {
   MedRepository,
   IntegrationCredentialRecord,
   IntegrationCredentialRepository,
+  LoginAttemptRecord,
+  LoginThrottleRepository,
 } from '@/infra/repositories/types';
 
 /**
@@ -31,7 +33,11 @@ import type {
  * DATABASE_URL and gets the Prisma repository instead.
  */
 export class InMemoryMedRepository
-  implements MedRepository, IdempotencyStore, IntegrationCredentialRepository
+  implements
+    MedRepository,
+    IdempotencyStore,
+    IntegrationCredentialRepository,
+    LoginThrottleRepository
 {
   private readonly meds = new Map<string, Med>();
   private readonly transactions = new Map<string, Transaction>();
@@ -46,6 +52,7 @@ export class InMemoryMedRepository
   private readonly audits = new Map<string, AuditLogEntry[]>();
   private readonly idempotency = new Map<string, string>();
   private readonly credentials = new Map<string, IntegrationCredentialRecord>();
+  private readonly loginAttempts = new Map<string, LoginAttemptRecord>();
 
   private scoped(organizationId: string, medId: string): string {
     return `${organizationId}:${medId}`;
@@ -308,5 +315,17 @@ export class InMemoryMedRepository
 
   async deleteCredential(organizationId: string, provider: string): Promise<boolean> {
     return this.credentials.delete(`${organizationId}:${provider}`);
+  }
+
+  async getLoginAttempt(key: string): Promise<LoginAttemptRecord | null> {
+    return this.loginAttempts.get(key) ?? null;
+  }
+
+  async saveLoginAttempt(record: LoginAttemptRecord): Promise<void> {
+    this.loginAttempts.set(record.key, record);
+  }
+
+  async clearLoginAttempt(key: string): Promise<void> {
+    this.loginAttempts.delete(key);
   }
 }

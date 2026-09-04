@@ -13,7 +13,7 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
     documentUrlSigningSecret: null,
     llm: { apiKey: null, model: 'claude-sonnet-5' },
     appUrl: 'https://example.test',
-    auth: { passwordHash: 'scrypt:aa:bb', sessionSecret: 'cc', enabled: true },
+    auth: { passwordHash: 'scrypt:aa:bb', sessionSecret: 'cc', user: null, enabled: true },
     gmail: {
       clientId: null,
       clientSecret: null,
@@ -47,7 +47,7 @@ describe('buildAccessList', () => {
 
   it('marca o console como desligado quando falta metade da configuração', () => {
     const list = buildAccessList(
-      config({ auth: { passwordHash: 'scrypt:aa:bb', sessionSecret: null, enabled: false } }),
+      config({ auth: { passwordHash: 'scrypt:aa:bb', sessionSecret: null, user: null, enabled: false } }),
       'org_a',
     );
     expect(list[0]!.active).toBe(false);

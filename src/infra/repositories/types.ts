@@ -107,3 +107,16 @@ export interface IntegrationCredentialRepository {
   saveCredential(record: IntegrationCredentialRecord): Promise<IntegrationCredentialRecord>;
   deleteCredential(organizationId: string, provider: string): Promise<boolean>;
 }
+
+/** Contador de tentativas de login falhas, por origem. */
+export interface LoginAttemptRecord {
+  key: string;
+  count: number;
+  windowStartedAt: string;
+}
+
+export interface LoginThrottleRepository {
+  getLoginAttempt(key: string): Promise<LoginAttemptRecord | null>;
+  saveLoginAttempt(record: LoginAttemptRecord): Promise<void>;
+  clearLoginAttempt(key: string): Promise<void>;
+}
