@@ -45,6 +45,8 @@ export function ConnectorRow({
   connector,
   state,
   blockedReason,
+  accountLabel,
+  onDisconnect,
 }: {
   connector: Connector;
   /** Estado resolvido no servidor — pode vir do ambiente, não do catálogo. */
@@ -54,6 +56,10 @@ export function ConnectorRow({
    * própria linha evita o botão que leva a um erro para explicar a mesma coisa.
    */
   blockedReason?: string;
+  /** Conta ligada, quando o conector sabe dizer qual. Endereço, não credencial. */
+  accountLabel?: string | null;
+  /** Desliga o conector. Só aparece para quem conecta por autorização. */
+  onDisconnect?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -85,14 +91,25 @@ export function ConnectorRow({
               {CONNECTOR_STATE_LABEL[state]}
             </Badge>
           </ItemTitle>
-          <ItemDescription>{connector.fills}</ItemDescription>
+          <ItemDescription>
+            {accountLabel && connected ? (
+              <>
+                <span className="font-medium text-foreground">{accountLabel}</span>
+                {' — '}
+              </>
+            ) : null}
+            {connector.fills}
+          </ItemDescription>
         </ItemContent>
 
         <ItemActions>
           {connector.managePath && connected ? (
-            <Button asChild size="sm" variant="outline">
-              <a href={connector.managePath}>Ver caixa</a>
-            </Button>
+            <>
+              <Button asChild size="sm" variant="outline">
+                <a href={connector.managePath}>Ver caixa</a>
+              </Button>
+              {onDisconnect}
+            </>
           ) : connector.authPath && !connected ? (
             blockedReason ? (
               <span className="max-w-64 text-right text-muted-foreground text-xs">

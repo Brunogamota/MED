@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { buildConsentUrl } from '@/infra/adapters/gmail';
 import { getConfig } from '@/lib/env';
+import { SecretBoxError, readEncryptionKey } from '@/lib/secretBox';
 import { jsonError } from '@/lib/api';
 import { GMAIL_STATE_COOKIE, GMAIL_STATE_MAX_AGE_SECONDS, gmailRedirectUri } from '@/lib/gmail';
 
@@ -76,6 +77,19 @@ export async function GET(request: Request) {
     const canonical = new URL('/api/integrations/gmail/connect', config.appUrl);
     canonical.searchParams.set('canonico', '1');
     return NextResponse.redirect(canonical);
+  }
+
+  /**
+   * Sem chave de cifra nao ha onde guardar o token com seguranca.
+   *
+   * Recusar aqui, e nao no retorno: mandar o operador autorizar no Google para
+   * so entao dizer que faltava configuracao gasta o consentimento dele a toa.
+   */
+  try {
+    readEncryptionKey(process.env.ENCRYPTION_KEY);
+  } catch (caught) {
+    if (caught instanceof SecretBoxError) return jsonError(503, caught.message);
+    throw caught;
   }
 
   const state = randomBytes(16).toString('hex');

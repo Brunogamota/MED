@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { serverPageContext } from '@/infra/auth/context';
 import { readRawMessage } from '@/services/gmailService';
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Informe o id da mensagem em ?id=' }, { status: 400 });
   }
 
-  const result = await readRawMessage(id);
+  const result = await readRawMessage(serverPageContext().organizationId, id);
   if (!result.ok) {
     return NextResponse.json({ error: result.reason }, { status: result.status });
   }

@@ -11,6 +11,8 @@
  */
 
 import { getConfig } from '@/lib/env';
+import { SecretBoxError } from '@/lib/secretBox';
+import { readConnectorCredential } from '@/services/credentialService';
 import {
   GmailError,
   type GmailMessageHeader,
@@ -37,20 +39,47 @@ function currentQuery(override?: string | null): string {
   return override?.trim() || config.gmail.query || DEFAULT_GMAIL_QUERY;
 }
 
+/**
+ * Refresh token da organizacao.
+ *
+ * O lugar dele e o banco, cifrado. `GMAIL_REFRESH_TOKEN` continua sendo lido
+ * como reserva porque o deploy que ja esta no ar guarda o token assim, e tirar
+ * a variavel de uma vez derrubaria a conexao existente. Banco primeiro: quem
+ * reconectar pela tela passa a usar o caminho novo sem fazer mais nada.
+ */
+async function organizationRefreshToken(
+  organizationId: string,
+): Promise<{ ok: true; token: string | null } | { ok: false; reason: string }> {
+  try {
+    const stored = await readConnectorCredential(organizationId, 'GMAIL');
+    if (stored) return { ok: true, token: stored.secret };
+  } catch (error) {
+    // Chave ausente ou trocada: a tela precisa dizer isso, nao mostrar pilha.
+    if (error instanceof SecretBoxError) return { ok: false, reason: error.message };
+    throw error;
+  }
+  return { ok: true, token: getConfig().gmail.refreshToken };
+}
+
 /** Access token de curta duracao, ou o motivo de nao haver um. */
-async function accessToken(): Promise<{ ok: true; token: string } | { ok: false; reason: string }> {
+async function accessToken(
+  organizationId: string,
+): Promise<{ ok: true; token: string } | { ok: false; reason: string }> {
   const { gmail } = getConfig();
   if (!gmail.configured) {
     return { ok: false, reason: 'Falta GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET no ambiente.' };
   }
-  if (!gmail.refreshToken) {
+  const stored = await organizationRefreshToken(organizationId);
+  if (!stored.ok) return { ok: false, reason: stored.reason };
+  const refreshToken = stored.token;
+  if (!refreshToken) {
     return { ok: false, reason: 'Caixa ainda não autorizada. Conecte o Gmail em Integrações.' };
   }
   try {
     const token = await refreshAccessToken({
       clientId: gmail.clientId as string,
       clientSecret: gmail.clientSecret as string,
-      refreshToken: gmail.refreshToken,
+      refreshToken,
     });
     return { ok: true, token };
   } catch (error) {
@@ -62,11 +91,12 @@ async function accessToken(): Promise<{ ok: true; token: string } | { ok: false;
 
 /** Cabecalhos das mensagens que casam com a busca. */
 export async function readInbox(
+  organizationId: string,
   override?: string | null,
   limit = 25,
 ): Promise<InboxResult> {
   const query = currentQuery(override);
-  const token = await accessToken();
+  const token = await accessToken(organizationId);
   if (!token.ok) return { ok: false, reason: token.reason, query };
   try {
     const messages = await listMessages({ accessToken: token.token, query, limit });
@@ -87,8 +117,11 @@ export type RawMessageResult =
  * E o insumo do parser: e contra este texto — RFC 822 de verdade, com
  * cabecalhos e corpo — que as regras de extracao serao escritas e testadas.
  */
-export async function readRawMessage(messageId: string): Promise<RawMessageResult> {
-  const token = await accessToken();
+export async function readRawMessage(
+  organizationId: string,
+  messageId: string,
+): Promise<RawMessageResult> {
+  const token = await accessToken(organizationId);
   if (!token.ok) return { ok: false, reason: token.reason, status: 409 };
   try {
     const raw = await fetchRawMessage({ accessToken: token.token, messageId });

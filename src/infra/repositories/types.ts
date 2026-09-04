@@ -81,3 +81,29 @@ export interface IdempotencyStore {
   get(organizationId: string, scope: string, key: string): Promise<string | null>;
   set(organizationId: string, scope: string, key: string, resultId: string): Promise<void>;
 }
+
+/**
+ * Credencial de um conector, por organizacao.
+ *
+ * `secret` trafega **cifrado** por esta porta. A cifra fica na camada de
+ * servico, e nao aqui: assim nenhum adapter — nem um futuro, nem um de teste —
+ * pode gravar o valor claro por engano.
+ */
+export interface IntegrationCredentialRecord {
+  organizationId: string;
+  provider: string;
+  /** Envelope de `src/lib/secretBox.ts`. Nunca o valor em claro. */
+  secret: string;
+  /** Qual conta esta ligada, para a tela dizer. E endereco, nao credencial. */
+  accountLabel: string | null;
+  connectedAt: string;
+}
+
+export interface IntegrationCredentialRepository {
+  getCredential(
+    organizationId: string,
+    provider: string,
+  ): Promise<IntegrationCredentialRecord | null>;
+  saveCredential(record: IntegrationCredentialRecord): Promise<IntegrationCredentialRecord>;
+  deleteCredential(organizationId: string, provider: string): Promise<boolean>;
+}

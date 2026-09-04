@@ -156,6 +156,26 @@ function headerOf(
 }
 
 /**
+ * Endereco da caixa autorizada.
+ *
+ * A tela precisa dizer *qual* conta foi ligada — "Gmail conectado" sozinho nao
+ * deixa ninguem perceber que autorizou a caixa errada. E endereco, nao
+ * credencial: pode aparecer.
+ */
+export async function fetchProfileEmail(
+  accessToken: string,
+  doFetch: Fetch = fetch,
+): Promise<string | null> {
+  const response = await doFetch(`${API_BASE}/profile`, {
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
+  // Sem endereco a conexao ainda vale; a tela mostra a conexao sem o rotulo.
+  if (!response.ok) return null;
+  const payload = (await response.json()) as { emailAddress?: string };
+  return typeof payload.emailAddress === 'string' ? payload.emailAddress : null;
+}
+
+/**
  * Mensagens que casam com a busca, mais novas primeiro.
  *
  * `query` e a mesma sintaxe da caixa de busca do Gmail — `from:med@banco.com.br`

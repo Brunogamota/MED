@@ -6,6 +6,10 @@ import { ConnectorRow } from '@/components/ConnectorRow';
 import { ItemGroup } from '@/components/ui/item';
 import { MetricCell, MetricStrip } from '@/components/ui';
 import { PageHeader } from '@/components/layout/page-header';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { connectorStatus } from '@/services/credentialService';
+import { disconnectGmailAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,14 +19,22 @@ export const dynamic = 'force-dynamic';
  * argumento de venda: quantas fontes conectadas e quanto do preenchimento
  * recente chegou sem digitação.
  */
-export default async function IntegracoesPage() {
+export default async function IntegracoesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ gmail?: string; motivo?: string }>;
+}) {
+  const { gmail: gmailResult, motivo } = await searchParams;
   const auth = serverPageContext();
   const stats = await computeAutoFillStats(auth);
   const config = getConfig();
+  const gmail = await connectorStatus(auth.organizationId, 'GMAIL');
   const runtime = {
     llmConfigured: config.llm.apiKey !== null,
     gmailConfigured: config.gmail.configured,
-    gmailConnected: config.gmail.connected,
+    // O banco manda; a variavel de ambiente sobrevive so para o deploy que ja
+    // guardava o token assim, e some quando ele reconectar pela tela.
+    gmailConnected: gmail.connected || config.gmail.connected,
   };
 
   const connected = CONNECTORS.filter(
@@ -40,6 +52,21 @@ export default async function IntegracoesPage() {
         title="Integrações"
         description="Cada fonte conectada é um conjunto de campos que você deixa de digitar. O formulário é o último recurso."
       />
+
+      {gmailResult === 'conectado' ? (
+        <Alert>
+          <AlertTitle>Gmail conectado</AlertTitle>
+          <AlertDescription>
+            A caixa já pode ser lida. Nenhuma credencial foi mostrada nem precisa ser guardada
+            por você.
+          </AlertDescription>
+        </Alert>
+      ) : gmailResult === 'erro' ? (
+        <Alert variant="destructive">
+          <AlertTitle>Não deu para conectar o Gmail</AlertTitle>
+          <AlertDescription>{motivo ?? 'Tente conectar novamente.'}</AlertDescription>
+        </Alert>
+      ) : null}
 
       <MetricStrip>
         <MetricCell label="Fontes conectadas" value={connected} unit={`de ${total}`} />
@@ -63,6 +90,21 @@ export default async function IntegracoesPage() {
                   key={connector.id}
                   connector={connector}
                   state={resolveState(connector, runtime)}
+                  accountLabel={connector.runtime === 'gmail' ? gmail.accountLabel : null}
+                  onDisconnect={
+                    connector.runtime === 'gmail' && gmail.connected ? (
+                      <form action={disconnectGmailAction}>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="ghost"
+                          title="Apaga a credencial guardada aqui. A autorização no Google continua até ser revogada lá."
+                        >
+                          Desconectar
+                        </Button>
+                      </form>
+                    ) : null
+                  }
                   blockedReason={
                     connector.runtime === 'gmail' && !config.gmail.configured
                       ? 'Falta GMAIL_CLIENT_ID e GMAIL_CLIENT_SECRET no ambiente.'

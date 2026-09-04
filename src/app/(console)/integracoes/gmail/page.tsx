@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/layout/page-header';
+import { serverPageContext } from '@/infra/auth/context';
 import { Panel } from '@/components/ui';
 import { formatDateTimeSmart } from '@/lib/format';
 import { DEFAULT_GMAIL_QUERY, readInbox } from '@/services/gmailService';
@@ -32,7 +33,8 @@ export default async function GmailInboxPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const result = await readInbox(q);
+  const auth = serverPageContext();
+  const result = await readInbox(auth.organizationId, q);
 
   return (
     <div className="@container/main flex flex-col gap-4 md:gap-6">

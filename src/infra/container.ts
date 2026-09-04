@@ -1,4 +1,8 @@
-import type { IdempotencyStore, MedRepository } from '@/infra/repositories/types';
+import type {
+  IdempotencyStore,
+  IntegrationCredentialRepository,
+  MedRepository,
+} from '@/infra/repositories/types';
 import { InMemoryMedRepository } from '@/infra/repositories/memory';
 import { getConfig } from '@/lib/env';
 
@@ -11,7 +15,7 @@ import { getConfig } from '@/lib/env';
  * bundle entirely when it is not configured.
  */
 
-export type Repository = MedRepository & IdempotencyStore;
+export type Repository = MedRepository & IdempotencyStore & IntegrationCredentialRepository;
 
 const globalStore = globalThis as unknown as {
   __medRepository?: Repository;

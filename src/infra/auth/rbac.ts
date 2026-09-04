@@ -16,12 +16,15 @@ export const PERMISSIONS = [
   'defense:generate',
   'submission:create',
   'audit:read',
+  /** Ligar e desligar conector. Da acesso a caixa de e-mail da empresa. */
+  'integration:write',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   OWNER: [...PERMISSIONS],
-  // Apagar caso fica só com o dono: e uma perda que nao tem desfazer.
+  // Apagar caso, e ligar conector, ficam só com o dono: um e perda sem
+  // desfazer, o outro entrega a caixa de e-mail da empresa a uma integração.
   ANALYST: ['med:read', 'med:write', 'evidence:write', 'defense:generate', 'audit:read'],
   VIEWER: ['med:read', 'audit:read'],
 };

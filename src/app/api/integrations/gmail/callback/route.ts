@@ -1,10 +1,13 @@
 import { timingSafeEqual } from 'node:crypto';
 import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { exchangeCode, GmailError } from '@/infra/adapters/gmail';
+import { GmailError, exchangeCode, fetchProfileEmail } from '@/infra/adapters/gmail';
+import { serverPageContext } from '@/infra/auth/context';
 import { getConfig } from '@/lib/env';
 import { jsonError } from '@/lib/api';
-import { gmailRedirectUri, GMAIL_STATE_COOKIE } from '@/lib/gmail';
+import { SecretBoxError } from '@/lib/secretBox';
+import { GMAIL_STATE_COOKIE, gmailRedirectUri } from '@/lib/gmail';
+import { saveConnectorCredential } from '@/services/credentialService';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -17,20 +20,32 @@ function sameState(a: string, b: string): boolean {
   return timingSafeEqual(left, right);
 }
 
+/** Volta para a tela, com o resultado no endereco em vez de no corpo. */
+function backToIntegrations(appUrl: string, params: Record<string, string>): NextResponse {
+  const url = new URL('/integracoes', appUrl);
+  for (const [name, value] of Object.entries(params)) url.searchParams.set(name, value);
+  return NextResponse.redirect(url);
+}
+
 /**
  * Volta do consentimento do Google.
  *
- * O refresh token **nao** e gravado sozinho: ele e um segredo de longa duracao,
- * e este projeto guarda segredo em variavel de ambiente, nao em banco. A rota
- * mostra o valor uma vez, para o operador colar em `GMAIL_REFRESH_TOKEN` na
- * Vercel — o mesmo caminho de toda credencial daqui.
+ * O refresh token e gravado cifrado, amarrado a organizacao, e o operador
+ * volta para a tela de Integracoes. Ele nunca ve o token: mostrar credencial
+ * em tela pede que alguem a copie para um lugar pior, e num produto vendido
+ * nenhum cliente teria onde cola-la.
  */
 export async function GET(request: Request) {
   const config = getConfig();
   const url = new URL(request.url);
 
   const error = url.searchParams.get('error');
-  if (error) return jsonError(400, `O Google recusou a autorização: ${error}`);
+  if (error) {
+    return backToIntegrations(config.appUrl, {
+      gmail: 'erro',
+      motivo: `O Google recusou a autorização: ${error}`,
+    });
+  }
 
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -41,8 +56,6 @@ export async function GET(request: Request) {
   // Os dois casos falham igual, mas se consertam diferente: sem cookie e
   // demora ou aba antiga; cookie diferente e outra autorizacao por cima desta.
   if (!expected) {
-    // Diz o host que respondeu e o host configurado. Quando diferem, a causa
-    // e essa e nao o prazo — e sem isto impresso a distincao e invisivel.
     const headerStore = await headers();
     const answeringHost = headerStore.get('x-forwarded-host') ?? headerStore.get('host') ?? '?';
     const canonicalHost = new URL(config.appUrl).host;
@@ -51,18 +64,18 @@ export async function GET(request: Request) {
         ? ''
         : ` O fluxo terminou em ${answeringHost}, mas NEXT_PUBLIC_APP_URL aponta para ` +
           `${canonicalHost}: o cookie ficou no outro host.`;
-    return jsonError(
-      400,
-      'A autorização expirou ou começou em outra aba. Volte a Integrações, clique em ' +
-        `Conectar e conclua sem sair do fluxo (a janela é de 30 minutos).${hostNote}`,
-    );
+    return backToIntegrations(config.appUrl, {
+      gmail: 'erro',
+      motivo:
+        'A autorização expirou ou começou em outra aba. Clique em Conectar e conclua sem ' +
+        `sair do fluxo (a janela é de 30 minutos).${hostNote}`,
+    });
   }
   if (!sameState(expected, state)) {
-    return jsonError(
-      400,
-      'Esta autorização foi substituída por outra mais recente. Use a aba mais nova, ' +
-        'ou recomece pela tela de Integrações.',
-    );
+    return backToIntegrations(config.appUrl, {
+      gmail: 'erro',
+      motivo: 'Esta autorização foi substituída por outra mais recente. Use a aba mais nova.',
+    });
   }
   store.delete(GMAIL_STATE_COOKIE);
 
@@ -71,36 +84,27 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { refreshToken } = await exchangeCode({
+    const { refreshToken, accessToken } = await exchangeCode({
       clientId: config.gmail.clientId,
       clientSecret: config.gmail.clientSecret,
       redirectUri: gmailRedirectUri(config.appUrl),
       code,
     });
 
-    // Texto puro, e nao uma tela: isto e para copiar e colar uma vez.
-    return new NextResponse(
-      [
-        'Autorizado.',
-        '',
-        'Copie a linha abaixo e crie a variável de ambiente na Vercel',
-        '(Settings -> Environment Variables -> Production). Depois, Redeploy.',
-        '',
-        `GMAIL_REFRESH_TOKEN=${refreshToken}`,
-        '',
-        'Esta página não guardou o token em lugar nenhum. Se fechar sem copiar,',
-        'refaça a conexão pela tela de Integrações.',
-        '',
-        'ATENÇÃO: a linha acima dá acesso de leitura à caixa de e-mail, e vale',
-        'até ser revogada. Não tire print desta página, não cole o valor em',
-        'chat, ticket ou commit. Vá daqui direto para a Vercel.',
-        'Se ele escapar, revogue em myaccount.google.com/permissions e refaça',
-        'a conexão — o token antigo morre na hora.',
-      ].join('\n'),
-      { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } },
-    );
+    // Qual caixa foi ligada. Falha aqui nao desfaz a conexao — a tela so fica
+    // sem o rótulo.
+    const accountLabel = await fetchProfileEmail(accessToken).catch(() => null);
+
+    await saveConnectorCredential(serverPageContext(), 'GMAIL', {
+      secret: refreshToken,
+      accountLabel,
+    });
+
+    return backToIntegrations(config.appUrl, { gmail: 'conectado' });
   } catch (caught) {
-    if (caught instanceof GmailError) return jsonError(caught.status ?? 502, caught.message);
+    if (caught instanceof GmailError || caught instanceof SecretBoxError) {
+      return backToIntegrations(config.appUrl, { gmail: 'erro', motivo: caught.message });
+    }
     throw caught;
   }
 }

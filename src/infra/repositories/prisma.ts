@@ -27,6 +27,8 @@ import type {
   ListMedsFilter,
   MedListRow,
   MedRepository,
+  IntegrationCredentialRecord,
+  IntegrationCredentialRepository,
 } from '@/infra/repositories/types';
 
 /**
@@ -347,7 +349,9 @@ export function createPrismaClient(connectionString: string): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export class PrismaMedRepository implements MedRepository, IdempotencyStore {
+export class PrismaMedRepository
+  implements MedRepository, IdempotencyStore, IntegrationCredentialRepository
+{
   constructor(private readonly prisma: PrismaClient) {}
 
   async createMed(med: Med): Promise<Med> {
@@ -784,5 +788,58 @@ export class PrismaMedRepository implements MedRepository, IdempotencyStore {
       create: { organizationId, scope, key, resultId },
       update: {},
     });
+  }
+
+  async getCredential(
+    organizationId: string,
+    provider: string,
+  ): Promise<IntegrationCredentialRecord | null> {
+    const row = await this.prisma.integrationCredential.findUnique({
+      where: { organizationId_provider: { organizationId, provider } },
+    });
+    if (!row) return null;
+    return {
+      organizationId: row.organizationId,
+      provider: row.provider,
+      secret: row.secret,
+      accountLabel: row.accountLabel,
+      connectedAt: row.connectedAt.toISOString(),
+    };
+  }
+
+  async saveCredential(
+    record: IntegrationCredentialRecord,
+  ): Promise<IntegrationCredentialRecord> {
+    // Reconectar substitui: duas credenciais do mesmo provedor para a mesma
+    // organizacao nao significam nada, e a chave primaria composta impede.
+    const row = await this.prisma.integrationCredential.upsert({
+      where: {
+        organizationId_provider: {
+          organizationId: record.organizationId,
+          provider: record.provider,
+        },
+      },
+      create: {
+        organizationId: record.organizationId,
+        provider: record.provider,
+        secret: record.secret,
+        accountLabel: record.accountLabel,
+      },
+      update: { secret: record.secret, accountLabel: record.accountLabel },
+    });
+    return {
+      organizationId: row.organizationId,
+      provider: row.provider,
+      secret: row.secret,
+      accountLabel: row.accountLabel,
+      connectedAt: row.connectedAt.toISOString(),
+    };
+  }
+
+  async deleteCredential(organizationId: string, provider: string): Promise<boolean> {
+    const result = await this.prisma.integrationCredential.deleteMany({
+      where: { organizationId, provider },
+    });
+    return result.count > 0;
   }
 }

@@ -17,6 +17,8 @@ import type {
   ListMedsFilter,
   MedListRow,
   MedRepository,
+  IntegrationCredentialRecord,
+  IntegrationCredentialRepository,
 } from '@/infra/repositories/types';
 
 /**
@@ -28,7 +30,9 @@ import type {
  * documented in `.env.example` and surfaced in the UI. Production sets
  * DATABASE_URL and gets the Prisma repository instead.
  */
-export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
+export class InMemoryMedRepository
+  implements MedRepository, IdempotencyStore, IntegrationCredentialRepository
+{
   private readonly meds = new Map<string, Med>();
   private readonly transactions = new Map<string, Transaction>();
   private readonly customers = new Map<string, Customer>();
@@ -41,6 +45,7 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
   private readonly submissions = new Map<string, DefenseSubmission[]>();
   private readonly audits = new Map<string, AuditLogEntry[]>();
   private readonly idempotency = new Map<string, string>();
+  private readonly credentials = new Map<string, IntegrationCredentialRecord>();
 
   private scoped(organizationId: string, medId: string): string {
     return `${organizationId}:${medId}`;
@@ -285,5 +290,23 @@ export class InMemoryMedRepository implements MedRepository, IdempotencyStore {
     resultId: string,
   ): Promise<void> {
     this.idempotency.set(`${organizationId}:${scope}:${key}`, resultId);
+  }
+
+  async getCredential(
+    organizationId: string,
+    provider: string,
+  ): Promise<IntegrationCredentialRecord | null> {
+    return this.credentials.get(`${organizationId}:${provider}`) ?? null;
+  }
+
+  async saveCredential(
+    record: IntegrationCredentialRecord,
+  ): Promise<IntegrationCredentialRecord> {
+    this.credentials.set(`${record.organizationId}:${record.provider}`, record);
+    return record;
+  }
+
+  async deleteCredential(organizationId: string, provider: string): Promise<boolean> {
+    return this.credentials.delete(`${organizationId}:${provider}`);
   }
 }

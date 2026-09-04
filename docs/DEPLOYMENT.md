@@ -241,6 +241,7 @@ que a diferenca era so o nome da variavel.
 DATABASE_URL=postgresql://...   # pooled
 DIRECT_DATABASE_URL=postgresql://...   # direta, so para migrate
 ORGANIZATION_ID=org_...         # organizacao que as telas operam
+ENCRYPTION_KEY=...              # 32 bytes: openssl rand -base64 32
 GMAIL_CLIENT_ID=...             # cliente OAuth do Google Cloud
 GMAIL_CLIENT_SECRET=...
 GMAIL_REFRESH_TOKEN=...         # sai da tela de retorno da autorizacao
@@ -388,3 +389,23 @@ Para valer, na Vercel: **Storage -> Create Database**, conectar ao projeto
 variaveis entram sozinhas, o build aplica as migrations, e a linha da
 organizacao nasce junto com o primeiro MED — `createMed` usa `connectOrCreate`,
 entao nao ha SQL manual a rodar.
+
+## Chave de criptografia
+
+`ENCRYPTION_KEY` cifra as credenciais de conector guardadas no banco (hoje o
+refresh token do Gmail). Gere com:
+
+```
+openssl rand -base64 32
+```
+
+Ela vive **so** no ambiente. Guardada junto do banco, nao protege de nada: a
+ideia e que um dump vazado sozinho nao abra a caixa de e-mail de ninguem.
+
+Trocar a chave nao migra o que ja esta gravado — o conteudo antigo deixa de
+abrir, e a leitura falha alto em vez de devolver lixo. Depois de trocar, cada
+organizacao reconecta o conector pela tela.
+
+`GMAIL_REFRESH_TOKEN` continua sendo lido como reserva, para o deploy que
+guardava o token assim antes desta mudanca. Quem reconectar pela tela passa a
+usar o banco e pode apagar a variavel.

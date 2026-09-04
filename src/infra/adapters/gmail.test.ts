@@ -7,6 +7,7 @@ import {
   fetchRawMessage,
   listMessages,
   refreshAccessToken,
+  fetchProfileEmail,
 } from '@/infra/adapters/gmail';
 
 /** Um `fetch` que devolve respostas combinadas e guarda o que foi pedido. */
@@ -208,4 +209,25 @@ describe('fetchRawMessage', () => {
       expect(doFetch.calls).toHaveLength(0);
     },
   );
+});
+
+describe('fetchProfileEmail', () => {
+  it('devolve o endereco da caixa autorizada', async () => {
+    const doFetch = (async () =>
+      new Response(JSON.stringify({ emailAddress: 'lojista@exemplo.com' }), {
+        status: 200,
+      })) as unknown as typeof fetch;
+    expect(await fetchProfileEmail('token', doFetch)).toBe('lojista@exemplo.com');
+  });
+
+  it('devolve null quando o Google recusa, sem derrubar a conexao', async () => {
+    const doFetch = (async () => new Response('{}', { status: 403 })) as unknown as typeof fetch;
+    expect(await fetchProfileEmail('token', doFetch)).toBeNull();
+  });
+
+  it('devolve null quando a resposta nao traz endereco', async () => {
+    const doFetch = (async () =>
+      new Response(JSON.stringify({}), { status: 200 })) as unknown as typeof fetch;
+    expect(await fetchProfileEmail('token', doFetch)).toBeNull();
+  });
 });

@@ -238,5 +238,6 @@ export const PERMISSION_LABEL: Record<Permission, string> = {
   'evidence:write': 'Anexar evidência',
   'defense:generate': 'Gerar defesa',
   'submission:create': 'Enviar defesa',
+  'integration:write': 'Ligar e desligar conectores',
   'audit:read': 'Ver auditoria',
 };

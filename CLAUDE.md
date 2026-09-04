@@ -62,6 +62,8 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/app/login/` | Entrada no console. |
 | `src/lib/session.ts` | Cookie de sessão assinado (Web Crypto — roda no middleware). |
 | `src/lib/password.ts` | Hash scrypt da senha do console (só Node). |
+| `src/lib/secretBox.ts` | Cifra AES-256-GCM das credenciais guardadas no banco. |
+| `src/services/credentialService.ts` | Credencial de conector por organizacao: unica camada que ve o valor claro. |
 | `src/lib/team.ts` | Acessos configurados: login do console e chaves de API, com papel e permissões. |
 | `src/app/meds/` | UI operacional. |
 | `src/components/ui/` | Primitivas do sistema visual (shadcn/ui). Não editar por tela. |
@@ -80,6 +82,9 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
   No resto da interface, tudo sai dos tokens de `globals.css` — é o que faz o
   modo escuro funcionar sem uma segunda folha de estilo.
 - Dinheiro persiste em centavos (`Int`). Nunca float no banco.
+- Credencial de terceiro nunca vai ao banco em texto puro. Cifre no serviço; o
+  repositório só conhece o envelope. Mostrar segredo em tela também não vale:
+  quem conecta não deveria precisar copiar nada.
 - Defense e imutavel e versionada: gerar de novo cria uma nova versao, nunca
   sobrescreve.
 - Log nao carrega PII desnecessaria. Use os helpers de mascara em `src/lib/format.ts`.
