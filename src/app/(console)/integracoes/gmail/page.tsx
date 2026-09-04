@@ -97,11 +97,6 @@ export default async function GmailInboxPage({
                     <TableCell className="max-w-56 truncate">{message.from ?? '—'}</TableCell>
                     <TableCell className="max-w-96">
                       <span className="block truncate font-medium">{message.subject ?? '—'}</span>
-                      {message.snippet ? (
-                        <span className="block truncate text-muted-foreground text-sm">
-                          {message.snippet}
-                        </span>
-                      ) : null}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button asChild variant="outline" size="sm">

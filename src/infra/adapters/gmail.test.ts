@@ -127,7 +127,6 @@ describe('listMessages', () => {
     id: 'm1',
     threadId: 't1',
     internalDate: '1788390000000',
-    snippet: 'Prezado, informamos a abertura de um MED',
     payload: {
       headers: [
         { name: 'From', value: 'med@banco.com.br' },
@@ -155,8 +154,7 @@ describe('listMessages', () => {
         receivedAt: new Date(1788390000000).toISOString(),
         from: 'med@banco.com.br',
         subject: 'Abertura de MED',
-        snippet: 'Prezado, informamos a abertura de um MED',
-      },
+          },
     ]);
   });
 
@@ -168,7 +166,7 @@ describe('listMessages', () => {
     const [row] = await listMessages({ accessToken: 'a', query: 'x' }, doFetch);
     expect(row?.from).toBeNull();
     expect(row?.subject).toBeNull();
-    expect(row?.snippet).toBeNull();
+
   });
 
   it('uma mensagem que o Gmail recusa não derruba a listagem inteira', async () => {

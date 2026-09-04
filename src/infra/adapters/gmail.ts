@@ -43,7 +43,6 @@ export interface GmailMessageHeader {
   receivedAt: string;
   from: string | null;
   subject: string | null;
-  snippet: string | null;
 }
 
 /**
@@ -180,6 +179,11 @@ export async function fetchProfileEmail(
  *
  * `query` e a mesma sintaxe da caixa de busca do Gmail — `from:med@banco.com.br`
  * — para o operador poder conferir no proprio Gmail o que a ferramenta vai ver.
+ *
+ * So remetente, assunto e data. O trecho do corpo que a API oferece fica de
+ * fora de proposito: para escolher uma mensagem basta saber de quem veio e
+ * sobre o que e, e conteudo de e-mail exposto numa lista e conteudo lido por
+ * quem passa atras da cadeira.
  */
 export async function listMessages(
   input: { accessToken: string; query: string; limit?: number },
@@ -215,7 +219,6 @@ export async function listMessages(
       id: string;
       threadId: string;
       internalDate?: string;
-      snippet?: string;
       payload?: { headers?: Array<{ name?: string; value?: string }> };
     };
     headers.push({
@@ -224,7 +227,6 @@ export async function listMessages(
       receivedAt: new Date(Number(message.internalDate ?? 0)).toISOString(),
       from: headerOf(message.payload?.headers, 'From'),
       subject: headerOf(message.payload?.headers, 'Subject'),
-      snippet: message.snippet ?? null,
     });
   }
   return headers;
