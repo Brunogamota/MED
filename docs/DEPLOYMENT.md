@@ -244,7 +244,6 @@ ORGANIZATION_ID=org_...         # organizacao que as telas operam
 ENCRYPTION_KEY=...              # 32 bytes: openssl rand -base64 32
 GMAIL_CLIENT_ID=...             # cliente OAuth do Google Cloud
 GMAIL_CLIENT_SECRET=...
-GMAIL_REFRESH_TOKEN=...         # sai da tela de retorno da autorizacao
 GMAIL_QUERY=from:med@banco...   # a mesma sintaxe da busca do Gmail
 API_KEYS=<key>:<organizationId>:OWNER   # so para acesso de maquina
 WEBHOOK_SIGNING_SECRET=<hex>    # obrigatorio para receber MED por webhook
@@ -406,6 +405,7 @@ Trocar a chave nao migra o que ja esta gravado — o conteudo antigo deixa de
 abrir, e a leitura falha alto em vez de devolver lixo. Depois de trocar, cada
 organizacao reconecta o conector pela tela.
 
-`GMAIL_REFRESH_TOKEN` continua sendo lido como reserva, para o deploy que
-guardava o token assim antes desta mudanca. Quem reconectar pela tela passa a
-usar o banco e pode apagar a variavel.
+`GMAIL_REFRESH_TOKEN` nao e mais lido. Houve uma reserva por variavel de
+ambiente aqui e ela criava um estado que a interface nao sabia desfazer:
+conectado, sem credencial para apagar, logo sem como desconectar. Existe um
+caminho so — conectar e desconectar pela tela. Apague a variavel do provedor.

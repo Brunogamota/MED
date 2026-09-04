@@ -96,12 +96,9 @@ export interface AppConfig {
   gmail: {
     clientId: string | null;
     clientSecret: string | null;
-    refreshToken: string | null;
     query: string | null;
     /** Da para iniciar o consentimento: as duas metades do app existem. */
     configured: boolean;
-    /** Ja autorizado: existe refresh token guardado. */
-    connected: boolean;
   };
   appUrl: string;
   /**
@@ -115,17 +112,12 @@ export interface AppConfig {
 function buildGmailConfig(): AppConfig['gmail'] {
   const clientId = process.env.GMAIL_CLIENT_ID?.trim() || null;
   const clientSecret = process.env.GMAIL_CLIENT_SECRET?.trim() || null;
-  const refreshToken = process.env.GMAIL_REFRESH_TOKEN?.trim() || null;
   const configured = clientId !== null && clientSecret !== null;
   return {
     clientId,
     clientSecret,
-    refreshToken,
     query: process.env.GMAIL_QUERY?.trim() || null,
     configured,
-    // Meia configuracao nao conecta ninguem: um refresh token sem o app que o
-    // emitiu nao serve para nada.
-    connected: configured && refreshToken !== null,
   };
 }
 

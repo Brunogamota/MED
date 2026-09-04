@@ -17,10 +17,8 @@ function config(overrides: Partial<AppConfig> = {}): AppConfig {
     gmail: {
       clientId: null,
       clientSecret: null,
-      refreshToken: null,
       query: null,
       configured: false,
-      connected: false,
     },
     ...overrides,
   };

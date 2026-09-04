@@ -40,12 +40,12 @@ function currentQuery(override?: string | null): string {
 }
 
 /**
- * Refresh token da organizacao.
+ * Refresh token da organizacao. Vem do banco, cifrado, e de mais lugar nenhum.
  *
- * O lugar dele e o banco, cifrado. `GMAIL_REFRESH_TOKEN` continua sendo lido
- * como reserva porque o deploy que ja esta no ar guarda o token assim, e tirar
- * a variavel de uma vez derrubaria a conexao existente. Banco primeiro: quem
- * reconectar pela tela passa a usar o caminho novo sem fazer mais nada.
+ * Houve uma reserva por variavel de ambiente aqui, e ela criava um estado que
+ * a interface nao sabia desfazer: conectado, mas sem credencial para apagar,
+ * logo sem como desconectar. Um caminho so — quem conecta pela tela desconecta
+ * pela tela.
  */
 async function organizationRefreshToken(
   organizationId: string,
@@ -58,7 +58,7 @@ async function organizationRefreshToken(
     if (error instanceof SecretBoxError) return { ok: false, reason: error.message };
     throw error;
   }
-  return { ok: true, token: getConfig().gmail.refreshToken };
+  return { ok: true, token: null };
 }
 
 /** Access token de curta duracao, ou o motivo de nao haver um. */

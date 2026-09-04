@@ -32,9 +32,7 @@ export default async function IntegracoesPage({
   const runtime = {
     llmConfigured: config.llm.apiKey !== null,
     gmailConfigured: config.gmail.configured,
-    // O banco manda; a variavel de ambiente sobrevive so para o deploy que ja
-    // guardava o token assim, e some quando ele reconectar pela tela.
-    gmailConnected: gmail.connected || config.gmail.connected,
+    gmailConnected: gmail.connected,
   };
 
   const connected = CONNECTORS.filter(
@@ -92,27 +90,17 @@ export default async function IntegracoesPage({
                   state={resolveState(connector, runtime)}
                   accountLabel={connector.runtime === 'gmail' ? gmail.accountLabel : null}
                   onDisconnect={
-                    connector.runtime === 'gmail' && runtime.gmailConnected ? (
-                      gmail.connected ? (
-                        <form action={disconnectGmailAction}>
-                          <Button
-                            type="submit"
-                            size="sm"
-                            variant="ghost"
-                            title="Apaga a credencial guardada aqui. A autorização no Google continua até ser revogada lá."
-                          >
-                            Desconectar
-                          </Button>
-                        </form>
-                      ) : (
-                        // Conexao herdada da variavel de ambiente: nao ha o que
-                        // apagar daqui, e um botao que nao desliga nada seria
-                        // pior do que nenhum. Dizer onde se desliga resolve.
-                        <span className="max-w-64 text-right text-muted-foreground text-xs">
-                          Conectado por <code>GMAIL_REFRESH_TOKEN</code>. Clique em Conectar para
-                          migrar, ou remova a variável no provedor.
-                        </span>
-                      )
+                    connector.runtime === 'gmail' && gmail.connected ? (
+                      <form action={disconnectGmailAction}>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="ghost"
+                          title="Apaga a credencial guardada aqui. A autorização no Google continua até ser revogada lá."
+                        >
+                          Desconectar
+                        </Button>
+                      </form>
                     ) : null
                   }
                   blockedReason={
