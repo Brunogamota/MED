@@ -283,6 +283,8 @@ export const EVIDENCE_SOURCES = [
   'ANTIFRAUD',
   'ERP',
   'MERCHANT',
+  /** Mensagem recebida por e-mail; `sourceReference` guarda o id da mensagem. */
+  'EMAIL',
   /** Derived by this system from other evidence; always carries its inputs. */
   'SYSTEM_DERIVED',
 ] as const;

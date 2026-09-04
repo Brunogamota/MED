@@ -125,6 +125,7 @@ export function evidenceSourceOrigin(
       return { kind: 'manual' };
     case 'MERCHANT':
       return provider ? { kind: 'connector', provider } : { kind: 'manual' };
+    case 'EMAIL':
     case 'API':
     case 'SHOPIFY':
     case 'TRACKING_PROVIDER':
@@ -147,6 +148,8 @@ function sourceProviderName(source: EvidenceSource): string {
       return 'antifraude';
     case 'ERP':
       return 'ERP';
+    case 'EMAIL':
+      return 'e-mail';
     default:
       return 'API';
   }

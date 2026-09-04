@@ -21,6 +21,10 @@ const SOURCE_TRUST: Record<EvidenceSource, SourceTrust> = {
   ERP: 'PROVIDER',
   API: 'PROVIDER',
   WEBHOOK: 'PROVIDER',
+  // A mensagem existe na caixa e tem id, mas quem a escreveu foi um terceiro
+  // sem contrato conosco, e cabecalho de e-mail se forja. Vale como registro
+  // do provedor, nao como verificacao independente.
+  EMAIL: 'PROVIDER',
   MERCHANT: 'FIRST_PARTY',
   SYSTEM_DERIVED: 'FIRST_PARTY',
   MANUAL: 'SELF_REPORTED',

@@ -88,6 +88,7 @@ export const EVIDENCE_SOURCE_LABEL: Record<EvidenceSource, string> = {
   ANTIFRAUD: 'Antifraude',
   ERP: 'ERP',
   MERCHANT: 'Loja',
+  EMAIL: 'E-mail',
   SYSTEM_DERIVED: 'Derivado pelo sistema',
 };
 

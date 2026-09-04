@@ -276,6 +276,10 @@ const SOURCE_AUTHORITY: Record<EvidenceSource, number> = {
   ERP: 3,
   API: 3,
   WEBHOOK: 3,
+  // Mensagem recebida, com id verificavel e remetente — vale mais que digitado
+  // ou declarado pela loja. Abaixo do provedor porque texto de e-mail nao e
+  // campo estruturado e o remetente pode ser forjado.
+  EMAIL: 3,
   MERCHANT: 2,
   SYSTEM_DERIVED: 2,
   MANUAL: 1,
