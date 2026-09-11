@@ -5,6 +5,7 @@ import {
   parseCommunicationReceipt,
   RECONSTRUCTION_STAMP,
 } from '@/domain/communication/receipt';
+import type { Evidence } from '@/domain/types';
 import { assessEvidence } from '@/domain/evidence/engine';
 import { makeCompleteCase, makeEvidence } from '@/test/fixtures';
 
@@ -129,5 +130,48 @@ describe('o comprovante não distorce a avaliação de evidências', () => {
     expect(comComprovante.score.total).toBe(semComprovante.score.total);
     expect(comComprovante.supplementaryEvidenceIds).toContain('ev_delivery_communication');
     expect(comComprovante.availableTypes).not.toContain('DELIVERY_COMMUNICATION');
+  });
+});
+
+describe('o rascunho nao apaga o que o operador ja escreveu', () => {
+  const salvo = {
+    template: 'ACCESS_DELIVERY' as const,
+    from: 'Loja',
+    to: 'comprador@exemplo.com',
+    toName: 'Maria',
+    subject: 'Seu acesso',
+    sentAt: '2026-09-05T12:00:00.000Z',
+    body: 'Segue o link real que foi enviado: https://area.exemplo.com/x',
+    reference: 'CODIGO-DE-ACESSO-123',
+  };
+
+  function casoComComprovanteSalvo() {
+    const base = makeCompleteCase();
+    return {
+      ...base,
+      evidences: [
+        ...base.evidences,
+        makeEvidence('DELIVERY_COMMUNICATION', salvo as unknown as Evidence['value'], {
+          createdAt: '2026-09-05T12:00:00.000Z',
+        }),
+      ],
+    };
+  }
+
+  it('retoma destinatario, codigo de acesso e texto', () => {
+    const draft = draftCommunication(casoComComprovanteSalvo(), 'ACCESS_DELIVERY');
+    expect(draft.to).toBe('comprador@exemplo.com');
+    expect(draft.reference).toBe('CODIGO-DE-ACESSO-123');
+    expect(draft.body).toContain('https://area.exemplo.com/x');
+  });
+
+  it('nao mistura modelos: outro modelo continua propondo texto novo', () => {
+    const draft = draftCommunication(casoComComprovanteSalvo(), 'PURCHASE_CONFIRMATION');
+    expect(draft.reference).not.toBe('CODIGO-DE-ACESSO-123');
+  });
+
+  it('sem comprovante salvo, propoe o texto padrao', () => {
+    const draft = draftCommunication(makeCompleteCase(), 'ACCESS_DELIVERY');
+    expect(draft.body).toContain('[Inclua aqui o link');
   });
 });

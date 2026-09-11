@@ -20,18 +20,37 @@ function onlyOnTransaction() {
 describe('resolveEndToEndId', () => {
   it('usa o do MED quando existe', () => {
     expect(
-      resolveEndToEndId({ med: { endToEndId: 'DO-MED' }, transaction: { endToEndId: 'DA-TX' } }),
+      resolveEndToEndId({ med: { endToEndId: 'DO-MED', medId: 'MED-1' }, transaction: { endToEndId: 'DA-TX' } }),
     ).toBe('DO-MED');
   });
 
   it('cai para o da transacao quando o MED nao trouxe', () => {
-    expect(resolveEndToEndId({ med: { endToEndId: null }, transaction: { endToEndId: E2E } })).toBe(
+    expect(resolveEndToEndId({ med: { endToEndId: null, medId: 'MED-1' }, transaction: { endToEndId: E2E } })).toBe(
       E2E,
     );
   });
 
   it('sem os dois, nao inventa: devolve null', () => {
-    expect(resolveEndToEndId({ med: { endToEndId: null }, transaction: null })).toBeNull();
+    expect(resolveEndToEndId({ med: { endToEndId: null, medId: 'MED-1' }, transaction: null })).toBeNull();
+  });
+});
+
+describe('instituicao que usa o end-to-end como identificador do MED', () => {
+  it('reconhece o medId com forma de end-to-end', () => {
+    // Caso real: a tela mostrava o numero no titulo e o comprovante dizia
+    // "nao informado" logo abaixo.
+    expect(
+      resolveEndToEndId({
+        med: { endToEndId: null, medId: 'E00416968202609050014skajET5C1iI' },
+        transaction: null,
+      }),
+    ).toBe('E00416968202609050014skajET5C1iI');
+  });
+
+  it('nao confunde identificador comum com end-to-end', () => {
+    expect(
+      resolveEndToEndId({ med: { endToEndId: null, medId: 'MED-2026-000481' }, transaction: null }),
+    ).toBeNull();
   });
 });
 

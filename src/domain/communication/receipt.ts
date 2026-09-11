@@ -190,10 +190,41 @@ export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmail
  * que já existem no caso — nunca inventa e-mail, data ou produto. Campos sem
  * dado ficam vazios para o operador completar com o que realmente enviou.
  */
+/**
+ * A última reconstrução salva deste modelo, se houver.
+ *
+ * O rascunho era montado do zero a cada carregamento da tela. O que o operador
+ * digitava — endereço do cliente, link ou código de acesso, o texto real da
+ * mensagem — não estava em lugar nenhum do caso, então sumia do formulário e
+ * precisava ser redigitado a cada comprovante. Parecia apagar, e na prática
+ * apagava: o trabalho existia só dentro da evidência já gravada.
+ *
+ * Agora o formulário volta de lá. A evidência é a fonte, e não o log: ela
+ * guarda a mensagem inteira, enquanto a auditoria só registra destinatário e
+ * assunto.
+ */
+function lastSavedReceipt(
+  medCase: MedCase,
+  template: CommunicationTemplate,
+): CommunicationReceipt | null {
+  const saved = medCase.evidences
+    .filter((evidence) => evidence.type === 'DELIVERY_COMMUNICATION')
+    .map((evidence) => ({ evidence, receipt: parseCommunicationReceipt(evidence.value) }))
+    .filter((entry) => entry.receipt?.template === template)
+    // Mais recente primeiro: é a última correção que o operador fez.
+    .sort((a, b) => b.evidence.createdAt.localeCompare(a.evidence.createdAt));
+  return saved[0]?.receipt ?? null;
+}
+
 export function draftCommunication(
   medCase: MedCase,
   template: CommunicationTemplate,
 ): CommunicationReceipt {
+  // Retomar o que já foi escrito vem antes de propor um texto novo: o texto
+  // novo é um palpite do sistema, e o salvo é o que de fato foi enviado.
+  const previous = lastSavedReceipt(medCase, template);
+  if (previous) return previous;
+
   const { customer, order, digitalDelivery, tracking, med } = medCase;
   const to =
     digitalDelivery?.sentTo ??

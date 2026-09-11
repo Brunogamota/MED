@@ -19,9 +19,31 @@ import type { Med, Transaction } from '@/domain/types';
  * Puro: nao inventa identificador nenhum. Sem os dois, devolve `null`, e quem
  * exibe diz "nao informado".
  */
+/**
+ * Formato do End-to-End ID do Pix, definido pelo arranjo.
+ *
+ * `E` + 8 dígitos de ISPB + 12 dígitos de data e hora (AAAAMMDDHHMM) + 11
+ * alfanuméricos. São 32 caracteres, e nenhum outro identificador do caso tem
+ * essa forma — por isso dá para reconhecê-lo sem depender de qual campo o
+ * guardou.
+ */
+const END_TO_END_FORMAT = /^E\d{8}\d{12}[A-Za-z0-9]{11}$/;
+
+export function looksLikeEndToEndId(value: string | null | undefined): boolean {
+  return typeof value === 'string' && END_TO_END_FORMAT.test(value.trim());
+}
+
 export function resolveEndToEndId(source: {
-  med: Pick<Med, 'endToEndId'>;
+  med: Pick<Med, 'endToEndId' | 'medId'>;
   transaction?: Pick<Transaction, 'endToEndId'> | null;
 }): string | null {
-  return source.med.endToEndId ?? source.transaction?.endToEndId ?? null;
+  if (source.med.endToEndId) return source.med.endToEndId;
+  if (source.transaction?.endToEndId) return source.transaction.endToEndId;
+
+  // Várias instituições usam o próprio end-to-end como identificador do MED.
+  // Quando o `medId` tem exatamente essa forma, ele **é** o end-to-end — dizer
+  // "não informado" com o número impresso no topo da tela é errado, e nada
+  // aqui é inventado: o valor já estava no registro.
+  if (looksLikeEndToEndId(source.med.medId)) return source.med.medId.trim();
+  return null;
 }
