@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { MED_STATUSES, type MedStatus } from '@/domain/types';
 import { serverPageContext } from '@/infra/auth/context';
 import {
   addDocument,
@@ -16,6 +17,7 @@ import {
   upsertOrder,
   upsertTracking,
   upsertTransaction,
+  setMedOutcome,
 } from '@/services/medService';
 import {
   createDocumentSchema,
@@ -530,4 +532,19 @@ export async function addCommunicationAction(form: FormData): Promise<void> {
 
   await addCommunicationReconstruction(auth, medId, input);
   revalidatePath(`/meds/${medId}`);
+}
+
+/**
+ * Desfecho declarado pelo operador.
+ *
+ * Campo vazio significa "voltar ao automatico" — e como se desfaz um desfecho
+ * marcado por engano.
+ */
+export async function setMedOutcomeAction(form: FormData): Promise<void> {
+  const medId = requireMedId(form);
+  const raw = text(form, 'outcome');
+  const outcome = raw && MED_STATUSES.includes(raw as MedStatus) ? (raw as MedStatus) : null;
+  await setMedOutcome(serverPageContext(), medId, outcome);
+  revalidatePath(`/meds/${medId}`);
+  revalidatePath('/meds');
 }

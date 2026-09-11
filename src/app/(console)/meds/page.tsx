@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
 import { QueueTable, type QueueRow } from '@/components/QueueTable';
+import { QueueDateFilter } from '@/components/med/QueueDateFilter';
 import { countdownText, formatAmount, hoursUntil, maskDocument } from '@/lib/format';
 import { queueBand, sortByUrgency } from '@/lib/urgency';
 import { cn } from '@/lib/cn';
@@ -49,7 +50,7 @@ const VIEWS = [
   { key: 'prontos', label: 'Prontos para envio' },
   { key: 'bloqueados', label: 'Bloqueados por evidência' },
   { key: 'vencendo', label: 'Vencendo' },
-  { key: 'enviados', label: 'Enviados' },
+  { key: 'enviados', label: 'Últimos enviados' },
 ] as const;
 
 function toQueueRow(row: MedListRow, now: Date): QueueRow {
@@ -75,11 +76,18 @@ function toQueueRow(row: MedListRow, now: Date): QueueRow {
 export default async function MedsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; de?: string; ate?: string }>;
 }) {
-  const { view } = await searchParams;
+  const { view, de, ate } = await searchParams;
   const auth = serverPageContext();
-  const all = await listMeds(auth, { limit: 200 });
+
+  // O dia escolhido vira intervalo aqui, num lugar so: `de` abre no primeiro
+  // instante do dia e `ate` fecha no ultimo, para que escolher o mesmo dia nos
+  // dois campos traga o que foi aberto naquele dia — e nao nada.
+  const openedFrom = de ? `${de}T00:00:00.000Z` : undefined;
+  const openedTo = ate ? `${ate}T23:59:59.999Z` : undefined;
+
+  const all = await listMeds(auth, { limit: 200, openedFrom, openedTo });
   const now = new Date();
 
   const open = all.filter((row) => OPEN_STATUSES.includes(row.med.status));
@@ -103,7 +111,15 @@ export default async function MedsPage({
             ? submitted
             : [...open, ...expired];
 
-  const rows = sortByUrgency(selection, now).map((row) => toQueueRow(row, now));
+  // Caso ja enviado nao tem urgencia: o prazo passou ou foi cumprido, e
+  // ordenar por ele poe no topo o que ninguem precisa olhar. O que interessa
+  // ali e o que mexeu por ultimo.
+  const ordered =
+    view === 'enviados'
+      ? [...selection].sort((a, b) => b.med.updatedAt.localeCompare(a.med.updatedAt))
+      : sortByUrgency(selection, now);
+  const rows = ordered.map((row) => toQueueRow(row, now));
+  const filtered = Boolean(de || ate);
 
   return (
     <div className="@container/main flex flex-col gap-4 md:gap-6">
@@ -152,19 +168,29 @@ export default async function MedsPage({
         </ul>
       </nav>
 
+      <QueueDateFilter view={view} from={de} to={ate} />
+
       {rows.length === 0 ? (
         <Card>
           <CardContent>
             <Empty>
               <EmptyHeader>
-                <EmptyTitle>{view ? 'Nada nesta visão' : 'Nenhum MED registrado'}</EmptyTitle>
+                <EmptyTitle>
+                  {filtered
+                    ? 'Nada no período escolhido'
+                    : view
+                      ? 'Nada nesta visão'
+                      : 'Nenhum MED registrado'}
+                </EmptyTitle>
                 <EmptyDescription>
-                  {view
-                    ? 'Nenhum caso corresponde a este filtro no momento.'
-                    : 'Com o webhook conectado, cada MED chega, é preenchido pelas fontes e entra nesta fila com a minuta pronta — sem digitação.'}
+                  {filtered
+                    ? 'Nenhum MED foi aberto entre essas datas. Limpe o período para ver o resto.'
+                    : view
+                      ? 'Nenhum caso corresponde a este filtro no momento.'
+                      : 'Com o webhook conectado, cada MED chega, é preenchido pelas fontes e entra nesta fila com a minuta pronta — sem digitação.'}
                 </EmptyDescription>
               </EmptyHeader>
-              {view ? null : (
+              {view || filtered ? null : (
                 <EmptyContent>
                   <div className="flex flex-wrap items-center justify-center gap-2">
                     <Button asChild>

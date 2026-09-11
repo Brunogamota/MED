@@ -36,6 +36,7 @@ import {
   Th,
 } from '@/components/ui';
 import { CopyId } from '@/components/CopyId';
+import { OutcomePanel } from '@/components/med/OutcomePanel';
 import { HiddenFields } from '@/components/HiddenFields';
 import {
   formatAddress,
@@ -332,6 +333,8 @@ export default async function MedDetailPage({
         />
         <MetricCell label="Valor contestado" value={formatAmount(med.amount, med.currency)} />
       </MetricStrip>
+
+      <OutcomePanel medId={med.id} status={med.status} />
 
       {/* Abas — sublinhado 2px, sem caixa */}
       <nav className="border-b border-border">

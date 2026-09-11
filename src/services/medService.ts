@@ -301,6 +301,62 @@ export async function updateMed(
   return (await repository.getMed(auth.organizationId, medId)) ?? updated;
 }
 
+/**
+ * Desfechos que o operador declara.
+ *
+ * Sao os unicos status que o sistema **nao** tem como derivar: se a instituicao
+ * aceitou ou recusou a defesa, quem sabe e quem leu a resposta. O resto do
+ * quadro — falta evidencia, pronto para enviar — sai da evidencia que existe,
+ * e deixar alguem marcar "pronto para envio" com evidencia faltando seria o
+ * sistema afirmar algo que o caso nao sustenta.
+ */
+export const DECLARABLE_OUTCOMES: MedStatus[] = ['SUBMITTED', 'ACCEPTED', 'REJECTED', 'EXPIRED'];
+
+/**
+ * Grava o desfecho declarado, ou devolve o caso ao calculo automatico.
+ *
+ * `outcome: null` reabre: o status volta a ser derivado da evidencia, que e o
+ * conserto de quem marcou o desfecho errado. Sem isso, um clique em "Recusado"
+ * seria definitivo, porque `deriveStatus` nunca tira um caso de estado
+ * terminal por conta propria.
+ */
+export async function setMedOutcome(
+  auth: AuthContext,
+  medId: string,
+  outcome: MedStatus | null,
+): Promise<Med> {
+  assertCan(auth.role, 'med:write');
+  if (outcome !== null && !DECLARABLE_OUTCOMES.includes(outcome)) {
+    throw new ValidationError(
+      `"${outcome}" nao e um desfecho declaravel: esse status vem da evidencia do caso.`,
+    );
+  }
+
+  const repository = await getRepository();
+  const current = await repository.getMed(auth.organizationId, medId);
+  if (!current) throw new NotFoundError(`MED ${medId} não encontrado`);
+  if (current.status === outcome) return current;
+
+  // Reabrir passa por um status nao terminal para que `refreshStatus` possa
+  // agir: ele respeita estado terminal, entao sem este passo a reabertura
+  // nao teria efeito nenhum.
+  const interim: MedStatus = outcome ?? 'COLLECTING_DATA';
+  await repository.updateMed(auth.organizationId, medId, { status: interim });
+  await recordAudit(repository, auth, {
+    action: 'MED_STATUS_CHANGED',
+    entityType: 'Med',
+    entityId: medId,
+    medId,
+    // Declarado por quem opera, e o log diz isso: nao foi o motor que decidiu.
+    source: 'MANUAL',
+    previousValue: current.status,
+    newValue: outcome ?? 'AUTOMATICO',
+  });
+
+  if (outcome === null) await refreshStatus(repository, auth, medId);
+  return (await repository.getMed(auth.organizationId, medId)) ?? current;
+}
+
 export async function upsertTransaction(
   auth: AuthContext,
   medId: string,

@@ -15,6 +15,17 @@ import type { MedCase } from '@/domain/case';
 const ORG = 'org_test';
 const MED_PK = 'med_pk_1';
 
+/**
+ * Prazo de resposta padrao das fixtures.
+ *
+ * Fica longe no futuro de proposito. Quando era uma data proxima, os testes
+ * passavam ate o dia em que ela ficava para tras — e ai o caso nascia EXPIRED
+ * na escrita (que usa o relogio real) e nunca alcancava os status derivados.
+ * Teste que quebra pela passagem do tempo nao testa o codigo, testa o
+ * calendario. Quem precisa de prazo vencido deriva deste valor.
+ */
+export const FIXTURE_DEADLINE = '2099-09-05T12:00:00.000Z';
+
 export function makeMed(overrides: Partial<Med> = {}): Med {
   return {
     id: MED_PK,
@@ -28,7 +39,7 @@ export function makeMed(overrides: Partial<Med> = {}): Med {
     currency: 'BRL',
     transactionAt: '2026-08-10T17:32:00.000Z',
     openedAt: '2026-08-20T12:00:00.000Z',
-    responseDeadlineAt: '2026-09-05T12:00:00.000Z',
+    responseDeadlineAt: FIXTURE_DEADLINE,
     reason: 'PRODUCT_NOT_RECEIVED',
     reasonDescription: null,
     requestingInstitution: 'Banco Exemplo S.A.',

@@ -89,6 +89,8 @@ export class InMemoryMedRepository
     for (const med of this.meds.values()) {
       if (med.organizationId !== organizationId) continue;
       if (filter.status && med.status !== filter.status) continue;
+      if (filter.openedFrom && med.openedAt < filter.openedFrom) continue;
+      if (filter.openedTo && med.openedAt > filter.openedTo) continue;
       if (search) {
         const haystack = [
           med.medId,

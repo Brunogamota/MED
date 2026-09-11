@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { generateDefense } from '@/domain/defense/engine';
 import {
+  FIXTURE_DEADLINE,
   makeCompleteCase,
   makeEmptyCase,
   makeEvidence,
@@ -99,11 +100,14 @@ describe('generateDefense', () => {
   });
 
   it('raises a deadline flag when the response window is closing', () => {
+    // O `now` sai do prazo do caso, e nao de uma data escrita a mao: este
+    // teste e sobre a distancia ate o prazo, e amarrar isso ao calendario o
+    // faria quebrar sozinho quando a data passasse.
     const { defense } = generateDefense({
       medCase: makeCompleteCase(),
       version: 1,
       defenseId: 'def_1',
-      now: new Date('2026-09-04T12:00:00.000Z'),
+      now: new Date(Date.parse(FIXTURE_DEADLINE) - 24 * 60 * 60 * 1000),
     });
     expect(defense.riskFlags.map((flag) => flag.code)).toContain('DEADLINE_NEAR');
   });

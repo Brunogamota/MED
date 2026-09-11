@@ -11,6 +11,7 @@ import {
   upsertTracking,
 } from '@/services/medService';
 import type { CreateMedInput } from '@/domain/schemas';
+import { FIXTURE_DEADLINE } from '@/test/fixtures';
 
 const auth: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'test:a' };
 
@@ -21,7 +22,7 @@ function medInput(overrides: Partial<CreateMedInput> = {}): CreateMedInput {
     currency: 'BRL',
     openedAt: '2026-08-20T12:00:00.000Z',
     transactionAt: '2026-08-10T17:32:00.000Z',
-    responseDeadlineAt: '2026-09-05T12:00:00.000Z',
+    responseDeadlineAt: FIXTURE_DEADLINE,
     reason: 'PRODUCT_NOT_RECEIVED',
     endToEndId: 'E12345678202608101432abcdef01',
     productType: 'PHYSICAL',

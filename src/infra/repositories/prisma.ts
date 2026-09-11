@@ -414,6 +414,14 @@ export class PrismaMedRepository
       where: {
         organizationId,
         ...(filter.status ? { status: filter.status } : {}),
+        ...(filter.openedFrom || filter.openedTo
+          ? {
+              openedAt: {
+                ...(filter.openedFrom ? { gte: new Date(filter.openedFrom) } : {}),
+                ...(filter.openedTo ? { lte: new Date(filter.openedTo) } : {}),
+              },
+            }
+          : {}),
         ...(search
           ? {
               OR: [

@@ -25,6 +25,10 @@ import type { MedCase } from '@/domain/case';
 export interface ListMedsFilter {
   status?: MedStatus;
   search?: string;
+  /** Abertura a partir de (inclusive), em ISO. */
+  openedFrom?: string;
+  /** Abertura ate (inclusive), em ISO. */
+  openedTo?: string;
   limit?: number;
 }
 

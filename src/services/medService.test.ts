@@ -26,6 +26,7 @@ import {
   deriveStatus,
 } from '@/services/medService';
 import type { CreateMedInput } from '@/domain/schemas';
+import { FIXTURE_DEADLINE } from '@/test/fixtures';
 
 const orgA: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'test:a' };
 const orgB: AuthContext = { organizationId: 'org_b', role: 'OWNER', actor: 'test:b' };
@@ -39,7 +40,7 @@ function medInput(overrides: Partial<CreateMedInput> = {}): CreateMedInput {
     currency: 'BRL',
     openedAt: '2026-08-20T12:00:00.000Z',
     transactionAt: '2026-08-10T17:32:00.000Z',
-    responseDeadlineAt: '2026-09-05T12:00:00.000Z',
+    responseDeadlineAt: FIXTURE_DEADLINE,
     reason: 'PRODUCT_NOT_RECEIVED',
     endToEndId: 'E12345678202608101432abcdef01',
     productType: 'PHYSICAL',
@@ -272,8 +273,11 @@ describe('deadline expiry', () => {
     const med = await seedDeliveredCase(orgA);
     const medCase = await getCase(orgA, med.id);
 
-    const beforeDeadline = deriveStatus(medCase, true, new Date('2026-09-04T12:00:00.000Z'));
-    const afterDeadline = deriveStatus(medCase, true, new Date('2026-09-06T12:00:00.000Z'));
+    // Um dia antes e um dia depois do prazo da fixture — e nao datas soltas,
+    // que voltariam a envelhecer.
+    const deadline = Date.parse(FIXTURE_DEADLINE);
+    const beforeDeadline = deriveStatus(medCase, true, new Date(deadline - 86_400_000));
+    const afterDeadline = deriveStatus(medCase, true, new Date(deadline + 86_400_000));
 
     expect(beforeDeadline).toBe('READY_TO_SUBMIT');
     expect(afterDeadline).toBe('EXPIRED');
