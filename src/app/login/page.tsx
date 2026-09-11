@@ -55,19 +55,12 @@ export default async function LoginPage({
       nextPath={next}
       action={signInAction}
       notice={
-        config.auth.enabled ? undefined : config.appEnv === 'production' ? (
+        config.auth.enabled ? undefined : (
           <>
-            <strong className="font-medium">Console fechado: falta configurar o login.</strong>{' '}
-            Gere as credenciais com <code>npm run gerar-senha</code> e defina{' '}
-            <code>ADMIN_PASSWORD_HASH</code> e <code>SESSION_SECRET</code> no ambiente. Enquanto
-            faltarem, nada aqui abre — em produção há dado de comprador, e servir isso sem senha
-            seria pior do que ficar fora do ar.
-          </>
-        ) : (
-          <>
-            <strong className="font-medium">Login desligado neste ambiente.</strong> Sem{' '}
-            <code>ADMIN_PASSWORD_HASH</code> e <code>SESSION_SECRET</code>, o console abre sem
-            pedir senha — o que só vale fora de produção. Veja <code>docs/DEPLOYMENT.md</code>.
+            <strong className="font-medium">Login desligado: o console está aberto.</strong> Sem{' '}
+            <code>ADMIN_PASSWORD_HASH</code> e <code>SESSION_SECRET</code>, qualquer pessoa com o
+            endereço entra e vê os casos. Para fechar, rode{' '}
+            <code>npm run gerar-senha</code> e defina as duas no ambiente.
           </>
         )
       }

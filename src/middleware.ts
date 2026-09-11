@@ -10,12 +10,20 @@ import { SESSION_COOKIE, verifySession } from '@/lib/session';
  * rota fora de `/login` e da API exige um cookie de sessão assinado e no
  * prazo.
  *
- * Faltando as variáveis, o que acontece depende do ambiente, e a diferença é
- * deliberada. Em desenvolvimento nada é bloqueado: exigir configuração para
- * rodar `next dev` só atrapalha. **Em produção o console fecha** e manda para
- * `/login`, que explica o que definir. Um deploy mal configurado servindo CPF,
- * nome e endereço de comprador para quem souber a URL é pior do que um deploy
- * fora do ar — e "esqueci de ligar o login" é exatamente o erro que acontece.
+ * Faltando as variáveis, nada é bloqueado: o console abre sem pedir senha, em
+ * qualquer ambiente.
+ *
+ * Houve aqui um fechamento automático em produção, e ele saiu. O efeito real
+ * não foi proteger dado, foi trancar quem administra do lado de fora do
+ * próprio deploy, sem caminho de volta pela interface — a mesma tela que
+ * pedia a configuração era a que só a configuração destravava. Porta aberta
+ * que o dono sabe que deixou é um risco que ele escolhe; porta que tranca o
+ * dono não é escolha de ninguém.
+ *
+ * Para fechar: `npm run gerar-senha`, e defina `ADMIN_PASSWORD_HASH` e
+ * `SESSION_SECRET`. A partir daí toda rota fora de `/login` e da API exige
+ * sessão. Enquanto não forem definidas, a tela de login e a tela de Equipe
+ * dizem, as duas, que o console está aberto.
  *
  * As rotas de API ficam de fora porque têm autenticação própria, por API key
  * (`infra/auth/context.ts`); um cookie de navegador não serve para elas.
@@ -60,24 +68,14 @@ function relaxOriginInDevelopment(request: NextRequest): NextResponse {
   return NextResponse.next({ request: { headers } });
 }
 
-/** Produção é onde há dado real; é lá que a falta de login não pode passar. */
-function isProduction(): boolean {
-  return (process.env.VERCEL_ENV ?? process.env.APP_ENV) === 'production';
-}
-
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const sessionSecret = process.env.SESSION_SECRET?.trim();
   const authEnabled = Boolean(process.env.ADMIN_PASSWORD_HASH?.trim() && sessionSecret);
   const { pathname } = request.nextUrl;
 
-  if (!isPublic(pathname)) {
-    const session =
-      authEnabled && sessionSecret
-        ? await verifySession(request.cookies.get(SESSION_COOKIE)?.value, sessionSecret)
-        : null;
-
-    // Sem sessão válida, ou sem login configurado num ambiente de produção.
-    if (!session && (authEnabled || isProduction())) {
+  if (authEnabled && sessionSecret && !isPublic(pathname)) {
+    const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value, sessionSecret);
+    if (!session) {
       const login = new URL('/login', request.url);
       // Guarda para onde a pessoa ia, para voltar depois de entrar.
       if (pathname !== '/') login.searchParams.set('next', pathname);
