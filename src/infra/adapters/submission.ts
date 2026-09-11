@@ -1,6 +1,7 @@
 import type { EvidencePack, JsonValue } from '@/domain/types';
 import { formatAddress, formatAmount } from '@/lib/format';
 import { toJson } from '@/lib/json';
+import { resolveEndToEndId } from '@/domain/identifiers';
 
 /**
  * Submission adapters.
@@ -27,7 +28,7 @@ export const genericJsonAdapter: SubmissionProviderAdapter = {
       packVersion: pack.packVersion,
       med: {
         medId: pack.med.medId,
-        endToEndId: pack.med.endToEndId,
+        endToEndId: resolveEndToEndId(pack),
         amount: formatAmount(pack.med.amount, pack.med.currency),
         reason: pack.med.reason,
         openedAt: pack.med.openedAt,

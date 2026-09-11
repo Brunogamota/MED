@@ -1,5 +1,6 @@
 import type { MedCase } from '@/domain/case';
 import { formatAmount, formatDateTimeSmart, maskDocument } from '@/lib/format';
+import { resolveEndToEndId } from '@/domain/identifiers';
 
 /**
  * Comprovante de pagamento Pix — representação, na visão do cliente, do
@@ -74,7 +75,7 @@ export function buildPaymentReceiptView(medCase: MedCase): PaymentReceiptView {
   const amountLabel = formatAmount(med.amount, med.currency);
 
   const paidAt = transaction?.capturedAt ?? med.transactionAt ?? transaction?.authorizedAt ?? null;
-  const endToEnd = med.endToEndId ?? transaction?.endToEndId ?? null;
+  const endToEnd = resolveEndToEndId(medCase);
   const payerDocument = maskDocument(med.payer.document);
   const transactionId =
     med.transactionId ?? transaction?.externalId ?? transaction?.providerReference ?? null;

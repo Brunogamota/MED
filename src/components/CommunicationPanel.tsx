@@ -20,6 +20,7 @@ import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
 import { addCommunicationAction } from '@/app/(console)/meds/actions';
+import { resolveEndToEndId } from '@/domain/identifiers';
 
 /**
  * Painel "Comprovantes": o operador reconstrói a comunicação enviada ao cliente
@@ -221,7 +222,11 @@ export function CommunicationPanel({
                       Abrir para imprimir / anexar
                     </a>
                   </div>
-                  <ClientEmailView receipt={receipt} sourceReference={evidence.sourceReference} />
+                  <ClientEmailView
+                    receipt={receipt}
+                    sourceReference={evidence.sourceReference}
+                    endToEndId={resolveEndToEndId(medCase)}
+                  />
                 </li>
               );
             })}

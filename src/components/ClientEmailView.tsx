@@ -122,10 +122,19 @@ function Field({ label, value, mono = false }: { label: string; value: string; m
 export function ClientEmailView({
   receipt,
   sourceReference,
+  endToEndId,
 }: {
   receipt: CommunicationReceipt;
   /** Id da mensagem no painel do gateway, quando registrado na evidência. */
   sourceReference?: string | null;
+  /**
+   * Transação que este envio defende.
+   *
+   * Um comprovante que não nomeia a transação obriga quem lê a confiar que
+   * alguém juntou as peças certas. Com o end-to-end impresso na própria peça,
+   * a instituição confere sozinha, no SPI, que o e-mail é daquela cobrança.
+   */
+  endToEndId?: string | null;
 }) {
   const view = buildClientEmailView(receipt);
 
@@ -184,8 +193,13 @@ export function ClientEmailView({
         <Field label="Canal" value="E-mail" />
         <Field label="Tipo" value={COMMUNICATION_TEMPLATE_LABEL[view.template]} />
         <Field label="Enviado em" value={view.sentAtLabel ?? 'não informado'} />
+        {endToEndId ? (
+          <div className="col-span-2 min-w-0 sm:col-span-2">
+            <Field label="End-to-end da transação" value={endToEndId} mono />
+          </div>
+        ) : null}
         {sourceReference ? (
-          <div className="col-span-2 min-w-0 sm:col-span-4">
+          <div className={endToEndId ? 'col-span-2 min-w-0' : 'col-span-2 min-w-0 sm:col-span-4'}>
             <Field label="ID da mensagem" value={sourceReference} mono />
           </div>
         ) : null}

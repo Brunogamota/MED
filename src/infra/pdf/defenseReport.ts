@@ -18,6 +18,7 @@ import {
   STRENGTH_LABEL,
   VERIFICATION_STATUS_LABEL,
 } from '@/lib/labels';
+import { resolveEndToEndId } from '@/domain/identifiers';
 import {
   A4,
   COLORS,
@@ -139,7 +140,7 @@ function drawCover(context: DocumentContext, pack: EvidencePack, defenseHash: st
     [
       { label: 'MED ID', value: med.medId },
       { label: 'ID DA TRANSAÇÃO', value: med.transactionId ?? 'Não informado' },
-      { label: 'END-TO-END ID', value: med.endToEndId ?? 'Não informado' },
+      { label: 'END-TO-END ID', value: resolveEndToEndId(pack) ?? 'Não informado' },
       { label: 'VALOR', value: formatAmount(med.amount, med.currency) },
       { label: 'DATA DA TRANSAÇÃO', value: formatDateTime(med.transactionAt) ?? 'Não informada' },
       { label: 'ABERTURA DO MED', value: formatDateTime(med.openedAt) ?? 'Não informada' },
@@ -430,7 +431,7 @@ function drawParties(context: DocumentContext, pack: EvidencePack): void {
     { label: 'AUTORIZADO EM', value: formatDateTime(transaction?.authorizedAt) ?? 'Não informado' },
     { label: 'PROVEDOR', value: transaction?.provider ?? 'Não informado' },
     { label: 'REFERÊNCIA', value: transaction?.providerReference ?? 'Não informada' },
-    { label: 'END-TO-END ID', value: transaction?.endToEndId ?? med.endToEndId ?? 'Não informado' },
+    { label: 'END-TO-END ID', value: resolveEndToEndId({ med, transaction }) ?? 'Não informado' },
   ]);
 
   drawSectionTitle(context, '6. Dados técnicos da compra');
@@ -633,9 +634,10 @@ function drawIntegrity(context: DocumentContext, pack: EvidencePack, defenseHash
 
   drawParagraph(context, 'Como reconferir os dados deste documento:', { size: 9, bold: true });
   const checks: string[] = [];
-  if (pack.med.endToEndId) {
+  const endToEnd = resolveEndToEndId(pack);
+  if (endToEnd) {
     checks.push(
-      `- O end-to-end ID ${pack.med.endToEndId} identifica a transação no SPI e pode ser conferido pela própria instituição.`,
+      `- O end-to-end ID ${endToEnd} identifica a transação no SPI e pode ser conferido pela própria instituição.`,
     );
   }
   if (pack.tracking?.trackingCode) {

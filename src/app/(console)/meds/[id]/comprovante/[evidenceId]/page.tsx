@@ -5,6 +5,7 @@ import { getCase } from '@/services/medService';
 import { NotFoundError } from '@/services/errors';
 import { parseCommunicationReceipt } from '@/domain/communication/receipt';
 import { ClientEmailView } from '@/components/ClientEmailView';
+import { resolveEndToEndId } from '@/domain/identifiers';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,11 @@ export default async function ComprovantePage({
           Use Imprimir (Ctrl/Cmd+P) para salvar em PDF, ou capture a tela.
         </span>
       </div>
-      <ClientEmailView receipt={receipt} sourceReference={evidence.sourceReference} />
+      <ClientEmailView
+        receipt={receipt}
+        sourceReference={evidence.sourceReference}
+        endToEndId={resolveEndToEndId(medCase)}
+      />
     </div>
   );
 }
