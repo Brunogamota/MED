@@ -669,6 +669,52 @@ export async function addCommunicationReconstruction(
   return saved;
 }
 
+/**
+ * Apaga uma reconstrucao de comunicacao.
+ *
+ * Gerar o comprovante de novo cria outra evidencia, entao corrigir o texto
+ * deixava a versao antiga no caso — e ela seguia para o Evidence Pack e para o
+ * PDF, com o conteudo que o operador ja tinha tirado. Sem poder remover, a
+ * correcao nao corrigia nada.
+ *
+ * So reconstrucoes sao removiveis por aqui. Evidencia vinda de fonte externa
+ * nao se apaga pela tela: ela e o lastro da defesa, e quem a recebeu nao pode
+ * decidir sozinho que ela nao existiu.
+ */
+export async function deleteCommunicationReconstruction(
+  auth: AuthContext,
+  medId: string,
+  evidenceId: string,
+): Promise<boolean> {
+  assertCan(auth.role, 'evidence:write');
+  const repository = await getRepository();
+  await loadCaseOrThrow(repository, auth, medId);
+
+  const evidences = await repository.listEvidence(auth.organizationId, medId);
+  const target = evidences.find((evidence) => evidence.id === evidenceId);
+  if (!target) throw new NotFoundError('Comprovante não encontrado neste MED');
+  if (target.type !== 'DELIVERY_COMMUNICATION') {
+    throw new ValidationError(
+      'Só comprovantes reconstruídos podem ser removidos por aqui. Evidência de origem externa é o lastro da defesa.',
+    );
+  }
+
+  const removed = await repository.deleteEvidence(auth.organizationId, evidenceId);
+  if (removed) {
+    await recordAudit(repository, auth, {
+      action: 'EVIDENCE_UPDATED',
+      entityType: 'Evidence',
+      entityId: evidenceId,
+      medId,
+      source: 'MANUAL',
+      // O que sai fica registrado inteiro: e a unica copia que resta.
+      previousValue: toJson({ removed: true, type: target.type, value: target.value }),
+    });
+    await refreshStatus(repository, auth, medId);
+  }
+  return removed;
+}
+
 export async function listCommunications(auth: AuthContext, medId: string): Promise<Evidence[]> {
   assertCan(auth.role, 'med:read');
   const repository = await getRepository();

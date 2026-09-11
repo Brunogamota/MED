@@ -58,6 +58,8 @@ export interface MedRepository {
 
   addEvidence(evidence: Evidence): Promise<Evidence>;
   listEvidence(organizationId: string, medId: string): Promise<Evidence[]>;
+  /** Remove uma evidencia da organizacao. `false` quando ela nao existe la. */
+  deleteEvidence(organizationId: string, evidenceId: string): Promise<boolean>;
 
   addDocument(document: StoredDocument): Promise<StoredDocument>;
   listDocuments(organizationId: string, medId: string): Promise<StoredDocument[]>;

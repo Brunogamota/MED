@@ -319,6 +319,19 @@ export class InMemoryMedRepository
     return this.credentials.delete(`${organizationId}:${provider}`);
   }
 
+  async deleteEvidence(organizationId: string, evidenceId: string): Promise<boolean> {
+    for (const [key, list] of this.evidences.entries()) {
+      const index = list.findIndex(
+        (evidence) => evidence.id === evidenceId && evidence.organizationId === organizationId,
+      );
+      if (index === -1) continue;
+      list.splice(index, 1);
+      this.evidences.set(key, list);
+      return true;
+    }
+    return false;
+  }
+
   async getLoginAttempt(key: string): Promise<LoginAttemptRecord | null> {
     return this.loginAttempts.get(key) ?? null;
   }

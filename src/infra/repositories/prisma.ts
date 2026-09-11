@@ -857,6 +857,15 @@ export class PrismaMedRepository
     return result.count > 0;
   }
 
+  async deleteEvidence(organizationId: string, evidenceId: string): Promise<boolean> {
+    // Filtra por organizacao mesmo tendo o id: id sozinho e porta aberta para
+    // apagar evidencia de outro cliente.
+    const result = await this.prisma.evidence.deleteMany({
+      where: { id: evidenceId, organizationId },
+    });
+    return result.count > 0;
+  }
+
   async getLoginAttempt(key: string): Promise<LoginAttemptRecord | null> {
     const row = await this.prisma.loginAttempt.findUnique({ where: { key } });
     if (!row) return null;

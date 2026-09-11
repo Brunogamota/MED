@@ -18,6 +18,7 @@ import {
   upsertTracking,
   upsertTransaction,
   setMedOutcome,
+  deleteCommunicationReconstruction,
 } from '@/services/medService';
 import {
   createDocumentSchema,
@@ -547,4 +548,13 @@ export async function setMedOutcomeAction(form: FormData): Promise<void> {
   await setMedOutcome(serverPageContext(), medId, outcome);
   revalidatePath(`/meds/${medId}`);
   revalidatePath('/meds');
+}
+
+/** Remove um comprovante reconstruído que saiu errado. */
+export async function deleteCommunicationAction(form: FormData): Promise<void> {
+  const medId = requireMedId(form);
+  const evidenceId = String(form.get('evidenceId') ?? '').trim();
+  if (!evidenceId) return;
+  await deleteCommunicationReconstruction(serverPageContext(), medId, evidenceId);
+  revalidatePath(`/meds/${medId}`);
 }

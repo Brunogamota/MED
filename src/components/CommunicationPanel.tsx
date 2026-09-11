@@ -19,7 +19,10 @@ import { formatDateTimeSmart } from '@/lib/format';
 import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
-import { addCommunicationAction } from '@/app/(console)/meds/actions';
+import {
+  addCommunicationAction,
+  deleteCommunicationAction,
+} from '@/app/(console)/meds/actions';
 import { resolveEndToEndId } from '@/domain/identifiers';
 
 /**
@@ -213,14 +216,32 @@ export function CommunicationPanel({
                     <span className="text-sm font-medium">
                       {COMMUNICATION_TEMPLATE_LABEL[receipt.template]} · {receipt.to}
                     </span>
-                    <a
-                      href={`/meds/${medId}/comprovante/${evidence.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm font-medium text-foreground hover:underline"
-                    >
-                      Abrir para imprimir / anexar
-                    </a>
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={`/meds/${medId}/comprovante/${evidence.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm font-medium text-foreground hover:underline"
+                      >
+                        Abrir para imprimir / anexar
+                      </a>
+                      {/*
+                        Gerar de novo cria outra peça, então corrigir o texto
+                        deixava a versão antiga no caso — e ela seguia para a
+                        defesa com o conteúdo já retirado. Sem remover, corrigir
+                        não corrigia.
+                      */}
+                      <form action={deleteCommunicationAction}>
+                        <input type="hidden" name="medId" value={medId} />
+                        <input type="hidden" name="evidenceId" value={evidence.id} />
+                        <button
+                          type="submit"
+                          className="text-muted-foreground text-sm hover:text-destructive"
+                        >
+                          Remover
+                        </button>
+                      </form>
+                    </div>
                   </div>
                   <ClientEmailView
                     receipt={receipt}
