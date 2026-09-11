@@ -191,15 +191,22 @@ export function ClientEmailView({
           ) : null}
         </div>
         <Field label="Canal" value="E-mail" />
+        {/*
+          O end-to-end ocupa o vão que sobrava à direita do canal, e leva duas
+          colunas porque são 32 caracteres em mono — numa coluna estreita ele
+          truncaria, e meio identificador não identifica nada.
+
+          Aparece sempre, mesmo ausente: a peça dizendo "não informado" é
+          honesta, enquanto o campo sumir deixa quem lê sem saber se o dado não
+          existe ou se ninguém preencheu.
+        */}
+        <div className="col-span-2 min-w-0">
+          <Field label="End-to-end" value={endToEndId ?? 'não informado'} mono />
+        </div>
         <Field label="Tipo" value={COMMUNICATION_TEMPLATE_LABEL[view.template]} />
         <Field label="Enviado em" value={view.sentAtLabel ?? 'não informado'} />
-        {endToEndId ? (
-          <div className="col-span-2 min-w-0 sm:col-span-2">
-            <Field label="End-to-end da transação" value={endToEndId} mono />
-          </div>
-        ) : null}
         {sourceReference ? (
-          <div className={endToEndId ? 'col-span-2 min-w-0' : 'col-span-2 min-w-0 sm:col-span-4'}>
+          <div className="col-span-2 min-w-0">
             <Field label="ID da mensagem" value={sourceReference} mono />
           </div>
         ) : null}
