@@ -1,0 +1,10 @@
+PSP Criador;medId;Tipo Origem;Detalhes;Valor;Nome Debitado;Reference;Company;Customer;Pagamento Transacao;Dados do usuario
+BANCO EXEMPLO S.A.;E00000000202609181529s1699875627;Golpe/Estelionato;Reporte fraude: transação foi contestada formalmente pelo usuário pagador;32.8;Fulano de Tal;c99b6e44-58fd-4085-94af-433e5ed3f696;Gateway Exemplo;Loja Exemplo LTDA;18/09/2026 12:30;Payer Name: Fulano de Tal | Payer Document: CPF 11111111111
+BANCO EXEMPLO S.A.;E00000000202609181633U5w7yF3JU6S;Golpe/Estelionato;Era uma recarga de moedas digital de um jogo, recarreguei e não chegaram as moedas;27.44;BELTRANO DA SILVA;02e43b3b-b4ff-40cd-a37d-84a7727c91a5;Gateway Exemplo;Loja Exemplo LTDA;18/09/2026 13:33;Payer Name: BELTRANO DA SILVA | Payer Document: CPF 22222222222
+OUTRO BANCO S.A.;E00000001202609181846eypRHLjh809;Acesso e autorização fraudulenta;Reporte fraude: transação foi contestada formalmente pelo usuário pagador;19.9;Sicrano Souza;8da551d9-f957-4810-bec2-e93b3acffdac;Gateway Exemplo;Loja Exemplo LTDA;18/09/2026 15:46;Payer Name: Sicrano Souza | Payer Document: CPF 33333333333
+OUTRO BANCO S.A.;E000000012026091816409rz2b026ad0;Transação não autorizada;não fiz esse pagamento nem sei para que meio foi pago;12.9;CICLANA PEREIRA;d581a692-962c-462f-9cf8-a326d79cea5a;Gateway Exemplo;Loja Exemplo LTDA;18/09/2026 13:40;Payer Name: CICLANA PEREIRA | Payer Document: CPF 44444444444
+TERCEIRO BANCO S.A.;E00000002202609191934kPpIWU7SAvh;Outros;prometeram fazer uma recarga no jogo e não fizeram;12.9;63.180.963 EMPRESA EXEMPLO;16aee20f-8e65-4eab-aa58-de024683e6bb;Gateway Exemplo;Loja Exemplo LTDA;19/09/2026 16:35;Payer Name: 63.180.963 EMPRESA EXEMPLO | Payer Document: CNPJ 63180963000134
+TERCEIRO BANCO S.A.;E00000002202609192246702767674;Golpe/Estelionato;;189.75;SEM RELATO EXEMPLO;16d43b5a-9699-4cd8-82ba-9cbd705c8836;Gateway Exemplo;Loja Exemplo LTDA;19/09/2026 19:47;Payer Name: SEM RELATO EXEMPLO | Payer Document: CPF 55555555555
+BANCO EXEMPLO S.A.;E00000000202609171525s110e8a67de;Golpe/Estelionato;Reporte fraude: transação foi contestada formalmente pelo usuário pagador;59.99;;;;;;
+;;;Total;=SUM(E2:E8);;;;;;
+;;;Multa (7 MEDs x R$15,00);105;;;;;;

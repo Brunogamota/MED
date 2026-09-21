@@ -103,6 +103,8 @@ export type ImportField =
   | 'openedAt'
   | 'responseDeadlineAt'
   | 'reason'
+  | 'reasonDescription'
+  | 'payerDetails'
   | 'requestingInstitution'
   | 'productType'
   | 'payerName'
@@ -119,24 +121,42 @@ export type ImportField =
  */
 const COLUMN_ALIASES: Record<ImportField, string[]> = {
   medId: ['medid', 'id', 'idmed', 'iddomed', 'numeromed', 'protocolo', 'protocolomed', 'codigomed', 'identificadormed'],
-  transactionId: ['transactionid', 'idtransacao', 'idtransaction', 'transacao', 'idpagamento', 'paymentid'],
+  transactionId: ['transactionid', 'idtransacao', 'idtransaction', 'transacao', 'idpagamento', 'paymentid', 'reference', 'referencia'],
   endToEndId: ['endtoendid', 'e2eid', 'endtoend', 'ide2e', 'idendtoend'],
   pixId: ['pixid', 'idpix', 'txid'],
   amount: ['valor', 'amount', 'valortransacao', 'valorcontestado', 'valordacompra', 'valorpix', 'vlr'],
   transactionAt: [
     'datatransacao', 'datadatransacao', 'datacompra', 'datadacompra', 'datahoracompra',
     'datahoratransacao', 'transactionat', 'transactiondate', 'datapagamento', 'datahorapagamento',
+    'pagamentotransacao', 'datahora',
   ],
   openedAt: ['dataabertura', 'dataaberturamed', 'dataabertura med', 'aberturamed', 'openedat', 'datasolicitacao', 'datamed', 'datanotificacao'],
   responseDeadlineAt: ['prazo', 'prazoresposta', 'prazoderesposta', 'datalimite', 'datalimiteresposta', 'deadline', 'vencimento', 'dataprazo'],
-  reason: ['motivo', 'motivomed', 'motivocontestacao', 'reason', 'motivodadevolucao', 'tipogolpe', 'categoria'],
-  requestingInstitution: ['instituicao', 'instituicaosolicitante', 'banco', 'ispb', 'instituicaorequerente', 'psp', 'participante'],
+  reason: ['motivo', 'motivomed', 'motivocontestacao', 'reason', 'motivodadevolucao', 'tipogolpe', 'categoria', 'tipoorigem', 'tipodeorigem'],
+  /**
+   * Relato do pagador, como a instituicao encaminhou. Quando existe coluna
+   * propria, ela vale mais que o texto do motivo: e o que o comprador de fato
+   * alegou, e e dali que sai metade da leitura do caso.
+   */
+  reasonDescription: ['detalhes', 'descricao', 'relato', 'observacao', 'observacoes', 'motivodetalhado', 'justificativa'],
+  /**
+   * Campo composto de alguns gateways: "Payer Name: X | Payer Document: CPF Y".
+   * Lido aqui em vez de ignorado — o CPF do pagador costuma vir so nele.
+   */
+  payerDetails: ['dadosdousuario', 'dadosusuario', 'dadosdopagador', 'payerdata', 'payerinfo'],
+  requestingInstitution: ['instituicao', 'instituicaosolicitante', 'banco', 'ispb', 'instituicaorequerente', 'psp', 'participante', 'pspcriador', 'pspsolicitante'],
   productType: ['tipoproduto', 'tipodeproduto', 'producttype', 'tipo', 'segmento'],
-  payerName: ['nome', 'nomecliente', 'nomepagador', 'cliente', 'pagador', 'payername', 'nomedocliente', 'nomecomprador'],
+  payerName: ['nome', 'nomecliente', 'nomepagador', 'cliente', 'pagador', 'payername', 'nomedocliente', 'nomecomprador', 'nomedebitado', 'nomedobitado'],
   payerDocument: ['cpf', 'cnpj', 'cpfcnpj', 'documento', 'documentocliente', 'documentopagador', 'payerdocument', 'cpfdocliente'],
   payerEmail: ['email', 'emailcliente', 'emailpagador', 'payeremail', 'emaildocliente'],
   payerPhone: ['telefone', 'celular', 'telefonecliente', 'payerphone', 'fone', 'whatsapp'],
-  merchantName: ['merchant', 'estabelecimento', 'loja', 'nomeloja', 'nomeestabelecimento', 'recebedor'],
+  /**
+   * `customer` entra aqui, e nao no pagador, porque este leitor le arquivo de
+   * adquirente: o "cliente" da adquirente e o lojista. Nesses arquivos o
+   * pagador vem em coluna propria ("Nome Debitado", "Pagador"). A tela lista as
+   * colunas reconhecidas, entao o mapeamento fica visivel e nao silencioso.
+   */
+  merchantName: ['merchant', 'estabelecimento', 'loja', 'nomeloja', 'nomeestabelecimento', 'recebedor', 'customer'],
   orderReference: ['pedido', 'numeropedido', 'idpedido', 'orderid', 'order', 'referenciapedido'],
 };
 
@@ -161,9 +181,14 @@ export function suggestedHeaders(field: ImportField): string[] {
 
 /**
  * Interpreta valores monetarios em formato brasileiro ou internacional.
- * Quando ha ponto e virgula, o ultimo separador e o decimal. Com apenas um
- * ponto e exatamente dois digitos depois, trata-se de decimal; caso contrario,
- * milhar. Formato que nao se encaixa nessas regras vira erro, nao um palpite.
+ *
+ * Com ponto e virgula, o ultimo separador e o decimal.
+ *
+ * So com ponto, ele e separador de milhar **apenas** quando vem seguido de
+ * exatamente tres digitos, que e a unica forma valida de agrupamento. Antes a
+ * regra exigia dois digitos para considerar decimal, e `32.8` virava `328` —
+ * dez vezes o valor, sem erro nenhum na tela. Um arquivo inteiro de valores
+ * com uma casa (`19.9`, `12.9`) era importado multiplicado por dez.
  */
 export function parseAmount(raw: string): number | null {
   const cleaned = raw.replace(/[^\d.,-]/g, '').trim();
@@ -181,8 +206,8 @@ export function parseAmount(raw: string): number | null {
   } else if (lastComma >= 0) {
     normalized = cleaned.replace(',', '.');
   } else if (lastDot >= 0) {
-    const decimals = cleaned.length - lastDot - 1;
-    normalized = decimals === 2 ? cleaned : cleaned.replace(/\./g, '');
+    const groupsOfThree = /^-?\d{1,3}(\.\d{3})+$/.test(cleaned);
+    normalized = groupsOfThree ? cleaned.replace(/\./g, '') : cleaned;
   } else {
     normalized = cleaned;
   }
@@ -264,8 +289,11 @@ export function parseDateTimeBr(raw: string): string | null {
 const REASON_KEYWORDS: [MedReason, string[]][] = [
   ['PRODUCT_NOT_RECEIVED', ['naorecebido', 'naorecebeu', 'produtonaorecebido', 'naoentregue', 'mercadorianaorecebida', 'nãorecebido']],
   ['PRODUCT_NOT_AS_DESCRIBED', ['diferentedoanunciado', 'produtodiferente', 'naoconformecomanunciado', 'produtodivergente']],
-  ['UNRECOGNIZED_TRANSACTION', ['naoreconhece', 'naoreconhecida', 'naoreconhecimento', 'desconhecea', 'transacaodesconhecida']],
-  ['FRAUD_ACCOUNT_TAKEOVER', ['invasaodeconta', 'containvadida', 'accounttakeover', 'ato']],
+  ['UNRECOGNIZED_TRANSACTION', ['naoreconhece', 'naoreconhecida', 'naoreconhecimento', 'desconhecea', 'transacaodesconhecida', 'naoautorizada', 'transacaonaoautorizada']],
+  // Nada de abreviacao curta aqui: `ato` casava dentro de "estelion*ato*" e
+  // mandava todo golpe para invasao de conta — e o motivo decide quais
+  // evidencias o motor passa a exigir do caso.
+  ['FRAUD_ACCOUNT_TAKEOVER', ['invasaodeconta', 'containvadida', 'accounttakeover', 'contahackeada', 'acessofraudulento', 'autorizacaofraudulenta']],
   ['FRAUD_COERCION', ['coacao', 'sequestro', 'sobcoacao']],
   ['FRAUD_SCAM', ['golpe', 'fraude', 'estelionato', 'scam', 'fraudulenta']],
   ['DUPLICATE_CHARGE', ['duplicidade', 'cobrancaduplicada', 'duplicado', 'duplicata']],
@@ -338,6 +366,41 @@ export function resolveProductTypeValue(raw: string): ProductType | null {
     if (keywords.some((keyword) => normalized.includes(keyword))) return productType;
   }
   return null;
+}
+
+/**
+ * Le o campo composto de pagador que alguns gateways exportam:
+ *
+ *   `Payer Name: Fulano | Payer Document: CPF 11122233344`
+ *
+ * Devolve so o que estiver escrito. Rotulo ausente vira campo ausente — nao se
+ * deduz nome a partir de documento nem o contrario.
+ */
+export function parsePayerDetails(raw: string): { name: string | null; document: string | null } {
+  const value = raw.trim();
+  if (value.length === 0) return { name: null, document: null };
+
+  const nameMatch = value.match(/payer\s*name\s*:\s*([^|]+)/i);
+  const documentMatch = value.match(/payer\s*document\s*:\s*([^|]+)/i);
+
+  const name = nameMatch?.[1]?.trim() || null;
+  // `CPF 111.222.333-44` -> so os digitos, que e como o dominio guarda.
+  const digits = documentMatch?.[1]?.replace(/\D/g, '') ?? '';
+  return { name, document: digits.length > 0 ? digits : null };
+}
+
+/**
+ * Linha de rodape de planilha: total, soma, multa.
+ *
+ * Nao e erro do operador, entao nao vira erro de linha — seria ruido num
+ * relatorio de 65 linhas. Simplesmente nao e um MED.
+ */
+function isSpreadsheetFooter(row: string[]): boolean {
+  const filled = row.filter((cell) => cell.trim().length > 0);
+  if (filled.length === 0) return true;
+  // Rodape tem poucas celulas e alguma delas denuncia o que e.
+  if (filled.length > 4) return false;
+  return filled.some((cell) => /^=|^total\b|^multa\b|^soma\b/i.test(cell.trim()));
 }
 
 // ---------------------------------------------------------------------------
@@ -438,7 +501,9 @@ export function parseMedImport(text: string): ParsedImport {
     };
   }
 
-  const rows: ImportedMedRow[] = table.slice(1).map((rawRow, index) => {
+  const rows: ImportedMedRow[] = [];
+  table.slice(1).forEach((rawRow, index) => {
+    if (isSpreadsheetFooter(rawRow)) return;
     const values = new Map<ImportField, string>();
     fieldByIndex.forEach((field, columnIndex) => {
       values.set(field, rawRow[columnIndex] ?? '');
@@ -475,8 +540,12 @@ export function parseMedImport(text: string): ParsedImport {
     const responseDeadlineAt = parseOptionalDate('responseDeadlineAt', 'Prazo de resposta');
 
     const resolvedReason = resolveReason(cell(values, 'reason'));
+    // Coluna propria de relato vence o texto do motivo: ela e o que o
+    // comprador alegou, e o outro e so o rotulo da categoria.
+    const ownDescription = orNull(cell(values, 'reasonDescription'));
+    const payerDetails = parsePayerDetails(cell(values, 'payerDetails'));
 
-    return {
+    rows.push({
       line: index + 2,
       medId,
       transactionId: orNull(cell(values, 'transactionId')),
@@ -489,17 +558,17 @@ export function parseMedImport(text: string): ParsedImport {
       openedAt,
       responseDeadlineAt,
       reason: resolvedReason.reason,
-      reasonDescription: resolvedReason.description,
+      reasonDescription: ownDescription ?? resolvedReason.description,
       requestingInstitution: orNull(cell(values, 'requestingInstitution')),
       productType: resolveProductTypeValue(cell(values, 'productType')),
-      payerName: orNull(cell(values, 'payerName')),
-      payerDocument: orNull(cell(values, 'payerDocument')),
+      payerName: orNull(cell(values, 'payerName')) ?? payerDetails.name,
+      payerDocument: orNull(cell(values, 'payerDocument')) ?? payerDetails.document,
       payerEmail: orNull(cell(values, 'payerEmail')),
       payerPhone: orNull(cell(values, 'payerPhone')),
       merchantName: orNull(cell(values, 'merchantName')),
       orderReference: orNull(cell(values, 'orderReference')),
       errors,
-    };
+    });
   });
 
   return { headers: headerRow, recognized, ignored, rows, fatalError: null };
