@@ -67,8 +67,12 @@ function TemplateIcon({ template }: { template: CommunicationTemplate }) {
 
 /**
  * Call-to-action da mensagem: botão preto, clicável quando há uma URL real.
- * Sem URL o botão aparece igual — era o botão que o cliente via —, com o
- * valor logo abaixo para quem confere a peça saber para onde ele levava.
+ * Sem URL o botão aparece igual — era o botão que o cliente via.
+ *
+ * O destino não é impresso embaixo do botão. A peça circula fora da operação:
+ * vai para a instituição, entra em análise de PLD e passa por gente que não
+ * tem nada a ver com a compra. O link segue no botão e na evidência gravada,
+ * onde quem confere o caso alcança; o que sai é a leitura no papel.
  */
 function ActionButton({ action }: { action: ClientEmailAction }) {
   if (action.kind === 'NOTE') {
@@ -96,12 +100,6 @@ function ActionButton({ action }: { action: ClientEmailAction }) {
       ) : (
         <span className={buttonClass}>{action.label}</span>
       )}
-      <p className="mt-2 text-[11px] text-[#71717a]">
-        {action.valueLabel}:{' '}
-        <span className="break-all font-mono text-[#52525b]">
-          {action.display}
-        </span>
-      </p>
     </div>
   );
 }

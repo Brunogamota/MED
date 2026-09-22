@@ -42,8 +42,7 @@ export const COMMUNICATION_TEMPLATE_LABEL: Record<CommunicationTemplate, string>
 
 /** Texto do selo. Vai na tela, na rota de impressão e no PDF, sem exceção. */
 export const RECONSTRUCTION_STAMP =
-  'Documento gerado a partir do registro de entrega/liberação de acesso referente à transação ' +
-  'notificada por MED. Representação dos registros de envio — não é uma captura do painel administrativo.';
+  'Documento gerado a partir do registro de envio. Não é uma captura de tela do painel.';
 
 /**
  * Quem efetivamente envia as comunicações transacionais desta operação — o
