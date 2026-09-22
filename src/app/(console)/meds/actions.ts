@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { MED_STATUSES, type MedStatus } from '@/domain/types';
 import { serverPageContext } from '@/infra/auth/context';
+import { importDeliveryLog } from '@/services/deliveryImportService';
 import {
   addDocument,
   addEvidence,
@@ -557,4 +558,31 @@ export async function deleteCommunicationAction(form: FormData): Promise<void> {
   if (!evidenceId) return;
   await deleteCommunicationReconstruction(serverPageContext(), medId, evidenceId);
   revalidatePath(`/meds/${medId}`);
+}
+
+export interface DeliveryImportState {
+  report: Awaited<ReturnType<typeof importDeliveryLog>> | null;
+  error: string | null;
+}
+
+/**
+ * Importa o log de envio do provedor e registra a entrega nos MEDs.
+ *
+ * Grava direto, sem prévia: diferente da importação de MEDs, aqui nada é
+ * criado — só se anexa registro a caso que já existe, e reimportar o mesmo
+ * arquivo sobrescreve com o mesmo conteúdo.
+ */
+export async function importDeliveryLogAction(
+  _previous: DeliveryImportState | null,
+  form: FormData,
+): Promise<DeliveryImportState> {
+  const read = await readImportText(form);
+  if (!read.ok) return { report: null, error: read.error };
+  if (read.csv.trim().length === 0) {
+    return { report: null, error: 'Escolha o arquivo do log de envio.' };
+  }
+
+  const report = await importDeliveryLog(serverPageContext(), read.csv);
+  revalidatePath('/meds');
+  return { report, error: report.fatalError };
 }

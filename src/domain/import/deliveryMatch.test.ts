@@ -16,6 +16,11 @@ function row(overrides: Partial<DeliveryLogRow> = {}): DeliveryLogRow {
     rawStatus: 'delivered',
     deliveredAt: '2026-09-18T15:31:50.000Z',
     smtpResponse: '250 OK',
+    productUrl: null,
+    productName: null,
+    orderRef: null,
+    firstAccessAt: null,
+    attempts: 1,
     errors: [],
     ...overrides,
   };

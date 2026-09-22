@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, Upload } from 'lucide-react';
+import { MailCheck, Plus, Upload } from 'lucide-react';
 import { serverPageContext } from '@/infra/auth/context';
 import { listMeds } from '@/services/medService';
 import { Button } from '@/components/ui/button';
@@ -129,6 +129,12 @@ export default async function MedsPage({
           <p className="text-muted-foreground text-sm">Qual caso atender agora, em ordem de urgência.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/meds/entregas">
+              <MailCheck data-icon="inline-start" />
+              Log de envio
+            </Link>
+          </Button>
           <Button asChild variant="outline">
             <Link href="/meds/import">
               <Upload data-icon="inline-start" />

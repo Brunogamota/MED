@@ -33,6 +33,20 @@ export interface DeliveryLogRow {
   rawStatus: string | null;
   deliveredAt: string | null;
   smtpResponse: string | null;
+  /** Onde o acesso foi liberado. Vira `platform` no registro de entrega. */
+  productUrl: string | null;
+  productName: string | null;
+  orderRef: string | null;
+  /**
+   * Primeiro acesso registrado pelo console.
+   *
+   * E a evidencia mais forte que este arquivo carrega: mostra que o comprador
+   * **usou** o que comprou. Entrega de e-mail prova que a mensagem chegou;
+   * so isto responde "nao recebi".
+   */
+  firstAccessAt: string | null;
+  /** Tentativas de envio. Mais de uma indica reenvio, e a tela deve dizer. */
+  attempts: number | null;
   errors: string[];
 }
 
@@ -52,6 +66,11 @@ const FIELD_ALIASES: Record<keyof Omit<DeliveryLogRow, 'line' | 'outcome' | 'err
   rawStatus: ['status', 'resultado', 'situacao'],
   deliveredAt: ['deliveredat', 'entregueem', 'dataentrega'],
   smtpResponse: ['smtpresponse', 'respostasmtp', 'smtp', 'response'],
+  productUrl: ['producturl', 'urlproduto', 'urldoproduto', 'linkacesso', 'url'],
+  productName: ['productname', 'produto', 'nomeproduto'],
+  orderRef: ['orderid', 'pedido', 'idpedido', 'numeropedido'],
+  firstAccessAt: ['firstaccessat', 'primeiroacesso', 'dataprimeiroacesso', 'acessoem'],
+  attempts: ['attempts', 'tentativas'],
 };
 
 type LogField = keyof typeof FIELD_ALIASES;
@@ -163,6 +182,14 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     }
 
     const rawAmount = value('amount');
+    const rawAttempts = value('attempts');
+    const attempts = rawAttempts.length > 0 ? Number.parseInt(rawAttempts, 10) : null;
+
+    const rawFirstAccess = value('firstAccessAt');
+    const firstAccessAt = rawFirstAccess.length > 0 ? parseLogTimestamp(rawFirstAccess) : null;
+    if (rawFirstAccess.length > 0 && firstAccessAt === null) {
+      errors.push(`Primeiro acesso "${rawFirstAccess}" não pôde ser interpretado.`);
+    }
 
     return {
       line: index + 2,
@@ -177,6 +204,11 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
       rawStatus,
       deliveredAt: parsedDeliveredAt,
       smtpResponse: orNull(value('smtpResponse')),
+      productUrl: orNull(value('productUrl')),
+      productName: orNull(value('productName')),
+      orderRef: orNull(value('orderRef')),
+      firstAccessAt,
+      attempts: attempts !== null && Number.isFinite(attempts) ? attempts : null,
       errors,
     };
   });
