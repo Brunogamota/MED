@@ -184,6 +184,52 @@ describe('importar log de envio', () => {
     expect(caso?.digitalDelivery?.firstAccessAt).toBe('2026-09-18T16:02:11.000Z');
   });
 
+  it('arquivo de entregas sozinho ainda casa pelo nome, quando o nome e unico', async () => {
+    // Foi o que aconteceu de verdade: o operador subiu so a metade de
+    // entregas, que nao tem valor nem data da compra, e nada casou.
+    const SO_ENTREGAS = [
+      'customer_name,customer_email,sent_at,product_url,message_id,status,delivered_at,first_access_at,smtp_response',
+      'Fulano de Tal,fulano@exemplo.com,2026-09-18 12:35:00,https://console.exemplo.com/p/abc,<m2@mta01.exemplo.com.br>,delivered,2026-09-18 12:36:00,2026-09-18 13:02:11,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, SO_ENTREGAS);
+    expect(report.accessLinked).toBe(1);
+    expect(
+      report.lines.find((entry) => entry.kind === 'ACCESS_LINKED')?.message,
+    ).toContain('nome do comprador');
+
+    const repository = await getRepository();
+    const med = (await repository.listMeds('org_a', {})).find(
+      (row) => row.med.medId === 'MED-ENTREGUE',
+    );
+    const caso = await repository.loadCase('org_a', med?.med.id ?? '');
+    expect(caso?.digitalDelivery?.platform).toBe('https://console.exemplo.com/p/abc');
+  });
+
+  it('nome que aponta para dois MEDs nao e sorteado', async () => {
+    // O mesmo comprador com duas cobrancas contestadas: o nome nao distingue,
+    // e escolher uma seria inventar.
+    await createMed(auth, {
+      medId: 'MED-SEGUNDO',
+      amount: 99.9,
+      currency: 'BRL',
+      openedAt: '2026-09-19T12:00:00.000Z',
+      transactionAt: '2026-09-18T18:00:00.000Z',
+      reason: 'FRAUD_SCAM',
+      payer: { name: 'Fulano de Tal' },
+    });
+
+    const SO_ENTREGAS = [
+      'customer_name,customer_email,sent_at,product_url,message_id,status,delivered_at,smtp_response',
+      'Fulano de Tal,fulano@exemplo.com,2026-09-18 12:35:00,https://console.exemplo.com/p/abc,<m2@mta01.exemplo.com.br>,delivered,2026-09-18 12:36:00,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, SO_ENTREGAS);
+    expect(report.accessLinked).toBe(0);
+    const linha = report.lines.find((entry) => entry.kind === 'UNMATCHED');
+    expect(linha?.message).toContain('2 MEDs de Fulano de Tal');
+  });
+
   it('arquivo ilegivel no meio derruba a importacao inteira', async () => {
     const report = await importDeliveryLog(auth, [LOG, 'sem cabecalho reconhecivel']);
     expect(report.fatalError).not.toBeNull();

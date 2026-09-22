@@ -93,7 +93,10 @@ export function matchDeliveryLog(rows: DeliveryLogRow[], meds: MatchableMed[]): 
     if (row.amount === null || row.purchaseAt === null) {
       unmatchedRows.push({
         row,
-        reason: 'Linha sem valor ou sem data da compra: não há como identificar a transação.',
+        reason:
+          'Linha de entrega: não traz valor nem data da compra, que é o que identifica a ' +
+          'transação. Suba junto o arquivo de cobranças — o que tem valor, horário e id da ' +
+          'transação — e esta linha se liga nele.',
       });
       continue;
     }

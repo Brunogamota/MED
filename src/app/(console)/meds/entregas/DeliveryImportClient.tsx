@@ -45,6 +45,16 @@ export function DeliveryImportClient() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
+      <Alert>
+        <AlertTitle>Suba os arquivos todos de uma vez</AlertTitle>
+        <AlertDescription>
+          O export costuma vir partido: um arquivo de cobranças (tem valor, horário e id da
+          transação) e um de entregas (tem a URL do produto e o primeiro acesso). É a cobrança
+          que identifica o MED — o de entregas sozinho não casa com nada. Arraste os dois
+          juntos, ou o export único se o seu vier assim.
+        </AlertDescription>
+      </Alert>
+
       <Panel title="Arquivo do provedor">
         <form action={action} className="space-y-4">
           <FileDropField

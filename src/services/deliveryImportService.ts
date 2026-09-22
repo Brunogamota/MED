@@ -37,7 +37,11 @@ import {
   type DeliveryLogRow,
   type ParsedDeliveryLog,
 } from '@/domain/import/deliveryLog';
-import { matchDeliveryLog, type MatchableMed } from '@/domain/import/deliveryMatch';
+import {
+  comparableName,
+  matchDeliveryLog,
+  type MatchableMed,
+} from '@/domain/import/deliveryMatch';
 
 export type DeliveryOutcomeKind =
   | 'RECORDED'
@@ -201,6 +205,19 @@ export async function importDeliveryLog(
     transactionAt: entry.med.transactionAt ?? null,
     payerName: entry.med.payer.name ?? null,
   }));
+
+  // Nome do pagador -> MEDs. Diferente das outras duas pontes, esta e montada
+  // com todos os MEDs da organizacao, e nao so com os que casaram agora: quem
+  // sobe o arquivo de entregas sozinho nao tem nenhuma linha de cobranca para
+  // servir de ponte, e o nome e a unica coisa que os dois lados tem.
+  const medsByName = new Map<string, MatchableMed[]>();
+  for (const med of candidates) {
+    const chave = comparableName(med.payerName);
+    if (!chave) continue;
+    const lista = medsByName.get(chave) ?? [];
+    lista.push(med);
+    medsByName.set(chave, lista);
+  }
 
   const report = matchDeliveryLog(parsed.rows, candidates);
   const lines: DeliveryImportLine[] = [];
@@ -366,8 +383,31 @@ export async function importDeliveryLog(
     const txn = row.transactionRef?.trim();
     const porTxn = txn ? medsByTxn.get(txn) : undefined;
     const buyer = normalizeEmail(row.customerEmail);
-    const meds = porTxn ?? (buyer ? medsByBuyer.get(buyer) : undefined);
+    const porEmail = buyer ? medsByBuyer.get(buyer) : undefined;
+
+    // Ultimo recurso: o nome. So vale quando aponta para um MED unico — dois
+    // MEDs do mesmo comprador e o caso em que o nome nao distingue nada, e
+    // escolher um seria sorteio.
+    const nome = comparableName(row.customerName);
+    const porNomeTodos = nome ? medsByName.get(nome) : undefined;
+    const porNome = porNomeTodos?.length === 1 ? porNomeTodos : undefined;
+
+    const meds = porTxn ?? porEmail ?? porNome;
     const exata = porTxn !== undefined;
+    const ligadoPeloNome = meds !== undefined && meds === porNome;
+
+    if (!meds && porNomeTodos && porNomeTodos.length > 1) {
+      lines.push({
+        line: row.line,
+        medId: porNomeTodos.map((med) => med.medId).join(', '),
+        customerEmail: row.customerEmail,
+        kind: 'UNMATCHED',
+        message:
+          `${porNomeTodos.length} MEDs de ${row.customerName}: o nome não diz a qual desta ` +
+          'linha se refere. Suba o arquivo de cobranças junto — o id da transação resolve.',
+      });
+      continue;
+    }
     const sentAt = row.deliveredAt ?? row.sentAt;
     if (meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
       // Uma liberação anterior à cobrança não prova a entrega **daquela**
@@ -459,8 +499,8 @@ export async function importDeliveryLog(
           `Liberação de acesso${row.productName ? ` a ${row.productName}` : ''} ligada ` +
           (exata
             ? `pelo id da transação (${txn}).`
-            : 'pelo e-mail do comprador — o arquivo não traz o id da transação, então a ' +
-              'ligação é com a pessoa, não com esta cobrança.') +
+            : `pelo ${ligadoPeloNome ? 'nome' : 'e-mail'} do comprador — o arquivo não traz ` +
+              'o id da transação, então a ligação é com a pessoa, não com esta cobrança.') +
           `${eligible.length > 1 ? ` ${eligible.length} MEDs.` : ''}` +
           `${row.firstAccessAt ? ' Com primeiro acesso registrado.' : ''}`,
       });

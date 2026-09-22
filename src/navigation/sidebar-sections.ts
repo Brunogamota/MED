@@ -2,6 +2,7 @@ import {
   ChartLineData,
   Dashboard,
   DocumentAdd,
+  Email,
   Flash,
   Rule,
   Settings as SettingsIcon,
@@ -68,7 +69,11 @@ const QUICK_ACTIONS: PanelGroup = {
   title: 'Ações rápidas',
   items: [
     { id: 'novo', label: 'Novo MED', icon: DocumentAdd, href: '/meds/new' },
-    { id: 'importar', label: 'Importar lote', icon: Upload, href: '/meds/import' },
+    // A ordem e a ordem de uso: os MEDs primeiro, o export do provedor depois.
+    // Subir o segundo antes do primeiro nao casa nada, e quem chega na tela
+    // sem saber por onde comecar segue a lista de cima para baixo.
+    { id: 'importar', label: '1. Importar MEDs', icon: Upload, href: '/meds/import' },
+    { id: 'entregas', label: '2. Importar envios', icon: Email, href: '/meds/entregas' },
   ],
 };
 

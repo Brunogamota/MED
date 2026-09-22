@@ -105,6 +105,8 @@ describe('casamento do log com os MEDs', () => {
 
   it('linha sem valor ou sem data nao tenta adivinhar', () => {
     const report = matchDeliveryLog([row({ amount: null })], [med()]);
-    expect(report.unmatchedRows[0]?.reason).toMatch(/não há como identificar/);
+    // O motivo diz o que fazer: sozinha a linha nao casa, e o arquivo de
+    // cobrancas e o que falta.
+    expect(report.unmatchedRows[0]?.reason).toMatch(/arquivo de cobranças/);
   });
 });

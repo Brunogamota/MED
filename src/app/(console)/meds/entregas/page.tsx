@@ -15,8 +15,8 @@ export default function EntregasPage() {
     <div className="@container/main flex flex-col gap-4 md:gap-6">
       <PageHeader
         parent={{ href: '/meds', label: 'MEDs' }}
-        title="Importar log de envio"
-        description="O export do provedor de e-mail vira registro de entrega em cada MED: destino, horário, message-id e, quando o arquivo traz, o primeiro acesso do comprador."
+        title="Importar envios"
+        description="Passo 2: com os MEDs já importados, suba aqui o export do provedor. Cada caso recebe e-mail do comprador, horário do envio, message-id, resposta do servidor e — quando o arquivo traz — a URL do produto e o primeiro acesso."
       />
       <DeliveryImportClient />
     </div>
