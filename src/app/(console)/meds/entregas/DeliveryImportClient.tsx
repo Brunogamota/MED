@@ -63,7 +63,7 @@ export function DeliveryImportClient() {
             extensions={['.csv', '.tsv', '.txt', '.zip']}
             maxBytes={MAX_BYTES}
             multiple
-            hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Se vier zipado, sobe o .zip mesmo. Precisa da coluna de message-id; id da transação, e-mail, URL do produto e primeiro acesso entram quando existem."
+            hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Se vier zipado, sobe o .zip mesmo. Cada coluna que existir é aproveitada: id da transação, e-mail, message-id, URL do produto, primeiro acesso."
           />
           <div className="grid gap-2">
             <Label htmlFor="modelo">Que mensagem este log registra</Label>
@@ -130,6 +130,20 @@ export function DeliveryImportClient() {
             />
             <MetricCell label="Sem casamento" value={report.unmatched} />
           </MetricStrip>
+
+          {report.withoutMessageId > 0 ? (
+            <Alert>
+              <AlertTitle>
+                {report.withoutMessageId} envio
+                {report.withoutMessageId > 1 ? 's' : ''} sem message-id
+              </AlertTitle>
+              <AlertDescription>
+                O dado entrou no caso — destinatário, horário, URL —, mas sem o message-id o
+                envio não é conferível na origem, e por isso não virou comprovante. Se o seu
+                provedor exporta essa coluna, suba o arquivo com ela e a peça sai.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           {report.anachronistic > 0 ? (
             <Alert variant="destructive">

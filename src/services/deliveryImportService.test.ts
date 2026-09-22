@@ -114,9 +114,31 @@ describe('importar log de envio', () => {
     expect(segundo.withFirstAccess).toBe(primeiro.withFirstAccess);
   });
 
-  it('arquivo sem message-id e recusado inteiro, sem gravar nada', async () => {
-    const report = await importDeliveryLog(auth, 'customer_email,status\na@b.com,delivered');
-    expect(report.fatalError).toMatch(/message-id/);
+  it('sem message-id a entrega entra, mas nao vira comprovante', async () => {
+    const SEM_ID = [
+      'customer_name,customer_email,amount_brl,purchase_at,status,delivered_at,product_url',
+      'Fulano de Tal,fulano@exemplo.com,32.80,2026-09-18 12:30:04,delivered,2026-09-18 12:31:50,https://console.exemplo.com/p/abc',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, SEM_ID, { generateReceipts: true });
+    expect(report.fatalError).toBeNull();
+    expect(report.recorded).toBe(1);
+    expect(report.withoutMessageId).toBe(1);
+    // O dado entra; a peca que afirmaria um envio inconferivel, nao.
+    expect(report.receipts).toBe(0);
+    expect(report.lines[0]?.message).toContain('sem comprovante');
+
+    const repository = await getRepository();
+    const med = (await repository.listMeds('org_a', {})).find(
+      (row) => row.med.medId === 'MED-ENTREGUE',
+    );
+    const caso = await repository.loadCase('org_a', med?.med.id ?? '');
+    expect(caso?.digitalDelivery?.sentTo).toBe('fulano@exemplo.com');
+  });
+
+  it('arquivo que nao identifica destinatario e recusado, sem gravar nada', async () => {
+    const report = await importDeliveryLog(auth, 'coluna_a,coluna_b\n1,2');
+    expect(report.fatalError).toMatch(/não parece um log de envio/);
     expect(report.recorded).toBe(0);
   });
 

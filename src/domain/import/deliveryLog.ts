@@ -62,7 +62,7 @@ const FIELD_ALIASES: Record<keyof Omit<DeliveryLogRow, 'line' | 'outcome' | 'err
   customerName: ['customername', 'nomecliente', 'cliente', 'nome'],
   customerEmail: ['customeremail', 'emailcliente', 'email', 'destinatario', 'to'],
   sentAt: ['confirmationsentat', 'sentat', 'enviadoem', 'dataenvio'],
-  messageId: ['messageid', 'idmensagem', 'msgid'],
+  messageId: ['messageid', 'idmensagem', 'msgid', 'smtpid', 'mailid', 'envelopeid', 'idenvio'],
   rawStatus: ['status', 'resultado', 'situacao'],
   deliveredAt: ['deliveredat', 'entregueem', 'dataentrega'],
   smtpResponse: ['smtpresponse', 'respostasmtp', 'smtp', 'response'],
@@ -142,12 +142,19 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     if (field && ![...fieldByIndex.values()].includes(field)) fieldByIndex.set(index, field);
   });
 
-  if (![...fieldByIndex.values()].includes('messageId')) {
+  // O arquivo precisa ao menos parecer um log de envio. O message-id nao entra
+  // aqui de proposito: ele decide se o envio e conferivel na origem, e isso e
+  // exigencia de quem gera a peca de prova, nao de quem so quer o dado do
+  // comprador no painel. Barrar tudo na porta por causa de uma coluna joga
+  // fora e-mail, URL e primeiro acesso junto.
+  const reconhecidos = [...fieldByIndex.values()];
+  const identifica = ['customerEmail', 'customerName', 'transactionRef', 'orderRef'] as const;
+  if (!identifica.some((campo) => reconhecidos.includes(campo))) {
     return {
       rows: [],
       fatalError:
-        'Nenhuma coluna de message-id encontrada. Sem ele o registro não é conferível na origem, ' +
-        'e um envio que ninguém pode conferir não vale como prova.',
+        'Este arquivo não parece um log de envio: nenhuma coluna identifica o destinatário ' +
+        '(e-mail, nome, id da transação ou do pedido). Confira se não é o arquivo do lote de MEDs.',
     };
   }
 
@@ -161,8 +168,10 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     const orNull = (raw: string): string | null => (raw.length > 0 ? raw : null);
 
     const errors: string[] = [];
+    // Sem message-id a linha continua valendo como dado — o que ela nao vale e
+    // como prova conferivel na origem. Quem decide isso e o servico, na hora
+    // de gerar a peca; aqui a ausencia so fica registrada.
     const messageId = cleanMessageId(value('messageId'));
-    if (!messageId) errors.push('Message-id ausente.');
 
     const rawSentAt = value('sentAt');
     const sentAt = rawSentAt.length > 0 ? parseLogTimestamp(rawSentAt) : null;

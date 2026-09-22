@@ -78,9 +78,21 @@ describe('log de entrega', () => {
     expect(row?.deliveredAt).toBeNull();
   });
 
-  it('arquivo sem message-id e recusado inteiro', () => {
-    const semId = parseDeliveryLog('customer_email,status\na@b.com,delivered');
-    expect(semId.fatalError).toMatch(/message-id/);
-    expect(semId.rows).toEqual([]);
+  it('arquivo sem message-id e lido: a coluna decide a peca, nao a leitura', () => {
+    // Barrar o arquivo inteiro aqui jogaria fora destinatario, URL e primeiro
+    // acesso junto. A ausencia fica na linha, e quem gera a peca e que decide.
+    const semId = parseDeliveryLog(
+      'customer_email,status,delivered_at\na@b.com,delivered,2026-09-18 12:31:50',
+    );
+    expect(semId.fatalError).toBeNull();
+    expect(semId.rows[0]?.messageId).toBeNull();
+    expect(semId.rows[0]?.errors).toEqual([]);
+  });
+
+  it('arquivo que nao identifica destinatario nenhum e recusado', () => {
+    // O caso de subir o arquivo errado: nada ali diz de quem e a linha.
+    const errado = parseDeliveryLog('coluna_a,coluna_b\n1,2');
+    expect(errado.fatalError).toMatch(/não parece um log de envio/);
+    expect(errado.rows).toEqual([]);
   });
 });

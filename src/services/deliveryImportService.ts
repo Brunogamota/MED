@@ -91,6 +91,14 @@ export interface DeliveryImportReport {
   /** Liberacoes de acesso ligadas ao comprador pelo e-mail. */
   accessLinked: number;
   /**
+   * Entregas registradas sem message-id.
+   *
+   * O dado entra — destinatario, horario, URL —, mas o envio nao e conferivel
+   * na origem, e por isso nao vira comprovante. O numero fica a vista porque
+   * e ele que diz se a defesa tem peca ou so tem cadastro.
+   */
+  withoutMessageId: number;
+  /**
    * Liberacoes anteriores a cobranca, recusadas como comprovante.
    *
    * O numero importa por si: se quase todo caso cai aqui, a entrega que o
@@ -186,6 +194,7 @@ export async function importDeliveryLog(
     recorded: 0,
     receipts: 0,
     accessLinked: 0,
+    withoutMessageId: 0,
     anachronistic: 0,
     notDelivered: 0,
     unmatched: 0,
@@ -237,6 +246,7 @@ export async function importDeliveryLog(
   let recorded = 0;
   let receipts = 0;
   let accessLinked = 0;
+  let withoutMessageId = 0;
   let anachronistic = 0;
   let notDelivered = 0;
   let invalid = 0;
@@ -338,6 +348,24 @@ export async function importDeliveryLog(
         },
         externalId: txn || undefined,
       });
+    }
+
+    if (!row.messageId) withoutMessageId += 1;
+
+    // Comprovante so com message-id: a peca imprime o identificador que a
+    // instituicao cruza na origem, e sem ele ela afirmaria um envio que
+    // ninguem pode conferir. O registro fica; a peca, nao.
+    if (options.generateReceipts && !row.messageId) {
+      lines.push({
+        line: row.line,
+        medId: med.medId,
+        customerEmail: row.customerEmail,
+        kind: 'RECORDED',
+        message:
+          'Entrega registrada, sem comprovante: a linha não traz message-id, e sem ele o ' +
+          'envio não é conferível na origem. O dado entrou no caso.',
+      });
+      continue;
     }
 
     if (options.generateReceipts) {
@@ -530,6 +558,7 @@ export async function importDeliveryLog(
       comPrimeiroAcesso: withFirstAccess,
       comprovantesGerados: receipts,
       acessosLigados: accessLinked,
+      semMessageId: withoutMessageId,
       acessosAnterioresACobranca: anachronistic,
     },
   });
@@ -539,6 +568,7 @@ export async function importDeliveryLog(
     recorded,
     receipts,
     accessLinked,
+    withoutMessageId,
     anachronistic,
     notDelivered,
     unmatched: report.unmatchedRows.length - accessLinked,
