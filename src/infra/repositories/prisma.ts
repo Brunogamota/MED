@@ -444,16 +444,25 @@ export class PrismaMedRepository
     });
 
     return rows.map((row) => {
+      // A lista se monta das colunas escalares, e nao do payload: a fila e a
+      // primeira tela do dia, e um payload de formato antigo derrubava todas
+      // as linhas de uma vez. Coluna tipada pelo banco nao tem esse risco, e
+      // e o que a propria tabela guarda para poder consultar.
       const latest = row.defenses[0];
-      const defense = latest ? mapDefense(latest) : null;
       return {
         med: mapMed(row),
-        latestDefense: defense
+        latestDefense: latest
           ? {
-              id: defense.id,
-              version: defense.version,
-              score: defense.score,
-              generatedAt: defense.generatedAt,
+              id: latest.id,
+              version: latest.version,
+              score: {
+                total: latest.scoreTotal,
+                max: latest.scoreMax,
+                // Os componentes so existem no payload, e quem os usa carrega
+                // a defesa inteira. Na fila ninguem os le.
+                components: [],
+              },
+              generatedAt: required(latest.generatedAt),
             }
           : null,
         evidenceCount: row._count.evidences,

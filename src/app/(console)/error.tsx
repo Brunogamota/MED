@@ -1,12 +1,30 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 
 /**
  * Erro recuperável: diz o que aconteceu em linguagem do operador e oferece a
  * saída — tentar de novo ou voltar à fila. Nunca um código de status seco.
+ *
+ * E mostra o identificador da falha. Sem ele, "algo falhou" e tudo o que
+ * sobra de uma quebra em produção: quem opera não tem o que reportar, e quem
+ * mantém não tem o que procurar no log. O `digest` e o que o servidor registra
+ * junto do erro de verdade — a mensagem em si o Next apaga em produção, de
+ * proposito, para nao vazar interno numa tela.
  */
-export default function AppError({ reset }: { error: Error; reset: () => void }) {
+export default function AppError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    // No navegador de quem opera isto e o unico registro que sobra.
+    console.error('Falha ao carregar a tela:', error);
+  }, [error]);
+
   return (
     <div className="mx-auto flex max-w-[420px] flex-col items-center gap-3 py-24 text-center">
       <p className="text-sm font-semibold text-foreground">
@@ -31,6 +49,17 @@ export default function AppError({ reset }: { error: Error; reset: () => void })
           Voltar à fila
         </Link>
       </div>
+
+      {error.digest || error.message ? (
+        <div className="mt-6 w-full rounded-md border bg-muted/40 p-3 text-left">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Para reportar
+          </p>
+          <p className="mt-1 select-all break-all font-mono text-[11px] text-muted-foreground">
+            {error.digest ? `digest ${error.digest}` : error.message}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }
