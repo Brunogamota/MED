@@ -49,10 +49,11 @@ export function DeliveryImportClient() {
         <form action={action} className="space-y-4">
           <FileDropField
             name="file"
-            label="Log de envio"
+            label="Export do provedor"
             extensions={['.csv', '.tsv', '.txt']}
             maxBytes={MAX_BYTES}
-            hint="Export do provedor de e-mail. Precisa ter a coluna de message-id; as de primeiro acesso e URL do produto entram quando existem."
+            multiple
+            hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Precisa da coluna de message-id; id da transação, e-mail, URL do produto e primeiro acesso entram quando existem."
           />
           <div className="grid gap-2">
             <Label htmlFor="modelo">Que mensagem este log registra</Label>

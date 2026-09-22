@@ -151,6 +151,45 @@ describe('importar log de envio', () => {
     expect(acesso).toHaveLength(0);
   });
 
+  it('junta os dois arquivos do export e liga pelo id da transacao', async () => {
+    // Como o export costuma chegar: cobrancas num arquivo, entregas no outro.
+    // So o de cobranca identifica o MED; o de entrega traz a URL e se pendura
+    // nele pelo txn_id.
+    const COBRANCAS = [
+      'customer_name,customer_email,amount_brl,purchase_at,txn_id,message_id,status,delivered_at,smtp_response',
+      'Fulano de Tal,fulano@exemplo.com,32.80,2026-09-18 12:30:04,txn_abc,<m1@mta03.exemplo.com.br>,delivered,2026-09-18 12:31:50,250 OK',
+    ].join('\n');
+    const ENTREGAS = [
+      'customer_name,customer_email,txn_id,sent_at,product_url,message_id,status,delivered_at,first_access_at,smtp_response',
+      'Fulano de Tal,fulano@exemplo.com,txn_abc,2026-09-18 12:35:00,https://console.exemplo.com/p/abc,<m2@mta01.exemplo.com.br>,delivered,2026-09-18 12:36:00,2026-09-18 13:02:11,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, [COBRANCAS, ENTREGAS]);
+    expect(report.recorded).toBe(1);
+    expect(report.accessLinked).toBe(1);
+    expect(report.unmatched).toBe(0);
+    expect(
+      report.lines.find((entry) => entry.kind === 'ACCESS_LINKED')?.message,
+    ).toContain('txn_abc');
+
+    const repository = await getRepository();
+    const med = (await repository.listMeds('org_a', {})).find(
+      (row) => row.med.medId === 'MED-ENTREGUE',
+    );
+    const caso = await repository.loadCase('org_a', med?.med.id ?? '');
+    // O e-mail vai para o cadastro do caso, nao so para dentro da entrega.
+    expect(caso?.customer?.identification.email).toBe('fulano@exemplo.com');
+    // E a URL fica no registro de entrega mesmo sem gerar comprovante.
+    expect(caso?.digitalDelivery?.platform).toBe('https://console.exemplo.com/p/abc');
+    expect(caso?.digitalDelivery?.firstAccessAt).toBe('2026-09-18T16:02:11.000Z');
+  });
+
+  it('arquivo ilegivel no meio derruba a importacao inteira', async () => {
+    const report = await importDeliveryLog(auth, [LOG, 'sem cabecalho reconhecivel']);
+    expect(report.fatalError).not.toBeNull();
+    expect(report.recorded).toBe(0);
+  });
+
   it('quem nao pode escrever MED nao importa entrega', async () => {
     const viewer: AuthContext = { organizationId: 'org_a', role: 'VIEWER', actor: 'teste' };
     await expect(importDeliveryLog(viewer, LOG)).rejects.toBeInstanceOf(ForbiddenError);

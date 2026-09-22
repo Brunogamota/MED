@@ -413,6 +413,8 @@ export async function batchPrepareSubmissionsAction(form: FormData): Promise<voi
  */
 type ImportRead = { ok: true; csv: string } | { ok: false; error: string };
 
+type ImportReadMany = { ok: true; csvs: string[] } | { ok: false; error: string };
+
 /** Byte nulo nao existe em CSV e existe em todo formato binario de planilha. */
 function looksBinary(content: string): boolean {
   return content.includes('\u0000');
@@ -437,6 +439,33 @@ async function readImportText(form: FormData): Promise<ImportRead> {
     return { ok: true, csv: content };
   }
   return { ok: true, csv: text(form, 'csv') ?? '' };
+}
+
+/**
+ * O mesmo, para o campo que aceita varios arquivos.
+ *
+ * Um arquivo ilegivel derruba a importacao inteira em vez de entrar pela
+ * metade: metade de um export carregada e pior que nenhuma, porque parece
+ * completa.
+ */
+async function readImportTexts(form: FormData): Promise<ImportReadMany> {
+  const csvs: string[] = [];
+  for (const entry of form.getAll('file')) {
+    if (!(entry instanceof File) || entry.size === 0) continue;
+    const content = await entry.text();
+    if (looksBinary(content)) {
+      return {
+        ok: false,
+        error: `"${entry.name}" não é texto. Exporte a planilha como CSV — .xlsx e .xls não são lidos aqui.`,
+      };
+    }
+    csvs.push(content);
+  }
+  if (csvs.length === 0) {
+    const colado = text(form, 'csv');
+    if (colado) csvs.push(colado);
+  }
+  return { ok: true, csvs };
 }
 
 export interface ImportPreviewState {
@@ -580,14 +609,14 @@ export async function importDeliveryLogAction(
   _previous: DeliveryImportState | null,
   form: FormData,
 ): Promise<DeliveryImportState> {
-  const read = await readImportText(form);
+  const read = await readImportTexts(form);
   if (!read.ok) return { report: null, error: read.error };
-  if (read.csv.trim().length === 0) {
+  if (read.csvs.length === 0) {
     return { report: null, error: 'Escolha o arquivo do log de envio.' };
   }
 
   const modelo = form.get('modelo');
-  const report = await importDeliveryLog(serverPageContext(), read.csv, {
+  const report = await importDeliveryLog(serverPageContext(), read.csvs, {
     generateReceipts: form.get('gerarComprovantes') === 'on',
     receiptTemplate: COMMUNICATION_TEMPLATES.includes(modelo as CommunicationTemplate)
       ? (modelo as CommunicationTemplate)

@@ -23,6 +23,7 @@ import {
   addEvidence,
   getCase,
   listMeds,
+  upsertCustomer,
 } from '@/services/medService';
 import {
   draftCommunication,
@@ -31,7 +32,11 @@ import {
 } from '@/domain/communication/receipt';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
-import { parseDeliveryLog, type DeliveryLogRow } from '@/domain/import/deliveryLog';
+import {
+  parseDeliveryLog,
+  type DeliveryLogRow,
+  type ParsedDeliveryLog,
+} from '@/domain/import/deliveryLog';
 import { matchDeliveryLog, type MatchableMed } from '@/domain/import/deliveryMatch';
 
 export type DeliveryOutcomeKind =
@@ -140,14 +145,38 @@ function describeNotDelivered(row: DeliveryLogRow): string {
   return `Status "${row.rawStatus ?? 'desconhecido'}" não é entrega concluída. Nada foi registrado.`;
 }
 
+/**
+ * Junta o que foi lido de cada arquivo numa lista so.
+ *
+ * As linhas de arquivos diferentes nao podem colidir de numero, senao o
+ * relatorio manda a pessoa conferir a linha errada: cada arquivo continua de
+ * onde o anterior parou, com um salto no meio para a fronteira ficar visivel.
+ */
+function mergeParsed(partes: ParsedDeliveryLog[]): ParsedDeliveryLog {
+  const comErro = partes.find((parte) => parte.fatalError);
+  if (comErro) return { rows: [], fatalError: comErro.fatalError };
+
+  const rows: DeliveryLogRow[] = [];
+  let deslocamento = 0;
+  for (const parte of partes) {
+    for (const row of parte.rows) rows.push({ ...row, line: row.line + deslocamento });
+    deslocamento += parte.rows.length + 1;
+  }
+  return { rows, fatalError: null };
+}
+
 export async function importDeliveryLog(
   auth: AuthContext,
-  text: string,
+  source: string | string[],
   options: DeliveryImportOptions = {},
 ): Promise<DeliveryImportReport> {
   assertCan(auth.role, 'med:write');
 
-  const parsed = parseDeliveryLog(text);
+  // Varios arquivos entram numa importacao so, e nao em duas seguidas. O
+  // export costuma vir partido — cobrancas num arquivo, entregas no outro —, e
+  // e a cobranca que identifica o MED. Importados separado, o arquivo de
+  // entregas chegaria sem nada a que se ligar.
+  const parsed = mergeParsed((Array.isArray(source) ? source : [source]).map(parseDeliveryLog));
   const empty: DeliveryImportReport = {
     total: 0,
     recorded: 0,
@@ -184,6 +213,10 @@ export async function importDeliveryLog(
   // ponte para as linhas de liberacao de acesso, que nao trazem valor nem
   // horario da cobranca e por isso nunca casariam sozinhas.
   const medsByBuyer = new Map<string, MatchableMed[]>();
+  // Id da transacao -> MEDs. E a ponte exata, e por isso vem antes do e-mail:
+  // o e-mail identifica o comprador, o txn_id identifica a cobranca. Quando o
+  // export traz os dois lados com esse campo, nao ha o que adivinhar.
+  const medsByTxn = new Map<string, MatchableMed[]>();
   let recorded = 0;
   let receipts = 0;
   let accessLinked = 0;
@@ -270,6 +303,25 @@ export async function importDeliveryLog(
       list.push(med);
       medsByBuyer.set(buyer, list);
     }
+    const txn = row.transactionRef?.trim();
+    if (txn) {
+      const list = medsByTxn.get(txn) ?? [];
+      list.push(med);
+      medsByTxn.set(txn, list);
+    }
+
+    // O e-mail do comprador vai para o cadastro do caso, e nao so para dentro
+    // do registro de entrega: e por ele que a tela do MED mostra com quem o
+    // estabelecimento falou, e e um dos dados que a defesa cita.
+    if (row.customerEmail || row.customerName) {
+      await upsertCustomer(auth, med.id, {
+        identification: {
+          name: row.customerName ?? undefined,
+          email: row.customerEmail ?? undefined,
+        },
+        externalId: txn || undefined,
+      });
+    }
 
     if (options.generateReceipts) {
       // Recarrega o caso: o rascunho le a entrega que acabou de ser gravada, e
@@ -311,10 +363,13 @@ export async function importDeliveryLog(
     // entao nao casa por transacao — casa pelo comprador. O comprovante que
     // ela gera fica inteiro dentro da propria linha: data, message-id e link
     // sao os dela, e nao se misturam com os do e-mail de cobranca.
+    const txn = row.transactionRef?.trim();
+    const porTxn = txn ? medsByTxn.get(txn) : undefined;
     const buyer = normalizeEmail(row.customerEmail);
-    const meds = buyer ? medsByBuyer.get(buyer) : undefined;
+    const meds = porTxn ?? (buyer ? medsByBuyer.get(buyer) : undefined);
+    const exata = porTxn !== undefined;
     const sentAt = row.deliveredAt ?? row.sentAt;
-    if (options.generateReceipts && meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
+    if (meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
       // Uma liberação anterior à cobrança não prova a entrega **daquela**
       // cobrança: nada é entregue antes de ser comprado. O acesso é real e é
       // do mesmo comprador, mas veio de outra compra, de uma renovação ou de
@@ -345,8 +400,24 @@ export async function importDeliveryLog(
       if (eligible.length === 0) continue;
 
       for (const med of eligible) {
+        // A URL fica no registro de entrega, e nao so dentro do comprovante:
+        // e o endereco onde o acesso foi liberado, e a tela do MED mostra
+        // isso mesmo que ninguem gere peca nenhuma.
+        await recordDigitalDelivery(auth, med.id, {
+          channel: 'EMAIL',
+          sentTo: row.customerEmail ?? undefined,
+          sentAt,
+          platform: row.productUrl,
+          firstAccessAt: row.firstAccessAt ?? undefined,
+          source: 'EMAIL',
+          sourceProvider: providerOf(row.messageId),
+          sourceReference: row.messageId ?? undefined,
+        });
+
+        if (!options.generateReceipts) continue;
+
         await addCommunicationReconstruction(auth, med.id, {
-          template: 'ACCESS_DELIVERY',
+          template: options.receiptTemplate ?? 'ACCESS_DELIVERY',
           from: EMAIL_SENDER_NAME,
           to: row.customerEmail ?? '',
           toName: row.customerName ?? med.payerName ?? undefined,
@@ -385,10 +456,13 @@ export async function importDeliveryLog(
         customerEmail: row.customerEmail,
         kind: 'ACCESS_LINKED',
         message:
-          `Liberação de acesso${row.productName ? ` a ${row.productName}` : ''} ligada pelo e-mail do comprador` +
-          `${eligible.length > 1 ? ` (${eligible.length} MEDs dele)` : ''}` +
-          `${row.firstAccessAt ? ', com primeiro acesso registrado' : ''}. ` +
-          'A data e o message-id do comprovante são os desta linha, não os do e-mail da cobrança.',
+          `Liberação de acesso${row.productName ? ` a ${row.productName}` : ''} ligada ` +
+          (exata
+            ? `pelo id da transação (${txn}).`
+            : 'pelo e-mail do comprador — o arquivo não traz o id da transação, então a ' +
+              'ligação é com a pessoa, não com esta cobrança.') +
+          `${eligible.length > 1 ? ` ${eligible.length} MEDs.` : ''}` +
+          `${row.firstAccessAt ? ' Com primeiro acesso registrado.' : ''}`,
       });
       if (row.firstAccessAt) withFirstAccess += 1;
       continue;

@@ -17,6 +17,10 @@ import { Label } from '@/components/ui/label';
  * A validacao acontece na hora de escolher, e nao no envio: arquivo do tipo
  * errado ou grande demais nao chega a ser anexado, e o motivo aparece ali
  * mesmo. Descobrir isso depois de esperar o envio e a pior ordem possivel.
+ *
+ * Com `multiple`, os arquivos se acumulam a cada escolha em vez de o ultimo
+ * substituir o anterior: quem esta juntando duas metades de um export escolhe
+ * uma, depois a outra, e espera que as duas fiquem.
  */
 
 export function formatBytes(bytes: number): string {
@@ -38,6 +42,7 @@ export function FileDropField({
   extensions,
   maxBytes,
   hint,
+  multiple = false,
   className,
 }: {
   name: string;
@@ -45,11 +50,12 @@ export function FileDropField({
   extensions: string[];
   maxBytes: number;
   hint?: string;
+  multiple?: boolean;
   className?: string;
 }) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -67,22 +73,40 @@ export function FileDropField({
     return null;
   }
 
-  function attach(candidate: File | null) {
-    if (!candidate) return;
-    const reason = reasonToReject(candidate);
-    if (reason) {
-      clear();
-      setError(reason);
-      return;
+  /** Escreve a lista no input de verdade — e ele que o formulario envia. */
+  function write(lista: File[]) {
+    const transfer = new DataTransfer();
+    for (const item of lista) transfer.items.add(item);
+    if (inputRef.current) inputRef.current.files = transfer.files;
+    setFiles(lista);
+  }
+
+  function attach(candidatos: File[]) {
+    if (candidatos.length === 0) return;
+    for (const candidato of candidatos) {
+      const reason = reasonToReject(candidato);
+      if (reason) {
+        clear();
+        setError(reason);
+        return;
+      }
     }
     setError(null);
-    setFile(candidate);
+    // O mesmo arquivo escolhido duas vezes entra uma vez so.
+    const anteriores = multiple
+      ? files.filter((atual) => !candidatos.some((novo) => novo.name === atual.name))
+      : [];
+    write([...anteriores, ...candidatos]);
   }
 
   function clear() {
     if (inputRef.current) inputRef.current.value = '';
-    setFile(null);
+    setFiles([]);
     setError(null);
+  }
+
+  function remove(alvo: File) {
+    write(files.filter((atual) => atual !== alvo));
   }
 
   return (
@@ -102,17 +126,8 @@ export function FileDropField({
         onDrop={(event) => {
           event.preventDefault();
           setDragging(false);
-          const dropped = event.dataTransfer.files[0] ?? null;
-          if (!dropped) return;
-          if (reasonToReject(dropped)) {
-            attach(dropped);
-            return;
-          }
-          // Escreve no input de verdade: e ele que o formulario envia.
-          const transfer = new DataTransfer();
-          transfer.items.add(dropped);
-          if (inputRef.current) inputRef.current.files = transfer.files;
-          attach(dropped);
+          const soltos = Array.from(event.dataTransfer.files);
+          attach(multiple ? soltos : soltos.slice(0, 1));
         }}
         className={cn(
           'flex justify-center rounded-lg border border-dashed px-6 py-10 transition-colors',
@@ -131,7 +146,9 @@ export function FileDropField({
               htmlFor={id}
               className="cursor-pointer rounded-sm pl-1 font-medium text-primary hover:underline hover:underline-offset-4"
             >
-              Arraste o arquivo aqui ou clique para escolher
+              {multiple
+                ? 'Arraste os arquivos aqui ou clique para escolher'
+                : 'Arraste o arquivo aqui ou clique para escolher'}
             </Label>
           </div>
         </div>
@@ -141,8 +158,9 @@ export function FileDropField({
           name={name}
           type="file"
           accept={accept}
+          multiple={multiple}
           className="sr-only"
-          onChange={(event) => attach(event.target.files?.[0] ?? null)}
+          onChange={(event) => attach(Array.from(event.target.files ?? []))}
         />
       </div>
 
@@ -154,8 +172,8 @@ export function FileDropField({
         </p>
       ) : null}
 
-      {file ? (
-        <div className="relative mt-3 rounded-lg bg-muted p-3">
+      {files.map((file) => (
+        <div key={file.name} className="relative mt-3 rounded-lg bg-muted p-3">
           <div className="absolute top-1 right-1">
             <Button
               type="button"
@@ -163,7 +181,7 @@ export function FileDropField({
               size="sm"
               className="rounded-sm p-2 text-muted-foreground hover:text-foreground"
               aria-label={`Remover ${file.name}`}
-              onClick={clear}
+              onClick={() => (multiple ? remove(file) : clear())}
             >
               <X aria-hidden className="size-4 shrink-0" />
             </Button>
@@ -182,7 +200,7 @@ export function FileDropField({
             </div>
           </div>
         </div>
-      ) : null}
+      ))}
     </div>
   );
 }
