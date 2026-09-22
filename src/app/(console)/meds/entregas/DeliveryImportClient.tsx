@@ -129,7 +129,20 @@ export function DeliveryImportClient() {
               tone={report.accessLinked > 0 ? 'success' : 'neutral'}
             />
             <MetricCell label="Sem casamento" value={report.unmatched} />
+            <MetricCell label="MEDs no sistema" value={report.medsConsidered} />
           </MetricStrip>
+
+          {report.unmatched > 0 && report.medsWithPayerName === 0 ? (
+            <Alert variant="destructive">
+              <AlertTitle>Nenhum MED tem nome de pagador</AlertTitle>
+              <AlertDescription>
+                São {report.medsConsidered} MEDs no sistema e nenhum com o nome de quem pagou,
+                então não há por onde ligar as linhas deste arquivo. O problema está do lado dos
+                MEDs, não deste arquivo: reimporte o lote no passo 1 conferindo se a coluna do
+                nome (“Nome Debitado”) foi reconhecida.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           {report.withoutMessageId > 0 ? (
             <Alert>

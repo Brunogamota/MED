@@ -111,6 +111,14 @@ export interface DeliveryImportReport {
   invalid: number;
   /** Quantos registros trouxeram primeiro acesso — a evidencia que decide. */
   withFirstAccess: number;
+  /**
+   * Contra quantos MEDs o arquivo foi comparado, e quantos deles tem nome de
+   * pagador. Sem esses dois numeros, "nada casou" nao se distingue de "nao ha
+   * com o que casar" — e a pessoa fica mexendo no arquivo quando o problema
+   * esta do outro lado.
+   */
+  medsConsidered: number;
+  medsWithPayerName: number;
   lines: DeliveryImportLine[];
   /**
    * MEDs que este arquivo deixou sem entrega registrada.
@@ -200,6 +208,8 @@ export async function importDeliveryLog(
     unmatched: 0,
     invalid: 0,
     withFirstAccess: 0,
+    medsConsidered: 0,
+    medsWithPayerName: 0,
     lines: [],
     medsWithoutDelivery: [],
     fatalError: parsed.fatalError,
@@ -417,7 +427,13 @@ export async function importDeliveryLog(
     // MEDs do mesmo comprador e o caso em que o nome nao distingue nada, e
     // escolher um seria sorteio.
     const nome = comparableName(row.customerName);
-    const porNomeTodos = nome ? medsByName.get(nome) : undefined;
+    // Igual primeiro; se nao achar, um contendo o outro. Um dos lados costuma
+    // vir com um sobrenome a menos, e exigir igualdade exata descartaria
+    // casamento bom — o mesmo criterio que o casador ja usa para conferir.
+    const porNomeTodos = nome
+      ? (medsByName.get(nome) ??
+        [...medsByName].find(([chave]) => chave.includes(nome) || nome.includes(chave))?.[1])
+      : undefined;
     const porNome = porNomeTodos?.length === 1 ? porNomeTodos : undefined;
 
     const meds = porTxn ?? porEmail ?? porNome;
@@ -436,6 +452,35 @@ export async function importDeliveryLog(
       });
       continue;
     }
+    // Quando nem o nome acha, o motivo do casador fala de valor e data — e a
+    // pessoa fica sem saber que a busca por nome tambem foi tentada e falhou.
+    // Dizer qual nome nao existe transforma um erro opaco num diagnostico.
+    if (!meds && medsByName.size === 0) {
+      lines.push({
+        line: row.line,
+        medId: null,
+        customerEmail: row.customerEmail,
+        kind: 'UNMATCHED',
+        message:
+          'Nenhum MED importado tem nome de pagador, então não há por onde ligar esta linha. ' +
+          'Importe os MEDs no passo 1 e suba o arquivo de cobranças junto com este.',
+      });
+      continue;
+    }
+
+    if (!meds && nome) {
+      lines.push({
+        line: row.line,
+        medId: null,
+        customerEmail: row.customerEmail,
+        kind: 'UNMATCHED',
+        message:
+          `Nenhum MED com o nome "${row.customerName}". Confira se os MEDs deste lote já foram ` +
+          'importados no passo 1 e se o nome do pagador é o mesmo do arquivo de envios.',
+      });
+      continue;
+    }
+
     const sentAt = row.deliveredAt ?? row.sentAt;
     if (meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
       // Uma liberação anterior à cobrança não prova a entrega **daquela**
@@ -574,6 +619,8 @@ export async function importDeliveryLog(
     unmatched: report.unmatchedRows.length - accessLinked,
     invalid,
     withFirstAccess,
+    medsConsidered: candidates.length,
+    medsWithPayerName: medsByName.size,
     lines: lines.sort((a, b) => a.line - b.line),
     medsWithoutDelivery: [...withoutDelivery.values()],
     fatalError: null,

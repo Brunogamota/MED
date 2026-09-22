@@ -136,6 +136,54 @@ describe('importar log de envio', () => {
     expect(caso?.digitalDelivery?.sentTo).toBe('fulano@exemplo.com');
   });
 
+  it('nome que nao existe em MED nenhum diz qual nome e, e nao fala de valor', async () => {
+    // O motivo do casador fala de valor e data, e deixa a pessoa sem saber que
+    // a busca por nome tambem aconteceu e falhou.
+    const SO_ENTREGAS = [
+      'customer_name,customer_email,sent_at,product_url,message_id,status,delivered_at,smtp_response',
+      'Pessoa Que Nao Existe,x@exemplo.com,2026-09-18 12:35:00,https://console.exemplo.com/p/abc,<m9@mta01.exemplo.com.br>,delivered,2026-09-18 12:36:00,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, SO_ENTREGAS);
+    const linha = report.lines.find((entry) => entry.kind === 'UNMATCHED');
+    expect(linha?.message).toContain('Pessoa Que Nao Existe');
+    expect(linha?.message).not.toContain('valor');
+    expect(report.medsWithPayerName).toBeGreaterThan(0);
+  });
+
+  it('nenhum MED com nome de pagador: o relatorio aponta para o outro lado', async () => {
+    __setRepositoryForTests(new InMemoryMedRepository());
+    await createMed(auth, {
+      medId: 'MED-ANONIMO',
+      amount: 10,
+      currency: 'BRL',
+      openedAt: '2026-09-20T12:00:00.000Z',
+      transactionAt: '2026-09-19T12:00:00.000Z',
+      reason: 'FRAUD_SCAM',
+      payer: {},
+    });
+
+    const SO_ENTREGAS = [
+      'customer_name,customer_email,sent_at,product_url,message_id,status,delivered_at,smtp_response',
+      'Fulano de Tal,fulano@exemplo.com,2026-09-18 12:35:00,https://console.exemplo.com/p/abc,<m9@mta01.exemplo.com.br>,delivered,2026-09-18 12:36:00,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, SO_ENTREGAS);
+    expect(report.medsConsidered).toBe(1);
+    expect(report.medsWithPayerName).toBe(0);
+    expect(report.lines[0]?.message).toContain('Importe os MEDs no passo 1');
+  });
+
+  it('sobrenome a mais de um lado ainda casa', async () => {
+    const SO_ENTREGAS = [
+      'customer_name,customer_email,sent_at,product_url,message_id,status,delivered_at,smtp_response',
+      'Fulano de Tal Silva,fulano@exemplo.com,2026-09-18 12:35:00,https://console.exemplo.com/p/abc,<m9@mta01.exemplo.com.br>,delivered,2026-09-18 12:36:00,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, SO_ENTREGAS);
+    expect(report.accessLinked).toBe(1);
+  });
+
   it('arquivo que nao identifica destinatario e recusado, sem gravar nada', async () => {
     const report = await importDeliveryLog(auth, 'coluna_a,coluna_b\n1,2');
     expect(report.fatalError).toMatch(/não parece um log de envio/);
