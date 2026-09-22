@@ -18,7 +18,12 @@
 import type { AuthContext } from '@/infra/auth/context';
 import { getRepository } from '@/infra/container';
 import { assertCan } from '@/infra/auth/rbac';
-import { addCommunicationReconstruction, getCase, listMeds } from '@/services/medService';
+import {
+  addCommunicationReconstruction,
+  addEvidence,
+  getCase,
+  listMeds,
+} from '@/services/medService';
 import { draftCommunication, EMAIL_SENDER_NAME } from '@/domain/communication/receipt';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
@@ -208,6 +213,29 @@ export async function importDeliveryLog(
       sourceReference: row.messageId ?? undefined,
     });
 
+    // A resposta do servidor de destino é o que torna o envio conferível: é
+    // nela que está o "250" e o identificador que o provedor devolveu ao
+    // aceitar a mensagem. Fica como evidência própria, com o message-id na
+    // procedência, porque o registro de entrega não tem onde guardá-la.
+    if (row.smtpResponse) {
+      await addEvidence(auth, med.id, {
+        type: 'DELIVERY_CONFIRMATION',
+        value: {
+          status: row.rawStatus ?? 'delivered',
+          resposta: row.smtpResponse,
+          entregueEm: row.deliveredAt,
+          tentativas: row.attempts,
+        },
+        displayValue: row.smtpResponse,
+        source: 'EMAIL',
+        sourceProvider: providerOf(row.messageId),
+        sourceReference: row.messageId ?? undefined,
+        receivedAt: row.deliveredAt ?? momentOfSending ?? undefined,
+        verificationStatus: 'UNVERIFIED',
+        metadata: {},
+      });
+    }
+
     recorded += 1;
     if (row.firstAccessAt) withFirstAccess += 1;
     const buyer = normalizeEmail(row.customerEmail);
@@ -273,6 +301,24 @@ export async function importDeliveryLog(
           source: 'EMAIL',
           sourceReference: row.messageId ?? undefined,
         });
+
+        // O primeiro acesso é o que responde "não recebi": mostra que a pessoa
+        // usou o que comprou. Entra como evidência própria, com o message-id
+        // da linha de onde veio — não no registro de entrega da cobrança, que
+        // é outro evento e não pode absorver a data deste.
+        if (row.firstAccessAt) {
+          await addEvidence(auth, med.id, {
+            type: 'FIRST_ACCESS_AT',
+            value: row.firstAccessAt,
+            displayValue: row.firstAccessAt,
+            source: 'EMAIL',
+            sourceProvider: providerOf(row.messageId),
+            sourceReference: row.messageId ?? undefined,
+            receivedAt: row.firstAccessAt,
+            verificationStatus: 'UNVERIFIED',
+            metadata: {},
+          });
+        }
       }
       accessLinked += 1;
       lines.push({
