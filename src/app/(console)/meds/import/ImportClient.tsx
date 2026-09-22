@@ -69,10 +69,10 @@ export function ImportClient() {
         <Panel title="1. Arquivo da adquirente">
           <FileDropField
             name="file"
-            label="Arquivo CSV"
-            extensions={['.csv', '.tsv', '.txt']}
+            label="Arquivo do lote"
+            extensions={['.csv', '.tsv', '.txt', '.zip']}
             maxBytes={5 * 1024 * 1024}
-            hint="Até 5 MB. CSV, TSV ou TXT — planilha do Excel (.xlsx) precisa ser exportada como CSV antes, porque o sistema lê o arquivo como texto."
+            hint="Até 5 MB. CSV, TSV, TXT ou um .zip com um deles dentro — planilha do Excel (.xlsx) precisa ser exportada como CSV antes, porque o sistema lê o arquivo como texto."
           />
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">

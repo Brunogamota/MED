@@ -60,10 +60,10 @@ export function DeliveryImportClient() {
           <FileDropField
             name="file"
             label="Export do provedor"
-            extensions={['.csv', '.tsv', '.txt']}
+            extensions={['.csv', '.tsv', '.txt', '.zip']}
             maxBytes={MAX_BYTES}
             multiple
-            hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Precisa da coluna de message-id; id da transação, e-mail, URL do produto e primeiro acesso entram quando existem."
+            hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Se vier zipado, sobe o .zip mesmo. Precisa da coluna de message-id; id da transação, e-mail, URL do produto e primeiro acesso entram quando existem."
           />
           <div className="grid gap-2">
             <Label htmlFor="modelo">Que mensagem este log registra</Label>

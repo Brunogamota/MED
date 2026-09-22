@@ -31,6 +31,7 @@ import {
   upsertTransactionSchema,
 } from '@/domain/schemas';
 import { address, compact, dateTime, integer, number, text } from '@/lib/forms';
+import { looksZipped, readZipEntries, ZipError } from '@/lib/zip';
 import { importParsedMeds } from '@/services/importService';
 import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentService';
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
@@ -420,6 +421,57 @@ function looksBinary(content: string): boolean {
   return content.includes('\u0000');
 }
 
+/** Teto do que um zip pode carregar descompactado, por importacao. */
+const MAX_UNZIPPED = 32 * 1024 * 1024;
+
+/** Extensoes que valem como tabela dentro de um zip. */
+const TABLE_EXTENSIONS = ['.csv', '.tsv', '.txt'];
+
+/**
+ * Abre um arquivo enviado como uma lista de textos.
+ *
+ * Zip vira a lista dos arquivos de dentro; qualquer outro vira uma lista de
+ * um. O export do provedor quase sempre chega zipado, e mandar quem opera
+ * descompactar antes so acrescenta um passo onde ja da errado.
+ *
+ * Dentro do zip, o que nao e tabela e ignorado em silencio — README, pasta do
+ * macOS, logo. Nao e erro; e o que vem junto.
+ */
+async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | { ok: false; error: string }> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+
+  if (looksZipped(bytes)) {
+    try {
+      const tabelas = readZipEntries(bytes, MAX_UNZIPPED).filter((entry) => {
+        const nome = entry.name.toLowerCase();
+        if (nome.includes('__macosx/') || nome.startsWith('.')) return false;
+        return TABLE_EXTENSIONS.some((extensao) => nome.endsWith(extensao));
+      });
+      if (tabelas.length === 0) {
+        return {
+          ok: false,
+          error: `"${file.name}" não tem nenhum .csv dentro. Confira se o export saiu completo.`,
+        };
+      }
+      return { ok: true, texts: tabelas.map((entry) => entry.bytes.toString('utf8')) };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof ZipError ? error.message : `Não foi possível abrir "${file.name}".`,
+      };
+    }
+  }
+
+  const content = new TextDecoder('utf-8').decode(bytes);
+  if (looksBinary(content)) {
+    return {
+      ok: false,
+      error: `"${file.name}" não é texto. Exporte a planilha como CSV — .xlsx e .xls não são lidos aqui.`,
+    };
+  }
+  return { ok: true, texts: [content] };
+}
+
 /**
  * O parser le o arquivo como texto. Um .xlsx e um zip, e `file.text()` devolve
  * bytes ilegiveis que o parser trataria como um cabecalho enorme e sem sentido
@@ -429,14 +481,17 @@ function looksBinary(content: string): boolean {
 async function readImportText(form: FormData): Promise<ImportRead> {
   const file = form.get('file');
   if (file instanceof File && file.size > 0) {
-    const content = await file.text();
-    if (looksBinary(content)) {
+    const aberto = await openAsTexts(file);
+    if (!aberto.ok) return aberto;
+    // Esta tela importa um lote de MEDs por vez: um zip com varias tabelas
+    // nao diz qual delas e o lote, e escolher a primeira seria adivinhar.
+    if (aberto.texts.length > 1) {
       return {
         ok: false,
-        error: 'O arquivo não é texto. Exporte a planilha como CSV — .xlsx e .xls não são lidos aqui.',
+        error: `"${file.name}" tem mais de uma tabela dentro. Envie o arquivo do lote de MEDs.`,
       };
     }
-    return { ok: true, csv: content };
+    return { ok: true, csv: aberto.texts[0] ?? '' };
   }
   return { ok: true, csv: text(form, 'csv') ?? '' };
 }
@@ -452,14 +507,9 @@ async function readImportTexts(form: FormData): Promise<ImportReadMany> {
   const csvs: string[] = [];
   for (const entry of form.getAll('file')) {
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const content = await entry.text();
-    if (looksBinary(content)) {
-      return {
-        ok: false,
-        error: `"${entry.name}" não é texto. Exporte a planilha como CSV — .xlsx e .xls não são lidos aqui.`,
-      };
-    }
-    csvs.push(content);
+    const aberto = await openAsTexts(entry);
+    if (!aberto.ok) return aberto;
+    csvs.push(...aberto.texts);
   }
   if (csvs.length === 0) {
     const colado = text(form, 'csv');
