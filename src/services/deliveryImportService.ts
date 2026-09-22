@@ -24,7 +24,11 @@ import {
   getCase,
   listMeds,
 } from '@/services/medService';
-import { draftCommunication, EMAIL_SENDER_NAME } from '@/domain/communication/receipt';
+import {
+  draftCommunication,
+  EMAIL_SENDER_NAME,
+  type CommunicationTemplate,
+} from '@/domain/communication/receipt';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
 import { parseDeliveryLog, type DeliveryLogRow } from '@/domain/import/deliveryLog';
@@ -57,6 +61,17 @@ export interface DeliveryImportOptions {
    * acesso. O texto sai do caso, e a peca leva o selo de reconstrucao.
    */
   generateReceipts?: boolean;
+
+  /**
+   * Que mensagem este log registra.
+   *
+   * O arquivo diz que um e-mail foi aceito pelo servidor do destinatario, e
+   * nao o que ele dizia. Um log de confirmacao de compra e um log de
+   * liberacao de acesso sao indistinguiveis por dentro — os dois trazem
+   * message-id, hora e resposta SMTP. Quem sabe qual e quem opera, e por isso
+   * o modelo e declarado aqui em vez de adivinhado pelo nome do arquivo.
+   */
+  receiptTemplate?: CommunicationTemplate;
 }
 
 export interface DeliveryImportReport {
@@ -261,7 +276,10 @@ export async function importDeliveryLog(
       // e dela que saem destinatario, data e link. Sem recarregar, o
       // comprovante sairia com o caso de antes da importacao.
       const medCase = await getCase(auth, med.id);
-      const draft = draftCommunication(medCase, 'ACCESS_DELIVERY');
+      const draft = draftCommunication(
+        medCase,
+        options.receiptTemplate ?? 'ACCESS_DELIVERY',
+      );
       await addCommunicationReconstruction(auth, med.id, {
         template: draft.template,
         from: draft.from,

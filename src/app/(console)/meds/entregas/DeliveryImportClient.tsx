@@ -54,6 +54,25 @@ export function DeliveryImportClient() {
             maxBytes={MAX_BYTES}
             hint="Export do provedor de e-mail. Precisa ter a coluna de message-id; as de primeiro acesso e URL do produto entram quando existem."
           />
+          <div className="grid gap-2">
+            <Label htmlFor="modelo">Que mensagem este log registra</Label>
+            <select
+              id="modelo"
+              name="modelo"
+              defaultValue="ACCESS_DELIVERY"
+              className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
+            >
+              <option value="ACCESS_DELIVERY">Entrega de acesso</option>
+              <option value="PURCHASE_CONFIRMATION">Confirmação de compra</option>
+              <option value="DELIVERY_CONFIRMATION">Confirmação de entrega</option>
+              <option value="GENERIC">Mensagem ao cliente</option>
+            </select>
+            <p className="text-muted-foreground text-sm">
+              Um log de confirmação de compra e um de liberação de acesso são idênticos por
+              dentro: os dois trazem message-id, hora e resposta SMTP. Quem sabe qual é você.
+            </p>
+          </div>
+
           <div className="flex items-start gap-3 rounded-lg border p-3">
             <Checkbox id="gerarComprovantes" name="gerarComprovantes" defaultChecked />
             <div className="grid gap-1 leading-snug">
@@ -62,8 +81,8 @@ export function DeliveryImportClient() {
               </Label>
               <p className="text-muted-foreground text-sm">
                 O log prova que a mensagem foi aceita pelo servidor do destinatário, não o que
-                ela dizia. Marcar aqui é você declarar que aqueles envios eram a liberação de
-                acesso. A peça sai com o selo de reconstrução, como toda reconstrução.
+                ela dizia. Marcar aqui é você declarar que aqueles envios eram a mensagem
+                escolhida acima. A peça sai com a declaração de origem, como toda reconstrução.
               </p>
             </div>
           </div>

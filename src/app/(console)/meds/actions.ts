@@ -36,7 +36,11 @@ import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentSer
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
 import { addCommunicationReconstruction } from '@/services/medService';
 import { parseMedImport } from '@/domain/import/csv';
-import { EMAIL_SENDER_NAME } from '@/domain/communication/receipt';
+import {
+  COMMUNICATION_TEMPLATES,
+  EMAIL_SENDER_NAME,
+  type CommunicationTemplate,
+} from '@/domain/communication/receipt';
 
 /**
  * Server actions used by the MED screens.
@@ -582,8 +586,12 @@ export async function importDeliveryLogAction(
     return { report: null, error: 'Escolha o arquivo do log de envio.' };
   }
 
+  const modelo = form.get('modelo');
   const report = await importDeliveryLog(serverPageContext(), read.csv, {
     generateReceipts: form.get('gerarComprovantes') === 'on',
+    receiptTemplate: COMMUNICATION_TEMPLATES.includes(modelo as CommunicationTemplate)
+      ? (modelo as CommunicationTemplate)
+      : undefined,
   });
   revalidatePath('/meds');
   return { report, error: report.fatalError };
