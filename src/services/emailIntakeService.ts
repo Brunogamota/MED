@@ -108,7 +108,11 @@ export async function createMedFromMessage(
     transactionId: draft.transactionId ?? undefined,
     endToEndId: draft.endToEndId ?? undefined,
     pixId: draft.pixId ?? undefined,
-    amount: draft.amountCents ?? undefined,
+    // `Med.amount` e em reais — quem converte para centavos e o adapter do
+    // Prisma, na borda do banco. Passar centavos aqui gravava cem vezes o
+    // valor, e so aparecia em producao: o repositorio de memoria, onde os
+    // testes rodam, nao converte nada.
+    amount: draft.amountCents === null ? undefined : draft.amountCents / 100,
     currency: draft.currency ?? 'BRL',
     transactionAt: draft.transactionAt ?? undefined,
     openedAt: draft.openedAt ?? undefined,

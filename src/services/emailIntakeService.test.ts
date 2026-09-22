@@ -58,7 +58,8 @@ describe('createMedFromMessage', () => {
 
     const med = await (await getRepository()).getMed('org_a', result.medId);
     expect(med?.medId).toBe('MED-2026-000481');
-    expect(med?.amount).toBe(34990);
+    // Em reais, e nao em centavos: `Med.amount` e reais em todo o dominio.
+    expect(med?.amount).toBe(349.9);
     expect(med?.reason).toBe('PRODUCT_NOT_RECEIVED');
     expect(med?.payer.document).toBe('11111111111');
   });
