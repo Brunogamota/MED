@@ -33,6 +33,7 @@ import { matchDeliveryLog, type MatchableMed } from '@/domain/import/deliveryMat
 export type DeliveryOutcomeKind =
   | 'RECORDED'
   | 'ACCESS_LINKED'
+  | 'ACCESS_BEFORE_CHARGE'
   | 'NOT_DELIVERED'
   | 'UNMATCHED'
   | 'INVALID';
@@ -65,6 +66,14 @@ export interface DeliveryImportReport {
   receipts: number;
   /** Liberacoes de acesso ligadas ao comprador pelo e-mail. */
   accessLinked: number;
+  /**
+   * Liberacoes anteriores a cobranca, recusadas como comprovante.
+   *
+   * O numero importa por si: se quase todo caso cai aqui, a entrega que o
+   * arquivo carrega nao e a da cobranca contestada, e a defesa precisa de
+   * outra prova — nao de outra formatacao desta.
+   */
+  anachronistic: number;
   notDelivered: number;
   unmatched: number;
   invalid: number;
@@ -129,6 +138,7 @@ export async function importDeliveryLog(
     recorded: 0,
     receipts: 0,
     accessLinked: 0,
+    anachronistic: 0,
     notDelivered: 0,
     unmatched: 0,
     invalid: 0,
@@ -162,6 +172,7 @@ export async function importDeliveryLog(
   let recorded = 0;
   let receipts = 0;
   let accessLinked = 0;
+  let anachronistic = 0;
   let notDelivered = 0;
   let invalid = 0;
   let withFirstAccess = 0;
@@ -286,7 +297,36 @@ export async function importDeliveryLog(
     const meds = buyer ? medsByBuyer.get(buyer) : undefined;
     const sentAt = row.deliveredAt ?? row.sentAt;
     if (options.generateReceipts && meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
-      for (const med of meds) {
+      // Uma liberação anterior à cobrança não prova a entrega **daquela**
+      // cobrança: nada é entregue antes de ser comprado. O acesso é real e é
+      // do mesmo comprador, mas veio de outra compra, de uma renovação ou de
+      // um plano — e só o estabelecimento sabe qual. Virar comprovante aqui
+      // produziria uma peça que se contradiz na própria data, e é o primeiro
+      // lugar em que um analista olha.
+      const early = meds.filter(
+        (med) => med.transactionAt && sentAt < med.transactionAt,
+      );
+      const eligible = meds.filter((med) => !early.includes(med));
+
+      for (const med of early) {
+        anachronistic += 1;
+        withoutDelivery.set(med.id, { id: med.id, medId: med.medId });
+        lines.push({
+          line: row.line,
+          medId: med.medId,
+          customerEmail: row.customerEmail,
+          kind: 'ACCESS_BEFORE_CHARGE',
+          message:
+            `Liberação de acesso em ${sentAt.slice(0, 10)}, anterior à cobrança de ` +
+            `${med.transactionAt?.slice(0, 10)}. Nenhum comprovante foi gerado: entrega ` +
+            'anterior à compra não prova esta compra. O acesso é do mesmo comprador, mas ' +
+            'veio de outra operação — diga qual antes de usar isto na defesa.',
+        });
+      }
+
+      if (eligible.length === 0) continue;
+
+      for (const med of eligible) {
         await addCommunicationReconstruction(auth, med.id, {
           template: 'ACCESS_DELIVERY',
           from: EMAIL_SENDER_NAME,
@@ -323,12 +363,12 @@ export async function importDeliveryLog(
       accessLinked += 1;
       lines.push({
         line: row.line,
-        medId: meds.map((med) => med.medId).join(', '),
+        medId: eligible.map((med) => med.medId).join(', '),
         customerEmail: row.customerEmail,
         kind: 'ACCESS_LINKED',
         message:
           `Liberação de acesso${row.productName ? ` a ${row.productName}` : ''} ligada pelo e-mail do comprador` +
-          `${meds.length > 1 ? ` (${meds.length} MEDs dele)` : ''}` +
+          `${eligible.length > 1 ? ` (${eligible.length} MEDs dele)` : ''}` +
           `${row.firstAccessAt ? ', com primeiro acesso registrado' : ''}. ` +
           'A data e o message-id do comprovante são os desta linha, não os do e-mail da cobrança.',
       });
@@ -358,6 +398,7 @@ export async function importDeliveryLog(
       comPrimeiroAcesso: withFirstAccess,
       comprovantesGerados: receipts,
       acessosLigados: accessLinked,
+      acessosAnterioresACobranca: anachronistic,
     },
   });
 
@@ -366,6 +407,7 @@ export async function importDeliveryLog(
     recorded,
     receipts,
     accessLinked,
+    anachronistic,
     notDelivered,
     unmatched: report.unmatchedRows.length - accessLinked,
     invalid,

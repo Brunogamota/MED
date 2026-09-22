@@ -21,6 +21,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const KIND_LABEL: Record<DeliveryOutcomeKind, string> = {
   RECORDED: 'Registrado',
   ACCESS_LINKED: 'Acesso ligado',
+  ACCESS_BEFORE_CHARGE: 'Acesso anterior',
   NOT_DELIVERED: 'Não entregue',
   UNMATCHED: 'Sem MED',
   INVALID: 'Linha inválida',
@@ -29,6 +30,7 @@ const KIND_LABEL: Record<DeliveryOutcomeKind, string> = {
 const KIND_TONE: Record<DeliveryOutcomeKind, string> = {
   RECORDED: 'text-emerald-700 dark:text-emerald-400',
   ACCESS_LINKED: 'text-emerald-700 dark:text-emerald-400',
+  ACCESS_BEFORE_CHARGE: 'text-amber-700 dark:text-amber-400',
   NOT_DELIVERED: 'text-destructive',
   UNMATCHED: 'text-muted-foreground',
   INVALID: 'text-amber-700 dark:text-amber-400',
@@ -98,6 +100,22 @@ export function DeliveryImportClient() {
             />
             <MetricCell label="Sem casamento" value={report.unmatched} />
           </MetricStrip>
+
+          {report.anachronistic > 0 ? (
+            <Alert variant="destructive">
+              <AlertTitle>
+                {report.anachronistic} liberaç
+                {report.anachronistic > 1 ? 'ões anteriores' : 'ão anterior'} à cobrança
+              </AlertTitle>
+              <AlertDescription>
+                Nesses casos o acesso foi liberado antes da transação contestada existir, então
+                não serve como prova de entrega dela — nada é entregue antes de ser comprado. O
+                acesso é do mesmo comprador, mas veio de outra operação: outra compra, uma
+                renovação ou um plano. Nenhum comprovante foi gerado. Só o estabelecimento sabe
+                qual operação foi, e é isso que a defesa precisa dizer.
+              </AlertDescription>
+            </Alert>
+          ) : null}
 
           {report.withFirstAccess > 0 ? (
             <Alert>

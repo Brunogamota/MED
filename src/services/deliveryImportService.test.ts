@@ -120,6 +120,37 @@ describe('importar log de envio', () => {
     expect(report.recorded).toBe(0);
   });
 
+  it('liberacao anterior a cobranca nao vira comprovante', async () => {
+    // O caso que um analista pega em dois segundos: a peca diria que o acesso
+    // foi entregue antes de a compra existir.
+    const LOG_ACESSO = [
+      'customer_name,customer_email,amount_brl,purchase_at,message_id,status,delivered_at,product_url,smtp_response',
+      'Fulano de Tal,fulano@exemplo.com,32.80,2026-09-18 12:30:04,<m1@mta03.exemplo.com.br>,delivered,2026-09-18 12:31:50,,250 OK',
+      // Mesma pessoa, liberacao tres semanas antes da cobranca contestada.
+      'Fulano de Tal,fulano@exemplo.com,,2026-08-27 10:00:00,<m9@mta03.exemplo.com.br>,delivered,2026-08-27 10:01:00,https://console.exemplo.com/p/abc,250 OK',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, LOG_ACESSO, { generateReceipts: true });
+    expect(report.anachronistic).toBe(1);
+    expect(report.accessLinked).toBe(0);
+
+    const linha = report.lines.find((entry) => entry.kind === 'ACCESS_BEFORE_CHARGE');
+    expect(linha?.message).toContain('anterior à cobrança');
+
+    // E o MED nao fica com uma peca que se contradiz na propria data.
+    const repository = await getRepository();
+    const med = (await repository.listMeds('org_a', {})).find(
+      (row) => row.med.medId === 'MED-ENTREGUE',
+    );
+    const evidencias = await repository.listEvidence('org_a', med?.med.id ?? '');
+    const acesso = evidencias.filter(
+      (evidence) =>
+        evidence.type === 'DELIVERY_COMMUNICATION' &&
+        (evidence.value as { reference?: string })?.reference,
+    );
+    expect(acesso).toHaveLength(0);
+  });
+
   it('quem nao pode escrever MED nao importa entrega', async () => {
     const viewer: AuthContext = { organizationId: 'org_a', role: 'VIEWER', actor: 'teste' };
     await expect(importDeliveryLog(viewer, LOG)).rejects.toBeInstanceOf(ForbiddenError);
