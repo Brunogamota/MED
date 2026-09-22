@@ -42,8 +42,8 @@ export const COMMUNICATION_TEMPLATE_LABEL: Record<CommunicationTemplate, string>
 
 /** Texto do selo. Vai na tela, na rota de impressão e no PDF, sem exceção. */
 export const RECONSTRUCTION_STAMP =
-  'RECONSTRUÇÃO — Representação do painel de envios, gerada a partir dos registros do caso. ' +
-  'Não é uma captura real do painel administrativo.';
+  'Documento gerado a partir do registro de entrega/liberação de acesso referente à transação ' +
+  'notificada por MED. Representação dos registros de envio — não é uma captura do painel administrativo.';
 
 /**
  * Quem efetivamente envia as comunicações transacionais desta operação — o
@@ -76,8 +76,33 @@ export interface CommunicationReceipt {
  * botão que existia não é inventar destino que não temos.
  */
 export type ClientEmailAction =
-  | { kind: 'BUTTON'; label: string; valueLabel: string; value: string; href: string | null }
-  | { kind: 'NOTE'; valueLabel: string; value: string };
+  | {
+      kind: 'BUTTON';
+      label: string;
+      valueLabel: string;
+      value: string;
+      href: string | null;
+      /** Forma curta para a legenda impressa. */
+      display: string;
+    }
+  | { kind: 'NOTE'; valueLabel: string; value: string; display: string };
+
+/**
+ * Como a referência aparece impressa.
+ *
+ * Link vira domínio mais reticências. O endereço completo de uma área de
+ * membros é caminho de acesso: a peça vai para a instituição, entra em análise
+ * de PLD e passa por gente que não tem nada a ver com a compra. O botão
+ * continua levando ao destino real — o que sai do papel é só a URL por extenso.
+ */
+export function displayReference(value: string): string {
+  if (!isUrl(value)) return value;
+  try {
+    return `${new URL(value).host}/…`;
+  } catch {
+    return value;
+  }
+}
 
 /**
  * Como a referência se chama em cada modelo — para o rótulo do campo no
@@ -154,14 +179,22 @@ function deriveAction(
       valueLabel: field.label,
       value,
       href,
+      display: displayReference(value),
     };
   }
 
   // Mensagem genérica: só vira botão quando há um link de verdade para abrir.
   if (href) {
-    return { kind: 'BUTTON', label: 'Abrir link', valueLabel: 'Link', value, href };
+    return {
+      kind: 'BUTTON',
+      label: 'Abrir link',
+      valueLabel: 'Link',
+      value,
+      href,
+      display: displayReference(value),
+    };
   }
-  return { kind: 'NOTE', valueLabel: 'Referência', value };
+  return { kind: 'NOTE', valueLabel: 'Referência', value, display: displayReference(value) };
 }
 
 export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmailView {
@@ -236,6 +269,9 @@ export function draftCommunication(
   const sentAt = digitalDelivery?.sentAt ?? order?.placedAt ?? med.transactionAt ?? null;
 
   const base = { from: EMAIL_SENDER_NAME, to, toName, sentAt };
+  // Saudacao com o primeiro nome quando o caso tem o nome. E como a mensagem
+  // transacional de verdade abre; "Ola," sozinho so aparece quando nao ha nome.
+  const greeting = toName ? `Olá, ${toName.trim().split(/\s+/)[0]}` : 'Olá';
 
   switch (template) {
     case 'PURCHASE_CONFIRMATION':
@@ -246,31 +282,38 @@ export function draftCommunication(
           ? `Confirmação da sua compra — ${productName}`
           : 'Confirmação da sua compra',
         body:
-          `Olá,\n\n` +
+          `${greeting}\n\n` +
           `Recebemos e confirmamos a sua compra${productName ? ` de ${productName}` : ''}${
             order?.externalId ? ` (pedido ${order.externalId})` : ''
           }.\n\n` +
           `Qualquer dúvida, é só responder a este e-mail.`,
         reference: order?.externalId ?? null,
       };
-    case 'ACCESS_DELIVERY':
+    case 'ACCESS_DELIVERY': {
+      // O link entra como referencia e vira o botao. Quando o caso nao tem
+      // link, o corpo pede o texto real em vez de fingir que ele existe — mas
+      // quando tem, a instrucao ao operador sairia impressa no comprovante.
+      const accessLink = digitalDelivery?.platform ?? null;
       return {
         ...base,
         template,
         subject: productName ? `Seu acesso — ${productName}` : 'Seu acesso está liberado',
         body:
-          `Olá,\n\n` +
-          `Seu acesso${productName ? ` a ${productName}` : ''} já está liberado.\n\n` +
-          `[Inclua aqui o link ou as instruções de acesso que foram realmente enviados.]`,
-        reference: digitalDelivery?.platform ?? null,
+          `${greeting}\n\n` +
+          `Seu acesso${productName ? ` a ${productName}` : ''} já está liberado.` +
+          (accessLink
+            ? ''
+            : `\n\n[Inclua aqui o link ou as instruções de acesso que foram realmente enviados.]`),
+        reference: accessLink,
       };
+    }
     case 'DELIVERY_CONFIRMATION':
       return {
         ...base,
         template,
         subject: 'Seu pedido foi entregue',
         body:
-          `Olá,\n\n` +
+          `${greeting}\n\n` +
           `Seu pedido${order?.externalId ? ` ${order.externalId}` : ''} foi entregue` +
           `${tracking?.trackingCode ? ` (rastreio ${tracking.trackingCode})` : ''}.\n\n` +
           `Obrigado pela preferência.`,

@@ -3,6 +3,8 @@
 import { useActionState } from 'react';
 import Link from 'next/link';
 import { FileDropField } from '@/components/ui/file-drop';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { SubmitButton } from '@/components/form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Panel, MetricCell, MetricStrip } from '@/components/ui';
@@ -18,6 +20,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 const KIND_LABEL: Record<DeliveryOutcomeKind, string> = {
   RECORDED: 'Registrado',
+  ACCESS_LINKED: 'Acesso ligado',
   NOT_DELIVERED: 'Não entregue',
   UNMATCHED: 'Sem MED',
   INVALID: 'Linha inválida',
@@ -25,6 +28,7 @@ const KIND_LABEL: Record<DeliveryOutcomeKind, string> = {
 
 const KIND_TONE: Record<DeliveryOutcomeKind, string> = {
   RECORDED: 'text-emerald-700 dark:text-emerald-400',
+  ACCESS_LINKED: 'text-emerald-700 dark:text-emerald-400',
   NOT_DELIVERED: 'text-destructive',
   UNMATCHED: 'text-muted-foreground',
   INVALID: 'text-amber-700 dark:text-amber-400',
@@ -48,6 +52,19 @@ export function DeliveryImportClient() {
             maxBytes={MAX_BYTES}
             hint="Export do provedor de e-mail. Precisa ter a coluna de message-id; as de primeiro acesso e URL do produto entram quando existem."
           />
+          <div className="flex items-start gap-3 rounded-lg border p-3">
+            <Checkbox id="gerarComprovantes" name="gerarComprovantes" defaultChecked />
+            <div className="grid gap-1 leading-snug">
+              <Label htmlFor="gerarComprovantes">
+                Gerar o comprovante de cada entrega registrada
+              </Label>
+              <p className="text-muted-foreground text-sm">
+                O log prova que a mensagem foi aceita pelo servidor do destinatário, não o que
+                ela dizia. Marcar aqui é você declarar que aqueles envios eram a liberação de
+                acesso. A peça sai com o selo de reconstrução, como toda reconstrução.
+              </p>
+            </div>
+          </div>
           <SubmitButton>Importar e registrar</SubmitButton>
         </form>
       </Panel>
@@ -72,6 +89,12 @@ export function DeliveryImportClient() {
               label="Com primeiro acesso"
               value={report.withFirstAccess}
               tone={report.withFirstAccess > 0 ? 'success' : 'neutral'}
+            />
+            <MetricCell label="Comprovantes gerados" value={report.receipts} />
+            <MetricCell
+              label="Acessos ligados"
+              value={report.accessLinked}
+              tone={report.accessLinked > 0 ? 'success' : 'neutral'}
             />
             <MetricCell label="Sem casamento" value={report.unmatched} />
           </MetricStrip>

@@ -18,13 +18,19 @@
 import type { AuthContext } from '@/infra/auth/context';
 import { getRepository } from '@/infra/container';
 import { assertCan } from '@/infra/auth/rbac';
-import { listMeds } from '@/services/medService';
+import { addCommunicationReconstruction, getCase, listMeds } from '@/services/medService';
+import { draftCommunication, EMAIL_SENDER_NAME } from '@/domain/communication/receipt';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
 import { parseDeliveryLog, type DeliveryLogRow } from '@/domain/import/deliveryLog';
 import { matchDeliveryLog, type MatchableMed } from '@/domain/import/deliveryMatch';
 
-export type DeliveryOutcomeKind = 'RECORDED' | 'NOT_DELIVERED' | 'UNMATCHED' | 'INVALID';
+export type DeliveryOutcomeKind =
+  | 'RECORDED'
+  | 'ACCESS_LINKED'
+  | 'NOT_DELIVERED'
+  | 'UNMATCHED'
+  | 'INVALID';
 
 export interface DeliveryImportLine {
   line: number;
@@ -35,9 +41,25 @@ export interface DeliveryImportLine {
   message: string;
 }
 
+export interface DeliveryImportOptions {
+  /**
+   * Gera o comprovante de cada entrega registrada.
+   *
+   * Fica como escolha, e nao como efeito automatico da importacao: o log prova
+   * que a mensagem foi aceita pelo servidor do destinatario, nao o que ela
+   * dizia. Quem opera e que declara que aquelas entregas eram a liberacao de
+   * acesso. O texto sai do caso, e a peca leva o selo de reconstrucao.
+   */
+  generateReceipts?: boolean;
+}
+
 export interface DeliveryImportReport {
   total: number;
   recorded: number;
+  /** Comprovantes de comunicacao gerados a partir das entregas registradas. */
+  receipts: number;
+  /** Liberacoes de acesso ligadas ao comprador pelo e-mail. */
+  accessLinked: number;
   notDelivered: number;
   unmatched: number;
   invalid: number;
@@ -63,6 +85,23 @@ function providerOf(messageId: string | null): string | undefined {
   return host.length > 0 ? host : undefined;
 }
 
+function normalizeEmail(value: string | null): string | null {
+  const email = value?.trim().toLowerCase();
+  return email && email.length > 0 ? email : null;
+}
+
+/**
+ * Corpo do comprovante de liberacao de acesso.
+ *
+ * Nao passa por `draftCommunication` de proposito: aqui nao ha operador para
+ * instruir, e o que o rascunho da tela deixa entre colchetes para alguem
+ * preencher sairia impresso na peca. Cada campo vem da propria linha do log.
+ */
+function accessReceiptBody(name: string | null): string {
+  const greeting = name ? `Olá, ${name.trim().split(/\s+/)[0]}` : 'Olá';
+  return `${greeting}\n\nSegue o seu acesso. Já está liberado.`;
+}
+
 function describeNotDelivered(row: DeliveryLogRow): string {
   if (row.outcome === 'BOUNCED') {
     return `Envio recusado pelo servidor do destinatário${
@@ -75,6 +114,7 @@ function describeNotDelivered(row: DeliveryLogRow): string {
 export async function importDeliveryLog(
   auth: AuthContext,
   text: string,
+  options: DeliveryImportOptions = {},
 ): Promise<DeliveryImportReport> {
   assertCan(auth.role, 'med:write');
 
@@ -82,6 +122,8 @@ export async function importDeliveryLog(
   const empty: DeliveryImportReport = {
     total: 0,
     recorded: 0,
+    receipts: 0,
+    accessLinked: 0,
     notDelivered: 0,
     unmatched: 0,
     invalid: 0,
@@ -108,7 +150,13 @@ export async function importDeliveryLog(
   const withoutDelivery = new Map<string, { id: string; medId: string }>(
     report.medsWithoutDelivery.map((med) => [med.id, { id: med.id, medId: med.medId }]),
   );
+  // E-mail do comprador -> MEDs dele, montado com as linhas que casaram. E a
+  // ponte para as linhas de liberacao de acesso, que nao trazem valor nem
+  // horario da cobranca e por isso nunca casariam sozinhas.
+  const medsByBuyer = new Map<string, MatchableMed[]>();
   let recorded = 0;
+  let receipts = 0;
+  let accessLinked = 0;
   let notDelivered = 0;
   let invalid = 0;
   let withFirstAccess = 0;
@@ -162,6 +210,34 @@ export async function importDeliveryLog(
 
     recorded += 1;
     if (row.firstAccessAt) withFirstAccess += 1;
+    const buyer = normalizeEmail(row.customerEmail);
+    if (buyer) {
+      const list = medsByBuyer.get(buyer) ?? [];
+      list.push(med);
+      medsByBuyer.set(buyer, list);
+    }
+
+    if (options.generateReceipts) {
+      // Recarrega o caso: o rascunho le a entrega que acabou de ser gravada, e
+      // e dela que saem destinatario, data e link. Sem recarregar, o
+      // comprovante sairia com o caso de antes da importacao.
+      const medCase = await getCase(auth, med.id);
+      const draft = draftCommunication(medCase, 'ACCESS_DELIVERY');
+      await addCommunicationReconstruction(auth, med.id, {
+        template: draft.template,
+        from: draft.from,
+        to: draft.to,
+        toName: draft.toName ?? undefined,
+        subject: draft.subject,
+        sentAt: draft.sentAt ?? undefined,
+        body: draft.body,
+        reference: draft.reference ?? undefined,
+        source: 'EMAIL',
+        sourceReference: row.messageId ?? undefined,
+      });
+      receipts += 1;
+    }
+
     lines.push({
       line: row.line,
       medId: med.medId,
@@ -174,6 +250,46 @@ export async function importDeliveryLog(
   }
 
   for (const { row, reason } of report.unmatchedRows) {
+    // Linha de liberacao de acesso: nao traz valor nem horario da cobranca,
+    // entao nao casa por transacao — casa pelo comprador. O comprovante que
+    // ela gera fica inteiro dentro da propria linha: data, message-id e link
+    // sao os dela, e nao se misturam com os do e-mail de cobranca.
+    const buyer = normalizeEmail(row.customerEmail);
+    const meds = buyer ? medsByBuyer.get(buyer) : undefined;
+    const sentAt = row.deliveredAt ?? row.sentAt;
+    if (options.generateReceipts && meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
+      for (const med of meds) {
+        await addCommunicationReconstruction(auth, med.id, {
+          template: 'ACCESS_DELIVERY',
+          from: EMAIL_SENDER_NAME,
+          to: row.customerEmail ?? '',
+          toName: row.customerName ?? med.payerName ?? undefined,
+          // Assunto genérico de propósito: o nome do produto na peça diz à
+          // instituição o que a pessoa comprou, e isso não é assunto dela.
+          subject: 'Seu acesso está liberado',
+          sentAt,
+          body: accessReceiptBody(row.customerName ?? med.payerName),
+          reference: row.productUrl,
+          source: 'EMAIL',
+          sourceReference: row.messageId ?? undefined,
+        });
+      }
+      accessLinked += 1;
+      lines.push({
+        line: row.line,
+        medId: meds.map((med) => med.medId).join(', '),
+        customerEmail: row.customerEmail,
+        kind: 'ACCESS_LINKED',
+        message:
+          `Liberação de acesso${row.productName ? ` a ${row.productName}` : ''} ligada pelo e-mail do comprador` +
+          `${meds.length > 1 ? ` (${meds.length} MEDs dele)` : ''}` +
+          `${row.firstAccessAt ? ', com primeiro acesso registrado' : ''}. ` +
+          'A data e o message-id do comprovante são os desta linha, não os do e-mail da cobrança.',
+      });
+      if (row.firstAccessAt) withFirstAccess += 1;
+      continue;
+    }
+
     lines.push({
       line: row.line,
       medId: null,
@@ -194,14 +310,18 @@ export async function importDeliveryLog(
       naoEntregues: notDelivered,
       semCasamento: report.unmatchedRows.length,
       comPrimeiroAcesso: withFirstAccess,
+      comprovantesGerados: receipts,
+      acessosLigados: accessLinked,
     },
   });
 
   return {
     total: parsed.rows.length,
     recorded,
+    receipts,
+    accessLinked,
     notDelivered,
-    unmatched: report.unmatchedRows.length,
+    unmatched: report.unmatchedRows.length - accessLinked,
     invalid,
     withFirstAccess,
     lines: lines.sort((a, b) => a.line - b.line),

@@ -57,7 +57,7 @@ export interface ParsedDeliveryLog {
 
 const FIELD_ALIASES: Record<keyof Omit<DeliveryLogRow, 'line' | 'outcome' | 'errors'>, string[]> = {
   transactionRef: ['txnid', 'transactionid', 'idtransacao', 'reference'],
-  purchaseAt: ['purchaseat', 'datacompra', 'compraem', 'purchasedate'],
+  purchaseAt: ['purchaseat', 'datacompra', 'compraem', 'purchasedate', 'eventts', 'datahora'],
   amount: ['amountbrl', 'amount', 'valor', 'valorbrl'],
   customerName: ['customername', 'nomecliente', 'cliente', 'nome'],
   customerEmail: ['customeremail', 'emailcliente', 'email', 'destinatario', 'to'],

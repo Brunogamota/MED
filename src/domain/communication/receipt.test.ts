@@ -74,6 +74,8 @@ describe('botão da mensagem', () => {
       valueLabel: 'Link de acesso',
       value: 'https://membros.exemplo.com/x',
       href: 'https://membros.exemplo.com/x',
+      // O botão leva ao destino real; impressa, a URL sai só como domínio.
+      display: 'membros.exemplo.com/…',
     });
 
     // Sem URL o botão continua aparecendo — era o botão que o cliente via —,

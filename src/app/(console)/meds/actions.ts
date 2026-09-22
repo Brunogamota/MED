@@ -582,7 +582,9 @@ export async function importDeliveryLogAction(
     return { report: null, error: 'Escolha o arquivo do log de envio.' };
   }
 
-  const report = await importDeliveryLog(serverPageContext(), read.csv);
+  const report = await importDeliveryLog(serverPageContext(), read.csv, {
+    generateReceipts: form.get('gerarComprovantes') === 'on',
+  });
   revalidatePath('/meds');
   return { report, error: report.fatalError };
 }

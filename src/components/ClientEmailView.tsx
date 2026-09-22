@@ -99,7 +99,7 @@ function ActionButton({ action }: { action: ClientEmailAction }) {
       <p className="mt-2 text-[11px] text-[#71717a]">
         {action.valueLabel}:{' '}
         <span className="break-all font-mono text-[#52525b]">
-          {action.value}
+          {action.display}
         </span>
       </p>
     </div>
@@ -140,23 +140,6 @@ export function ClientEmailView({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#d4d4d8] bg-white shadow-sm">
-      {/* Selo de reconstrução — inseparável da peça */}
-      <div className="flex items-start gap-2 border-b border-[#e5e5e5] bg-[#fafafa] px-5 py-2.5 text-[11px] leading-snug text-[#8a8a92]">
-        <svg
-          width={13}
-          height={13}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          className="mt-px shrink-0"
-          aria-hidden
-        >
-          <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-        </svg>
-        <span>{view.stamp}</span>
-      </div>
-
       {/* Barra do painel — identidade do gateway + status do envio */}
       <div className="flex items-center justify-between gap-3 border-b border-[#e5e5e5] bg-[#fafafa] px-5 py-3.5">
         <div className="flex min-w-0 items-center gap-2.5">
@@ -241,6 +224,20 @@ export function ClientEmailView({
           {view.action ? <ActionButton action={view.action} /> : null}
         </div>
       </div>
+
+      {/*
+        Declaração de origem — inseparável da peça.
+
+        Saiu do topo, onde abria o documento com um alerta, e virou a linha de
+        rodapé que todo comprovante tem. O que ela diz não muda: isto foi
+        gerado a partir dos registros do caso e não é uma captura da tela do
+        painel. É essa frase que separa representação honesta de falsificação,
+        e é ela que sustenta a peça se a instituição perguntar como foi feita.
+        Nunca remova.
+      */}
+      <p className="border-t border-[#e5e5e5] px-5 py-3 text-[10px] leading-snug text-[#a1a1aa]">
+        {view.stamp}
+      </p>
     </div>
   );
 }

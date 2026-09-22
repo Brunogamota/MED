@@ -3,6 +3,7 @@ import type { EvidencePack } from '@/domain/types';
 import {
   parseCommunicationReceipt,
   buildClientEmailView,
+  displayReference,
   COMMUNICATION_TEMPLATE_LABEL,
 } from '@/domain/communication/receipt';
 import { getEvidenceDefinition } from '@/domain/evidence/catalog';
@@ -692,9 +693,15 @@ function drawCommunications(context: DocumentContext, pack: EvidencePack): void 
       context.y -= 2;
     }
     if (view.reference) {
-      drawParagraph(context, `Referência: ${view.reference}`, { size: 8.5, color: COLORS.muted });
+      // Mesma regra da tela: o link vai encurtado. O relatório é lido por
+      // quem analisa o MED e por quem faz PLD, e nenhum dos dois precisa do
+      // caminho de acesso do comprador por extenso.
+      drawParagraph(context, `Referência: ${displayReference(view.reference)}`, {
+        size: 8.5,
+        color: COLORS.muted,
+      });
     }
-    drawParagraph(context, view.stamp, { size: 7.5, color: COLORS.danger });
+    drawParagraph(context, view.stamp, { size: 7.5, color: COLORS.muted });
     context.y -= 8;
   }
 }
