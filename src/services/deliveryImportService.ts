@@ -99,6 +99,22 @@ export interface DeliveryImportReport {
    */
   withoutMessageId: number;
   /**
+   * Envios que vieram repetidos entre os arquivos subidos e entraram uma vez so.
+   *
+   * Nao e erro nem descarte de dado: o export do provedor costuma vir partido
+   * **e** junto, e subir os tres arquivos e o razoavel a fazer. O numero existe
+   * para a tela explicar por que leu mais linhas do que registrou envios.
+   */
+  duplicated: number;
+  /**
+   * Ids internos dos casos em que esta importacao gravou alguma coisa.
+   *
+   * E o que permite agir sobre o lote recem-importado sem voltar a fila e
+   * reencontrar a selecao a mao — que e o passo em que se perde qual caso era
+   * de qual arquivo.
+   */
+  touchedMedIds: string[];
+  /**
    * Liberacoes anteriores a cobranca, recusadas como comprovante.
    *
    * O numero importa por si: se quase todo caso cai aqui, a entrega que o
@@ -165,24 +181,53 @@ function describeNotDelivered(row: DeliveryLogRow): string {
   return `Status "${row.rawStatus ?? 'desconhecido'}" não é entrega concluída. Nada foi registrado.`;
 }
 
+interface MergedLog extends ParsedDeliveryLog {
+  /** Linhas descartadas por repetirem um message-id ja visto. */
+  duplicated: number[];
+}
+
 /**
- * Junta o que foi lido de cada arquivo numa lista so.
+ * Junta o que foi lido de cada arquivo numa lista so, sem repetir envio.
  *
  * As linhas de arquivos diferentes nao podem colidir de numero, senao o
  * relatorio manda a pessoa conferir a linha errada: cada arquivo continua de
  * onde o anterior parou, com um salto no meio para a fronteira ficar visivel.
  */
-function mergeParsed(partes: ParsedDeliveryLog[]): ParsedDeliveryLog {
+function mergeParsed(partes: ParsedDeliveryLog[]): MergedLog {
   const comErro = partes.find((parte) => parte.fatalError);
-  if (comErro) return { rows: [], fatalError: comErro.fatalError };
+  if (comErro) return { rows: [], fatalError: comErro.fatalError, duplicated: [] };
 
   const rows: DeliveryLogRow[] = [];
+  const vistos = new Map<string, number>();
+  const repetidas: number[] = [];
   let deslocamento = 0;
   for (const parte of partes) {
-    for (const row of parte.rows) rows.push({ ...row, line: row.line + deslocamento });
+    for (const row of parte.rows) {
+      const linha = row.line + deslocamento;
+      // O export do provedor costuma vir partido **e** junto: um arquivo de
+      // cobrancas, um de entregas, e um "completo" que e os dois somados. Quem
+      // sobe os tres de uma vez — o que e o razoavel a fazer quando chegam os
+      // tres — mandava cada envio duas vezes, e a segunda passagem nao tinha
+      // mais MED livre a que se ligar: 112 linhas para 56 envios, e 32
+      // "sem casamento" que nao eram falha de dado nenhuma.
+      //
+      // O message-id resolve sem heuristica. Ele e atribuido uma vez, quando a
+      // mensagem entra na fila, e nao muda depois: duas linhas com o mesmo
+      // message-id sao o mesmo envio, venham do arquivo que vierem.
+      const chave = row.messageId?.trim().toLowerCase();
+      if (chave) {
+        const primeira = vistos.get(chave);
+        if (primeira !== undefined) {
+          repetidas.push(linha);
+          continue;
+        }
+        vistos.set(chave, linha);
+      }
+      rows.push({ ...row, line: linha });
+    }
     deslocamento += parte.rows.length + 1;
   }
-  return { rows, fatalError: null };
+  return { rows, fatalError: null, duplicated: repetidas };
 }
 
 export async function importDeliveryLog(
@@ -203,6 +248,8 @@ export async function importDeliveryLog(
     receipts: 0,
     accessLinked: 0,
     withoutMessageId: 0,
+    duplicated: 0,
+    touchedMedIds: [],
     anachronistic: 0,
     notDelivered: 0,
     unmatched: 0,
@@ -274,6 +321,10 @@ export async function importDeliveryLog(
   let receipts = 0;
   let accessLinked = 0;
   let withoutMessageId = 0;
+  // Casos em que esta importacao gravou alguma coisa, na ordem em que foram
+  // alcancados. `Set` porque o mesmo MED pode ser tocado pela cobranca e pela
+  // liberacao de acesso, e e um caso so.
+  const touched = new Set<string>();
   let anachronistic = 0;
   let notDelivered = 0;
   let invalid = 0;
@@ -350,6 +401,7 @@ export async function importDeliveryLog(
     }
 
     recorded += 1;
+    touched.add(med.id);
     if (row.firstAccessAt) withFirstAccess += 1;
     const buyer = normalizeEmail(row.customerEmail);
     if (buyer) {
@@ -534,6 +586,7 @@ export async function importDeliveryLog(
       if (eligible.length === 0) continue;
 
       for (const med of eligible) {
+        touched.add(med.id);
         // A URL fica no registro de entrega, e nao so dentro do comprovante:
         // e o endereco onde o acesso foi liberado, e a tela do MED mostra
         // isso mesmo que ninguem gere peca nenhuma.
@@ -625,6 +678,7 @@ export async function importDeliveryLog(
       comprovantesGerados: receipts,
       acessosLigados: accessLinked,
       semMessageId: withoutMessageId,
+      repetidosEntreArquivos: parsed.duplicated.length,
       acessosAnterioresACobranca: anachronistic,
     },
   });
@@ -635,6 +689,8 @@ export async function importDeliveryLog(
     receipts,
     accessLinked,
     withoutMessageId,
+    duplicated: parsed.duplicated.length,
+    touchedMedIds: [...touched],
     anachronistic,
     notDelivered,
     unmatched: report.unmatchedRows.length - accessLinked,

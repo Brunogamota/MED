@@ -12,7 +12,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/cn';
 import {
   importDeliveryLogAction,
+  markSubmittedAction,
   type DeliveryImportState,
+  type MarkSubmittedState,
 } from '@/app/(console)/meds/actions';
 import type { DeliveryOutcomeKind } from '@/services/deliveryImportService';
 
@@ -41,7 +43,12 @@ export function DeliveryImportClient() {
     importDeliveryLogAction,
     null,
   );
+  const [sent, markSent] = useActionState<MarkSubmittedState | null, FormData>(
+    markSubmittedAction,
+    null,
+  );
   const report = state?.report ?? null;
+  const touched = report?.touchedMedIds ?? [];
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
@@ -128,6 +135,9 @@ export function DeliveryImportClient() {
               value={report.accessLinked}
               tone={report.accessLinked > 0 ? 'success' : 'neutral'}
             />
+            {report.duplicated > 0 ? (
+              <MetricCell label="Repetidos entre arquivos" value={report.duplicated} />
+            ) : null}
             <MetricCell label="Sem casamento" value={report.unmatched} />
             <MetricCell label="MEDs no sistema" value={report.medsConsidered} />
           </MetricStrip>
@@ -140,6 +150,22 @@ export function DeliveryImportClient() {
                 então não há por onde ligar as linhas deste arquivo. O problema está do lado dos
                 MEDs, não deste arquivo: reimporte o lote no passo 1 conferindo se a coluna do
                 nome (“Nome Debitado”) foi reconhecida.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {report.duplicated > 0 ? (
+            <Alert>
+              <AlertTitle>
+                {report.duplicated} linha{report.duplicated > 1 ? 's' : ''} repetida
+                {report.duplicated > 1 ? 's' : ''} entre os arquivos
+              </AlertTitle>
+              <AlertDescription>
+                O export do provedor costuma vir partido <em>e</em> junto — um arquivo de
+                cobranças, um de entregas, e um “completo” que é os dois somados. Subir os três é
+                o certo a fazer, e o mesmo envio aparece mais de uma vez. Cada envio entrou uma
+                vez só, pelo message-id, que não muda depois que a mensagem é enfileirada. Nada
+                foi perdido: são {report.total} envios distintos.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -185,6 +211,37 @@ export function DeliveryImportClient() {
                 comprou. Entrega de e-mail sozinha só prova que a mensagem chegou.
               </AlertDescription>
             </Alert>
+          ) : null}
+
+          {touched.length > 0 ? (
+            <Panel title="Depois de enviar a defesa">
+              {sent?.marked ? (
+                <p className="text-sm">
+                  {sent.marked} caso{sent.marked > 1 ? 's' : ''} marcado
+                  {sent.marked > 1 ? 's' : ''} como Enviado.{' '}
+                  <Link href="/meds?view=enviados" className="font-medium hover:underline">
+                    Ver em Enviados
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <>
+                  <p className="text-muted-foreground text-sm">
+                    Esta importação anexou registro a {touched.length} caso
+                    {touched.length > 1 ? 's' : ''}. Quando a defesa desses casos já tiver ido
+                    para a instituição, marque aqui — é a declaração de que foi enviada, e é o
+                    único passo que o sistema não tem como saber sozinho.
+                  </p>
+                  <form action={markSent} className="mt-3">
+                    <input type="hidden" name="medIds" value={JSON.stringify(touched)} />
+                    <SubmitButton>Enviar ({touched.length})</SubmitButton>
+                  </form>
+                  {sent?.error ? (
+                    <p className="mt-2 text-destructive text-sm">{sent.error}</p>
+                  ) : null}
+                </>
+              )}
+            </Panel>
           ) : null}
 
           <Panel flush title={`Resultado por linha (${report.lines.length})`}>

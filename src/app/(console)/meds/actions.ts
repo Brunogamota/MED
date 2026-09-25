@@ -739,6 +739,48 @@ export interface DeliveryImportState {
   error: string | null;
 }
 
+export interface MarkSubmittedState {
+  /** Quantos casos passaram a Enviado nesta declaracao. */
+  marked: number;
+  error: string | null;
+}
+
+/**
+ * Declara como Enviado o lote que a importacao acabou de tocar.
+ *
+ * Existe aqui, e nao so na fila, porque e aqui que se sabe quais casos sao. Ao
+ * voltar para a fila, quem opera tem de reencontrar a selecao a mao entre
+ * cento e tantos casos — e e nesse passo que se perde qual caso era de qual
+ * arquivo, ou se marca um que nao foi.
+ *
+ * O que se declara continua sendo o mesmo: que a defesa **foi enviada** a
+ * instituicao. Importar evidencia nao envia nada; quem envia e quem opera, e
+ * por isso o botao e um segundo ato, e nao um efeito da importacao.
+ */
+export async function markSubmittedAction(
+  _previous: MarkSubmittedState | null,
+  form: FormData,
+): Promise<MarkSubmittedState> {
+  const medIds = medIdsFrom(form);
+  if (medIds.length === 0) return { marked: 0, error: 'Nenhum caso para marcar.' };
+
+  const auth = serverPageContext();
+  let marked = 0;
+  for (const medId of medIds) {
+    try {
+      await setMedOutcome(auth, medId, 'SUBMITTED');
+      marked += 1;
+      revalidatePath(`/meds/${medId}`);
+    } catch {
+      // Caso inelegivel ou fora da organizacao: fica como esta, e a conta no
+      // fim diz quantos entraram de verdade.
+    }
+  }
+  revalidatePath('/meds');
+  revalidatePath('/');
+  return { marked, error: null };
+}
+
 /**
  * Importa o log de envio do provedor e registra a entrega nos MEDs.
  *
