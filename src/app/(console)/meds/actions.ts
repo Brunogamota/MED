@@ -32,6 +32,7 @@ import {
 } from '@/domain/schemas';
 import { address, compact, dateTime, integer, number, text } from '@/lib/forms';
 import { looksZipped, readZipEntries, ZipError } from '@/lib/zip';
+import { looksXlsx, xlsxToCsv, XlsxError } from '@/lib/xlsx';
 import { importParsedMeds } from '@/services/importService';
 import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentService';
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
@@ -473,25 +474,51 @@ const TABLE_EXTENSIONS = ['.csv', '.tsv', '.txt'];
 async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | { ok: false; error: string }> {
   const bytes = new Uint8Array(await file.arrayBuffer());
 
-  if (looksZipped(bytes)) {
+  // Antes do zip, e nao depois: um .xlsx **e** um zip, e cairia no ramo de
+  // baixo, que procuraria .csv dentro dele e diria que o export saiu
+  // incompleto — quando o arquivo esta inteiro e certo.
+  if (looksXlsx(bytes)) {
     try {
-      const tabelas = readZipEntries(bytes, MAX_UNZIPPED).filter((entry) => {
-        const nome = entry.name.toLowerCase();
-        if (nome.includes('__macosx/') || nome.startsWith('.')) return false;
-        return TABLE_EXTENSIONS.some((extensao) => nome.endsWith(extensao));
-      });
-      if (tabelas.length === 0) {
-        return {
-          ok: false,
-          error: `"${file.name}" não tem nenhum .csv dentro. Confira se o export saiu completo.`,
-        };
-      }
-      return { ok: true, texts: tabelas.map((entry) => entry.bytes.toString('utf8')) };
+      return { ok: true, texts: [xlsxToCsv(bytes)] };
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof ZipError ? error.message : `Não foi possível abrir "${file.name}".`,
+        error:
+          error instanceof XlsxError
+            ? error.message
+            : `Não foi possível ler a planilha "${file.name}". Salve como CSV e suba o CSV.`,
       };
+    }
+  }
+
+  if (looksZipped(bytes)) {
+    try {
+      const tabelas: string[] = [];
+      for (const entry of readZipEntries(bytes, MAX_UNZIPPED)) {
+        const nome = entry.name.toLowerCase();
+        if (nome.includes('__macosx/') || nome.startsWith('.')) continue;
+        // Planilha dentro do zip vira tabela do mesmo jeito: quem zipa o que a
+        // instituicao mandou nao devia ter de abrir para converter primeiro.
+        if (looksXlsx(entry.bytes)) {
+          tabelas.push(xlsxToCsv(entry.bytes));
+          continue;
+        }
+        if (TABLE_EXTENSIONS.some((extensao) => nome.endsWith(extensao))) {
+          tabelas.push(entry.bytes.toString('utf8'));
+        }
+      }
+      if (tabelas.length === 0) {
+        return {
+          ok: false,
+          error: `"${file.name}" não tem nenhuma tabela dentro. Confira se o export saiu completo.`,
+        };
+      }
+      return { ok: true, texts: tabelas };
+    } catch (error) {
+      if (error instanceof ZipError || error instanceof XlsxError) {
+        return { ok: false, error: error.message };
+      }
+      return { ok: false, error: `Não foi possível abrir "${file.name}".` };
     }
   }
 
@@ -499,17 +526,19 @@ async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | 
   if (looksBinary(content)) {
     return {
       ok: false,
-      error: `"${file.name}" não é texto. Exporte a planilha como CSV — .xlsx e .xls não são lidos aqui.`,
+      // `.xlsx` ja foi tratado acima. O que sobra aqui e outro binario: .xls
+      // antigo, PDF, imagem de print.
+      error: `"${file.name}" não é texto nem planilha .xlsx. Salve como CSV e suba o CSV.`,
     };
   }
   return { ok: true, texts: [content] };
 }
 
 /**
- * O parser le o arquivo como texto. Um .xlsx e um zip, e `file.text()` devolve
- * bytes ilegiveis que o parser trataria como um cabecalho enorme e sem sentido
- * — dezenas de "coluna ignorada" no lugar de dizer o que aconteceu. A tela ja
- * recusa a extensao errada; isto cobre quem chega pela API.
+ * O parser le o arquivo como texto. Planilha e zip viram texto antes de chegar
+ * nele; o que nao der para converter e recusado com o motivo, em vez de entrar
+ * como bytes ilegiveis que o parser trataria como um cabecalho enorme e sem
+ * sentido — dezenas de "coluna ignorada" no lugar de dizer o que aconteceu.
  */
 async function readImportText(form: FormData): Promise<ImportRead> {
   const file = form.get('file');

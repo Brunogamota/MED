@@ -144,7 +144,13 @@ const COLUMN_ALIASES: Record<ImportField, string[]> = {
    * Campo composto de alguns gateways: "Payer Name: X | Payer Document: CPF Y".
    * Lido aqui em vez de ignorado — o CPF do pagador costuma vir so nele.
    */
-  payerDetails: ['dadosdousuario', 'dadosusuario', 'dadosdopagador', 'payerdata', 'payerinfo'],
+  payerDetails: [
+    'dadosdousuario', 'dadosusuario', 'dadosdopagador', 'payerdata', 'payerinfo',
+    // A mesma coluna da adquirente, na planilha: "Dados do usuário no pedido".
+    // Sem este nome ela caia em "ignoradas", e o CPF do pagador — que so vem
+    // aqui — ficava fora do caso.
+    'dadosdousuarionopedido', 'dadosdousuariodopedido', 'dadosusuariopedido',
+  ],
   requestingInstitution: ['instituicao', 'instituicaosolicitante', 'banco', 'ispb', 'instituicaorequerente', 'psp', 'participante', 'pspcriador', 'pspsolicitante'],
   productType: ['tipoproduto', 'tipodeproduto', 'producttype', 'tipo', 'segmento'],
   payerName: ['nome', 'nomecliente', 'nomepagador', 'cliente', 'pagador', 'payername', 'nomedocliente', 'nomecomprador', 'nomedebitado', 'nomedobitado', 'customername'],

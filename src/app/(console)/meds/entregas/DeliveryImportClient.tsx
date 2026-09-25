@@ -60,7 +60,7 @@ export function DeliveryImportClient() {
           <FileDropField
             name="file"
             label="Export do provedor"
-            extensions={['.csv', '.tsv', '.txt', '.zip']}
+            extensions={['.csv', '.tsv', '.txt', '.xlsx', '.zip']}
             maxBytes={MAX_BYTES}
             multiple
             hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Se vier zipado, sobe o .zip mesmo. Cada coluna que existir é aproveitada: id da transação, e-mail, message-id, URL do produto, primeiro acesso."
