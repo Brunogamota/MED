@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCheck, Download, RefreshCw, Send, Trash2 } from 'lucide-react';
+import { CheckCheck, Download, FileText, RefreshCw, Send, Trash2 } from 'lucide-react';
 import {
   batchDeleteMedsAction,
   batchGenerateDefensesAction,
@@ -295,6 +295,14 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
               >
                 <Download data-icon="inline-start" />
                 Exportar
+              </Button>
+              {/* Abre em aba nova: a fila continua com a selecao de pe, e o
+                  lote vai para o PDF sem perder onde se estava. */}
+              <Button variant="ghost" size="sm" asChild>
+                <a href={`/meds/comprovantes?ids=${[...selected].join(',')}`} target="_blank" rel="noreferrer">
+                  <FileText data-icon="inline-start" />
+                  Comprovantes ({selected.size})
+                </a>
               </Button>
               <Button
                 variant="outline"
