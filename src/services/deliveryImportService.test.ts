@@ -3,7 +3,7 @@ import { __setRepositoryForTests, getRepository } from '@/infra/container';
 import { InMemoryMedRepository } from '@/infra/repositories/memory';
 import { ForbiddenError } from '@/infra/auth/rbac';
 import type { AuthContext } from '@/infra/auth/context';
-import { createMed } from '@/services/medService';
+import { createMed, getCase, listMeds } from '@/services/medService';
 import { importDeliveryLog } from '@/services/deliveryImportService';
 
 const auth: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'teste' };
@@ -309,5 +309,59 @@ describe('importar log de envio', () => {
   it('quem nao pode escrever MED nao importa entrega', async () => {
     const viewer: AuthContext = { organizationId: 'org_a', role: 'VIEWER', actor: 'teste' };
     await expect(importDeliveryLog(viewer, LOG)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+});
+
+/**
+ * O caminho mais forte: o log de envio traz, na coluna da transacao, o proprio
+ * numero do MED. Nao ha nome para comparar, valor para conferir nem arquivo de
+ * cobrancas para casar antes — a linha diz de que caso ela e.
+ */
+describe('log de envio que traz o numero do MED', () => {
+  const E2E = 'E18236120202609220604s1415b933c2';
+
+  const LOG_COM_E2E = [
+    'txn_id,customer_name,customer_email,message_id,status,delivered_at,first_access_at,product_url,smtp_response',
+    `${E2E},Nome Que Nao Casa,outro@exemplo.com,<m9@mta03.exemplo.com.br>,delivered,2026-09-22 04:10:00,2026-09-22 05:01:00,https://console.exemplo.com/p/xyz,250 OK`,
+  ].join('\n');
+
+  beforeEach(async () => {
+    await createMed(auth, {
+      medId: E2E,
+      amount: 34.8,
+      currency: 'BRL',
+      openedAt: '2026-09-23T12:00:00.000Z',
+      transactionAt: '2026-09-22T03:04:33.000Z',
+      reason: 'FRAUD_SCAM',
+      payer: { name: 'Antônio Marcos Alves da Silva Júnior' },
+    });
+  });
+
+  it('casa pelo identificador mesmo com nome e e-mail diferentes', async () => {
+    const report = await importDeliveryLog(auth, LOG_COM_E2E);
+
+    expect(report.unmatched).toBe(0);
+    expect(report.accessLinked).toBe(1);
+
+    // A linha nao traz valor nem horario da cobranca, entao o casador nao a
+    // alcanca: quem ligou foi o identificador. O que importa e que o envio
+    // ficou gravado no caso certo.
+    const linha = report.lines.find((line) => line.medId === E2E);
+    expect(linha?.kind).toBe('ACCESS_LINKED');
+
+    const fila = await listMeds(auth, { limit: 100 });
+    const alvo = fila.find((linha) => linha.med.medId === E2E);
+    const caso = await getCase(auth, alvo?.med.id ?? '');
+    expect(caso.digitalDelivery?.sentTo).toBe('outro@exemplo.com');
+  });
+
+  it('identificador que nao existe nao cai no nome nem no e-mail', async () => {
+    const outro = LOG_COM_E2E.replace(E2E, 'E99999999202609220604s0000000000');
+    const report = await importDeliveryLog(auth, outro);
+
+    // O nome do log nao corresponde a nenhum MED, e o identificador tambem nao:
+    // a linha fica sem casar em vez de ser encaixada em algum caso.
+    expect(report.recorded).toBe(0);
+    expect(report.unmatched).toBe(1);
   });
 });

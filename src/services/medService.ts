@@ -10,6 +10,7 @@ import type {
   Tracking,
   Transaction,
 } from '@/domain/types';
+import { DECLARABLE_OUTCOMES } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type { AuthContext } from '@/infra/auth/context';
 import { assertCan } from '@/infra/auth/rbac';
@@ -120,6 +121,11 @@ async function refreshStatus(
     entityType: 'Med',
     entityId: medId,
     medId,
+    // Quem mudou o status aqui foi o motor, olhando a evidencia do caso —
+    // ninguem declarou nada. `recordAudit` assume MANUAL quando a origem nao
+    // vem, e o padrao carimbava o calculo como decisao do operador: o log
+    // dizia que alguem tinha marcado "aguardando evidencia" a mao.
+    source: 'SYSTEM_DERIVED',
     previousValue: medCase.med.status,
     newValue: next,
   });
@@ -302,15 +308,11 @@ export async function updateMed(
 }
 
 /**
- * Desfechos que o operador declara.
- *
- * Sao os unicos status que o sistema **nao** tem como derivar: se a instituicao
- * aceitou ou recusou a defesa, quem sabe e quem leu a resposta. O resto do
- * quadro — falta evidencia, pronto para enviar — sai da evidencia que existe,
- * e deixar alguem marcar "pronto para envio" com evidencia faltando seria o
- * sistema afirmar algo que o caso nao sustenta.
+ * Reexportado para nao mudar quem ja importava daqui. A lista mora no dominio
+ * (`@/domain/types`): a tela precisa dela, e importar deste modulo levaria o
+ * Prisma para o bundle do navegador.
  */
-export const DECLARABLE_OUTCOMES: MedStatus[] = ['SUBMITTED', 'ACCEPTED', 'REJECTED', 'EXPIRED'];
+export { DECLARABLE_OUTCOMES };
 
 /**
  * Grava o desfecho declarado, ou devolve o caso ao calculo automatico.

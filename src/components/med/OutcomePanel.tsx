@@ -1,9 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui';
 import { MED_STATUS_LABEL } from '@/lib/labels';
-import { DECLARABLE_OUTCOMES } from '@/services/medService';
 import { setMedOutcomeAction } from '@/app/(console)/meds/actions';
-import type { MedStatus } from '@/domain/types';
+import { DECLARABLE_OUTCOMES, type MedStatus } from '@/domain/types';
 
 /**
  * Desfecho do caso, declarado por quem opera.

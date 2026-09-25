@@ -1,4 +1,5 @@
 import type { MedReason, ProductType } from '@/domain/types';
+import { looksLikeEndToEndId } from '@/domain/identifiers';
 
 /**
  * Importacao de MEDs em lote a partir do arquivo da adquirente.
@@ -121,14 +122,14 @@ export type ImportField =
  */
 const COLUMN_ALIASES: Record<ImportField, string[]> = {
   medId: ['medid', 'id', 'idmed', 'iddomed', 'numeromed', 'protocolo', 'protocolomed', 'codigomed', 'identificadormed'],
-  transactionId: ['transactionid', 'idtransacao', 'idtransaction', 'transacao', 'idpagamento', 'paymentid', 'reference', 'referencia'],
+  transactionId: ['transactionid', 'idtransacao', 'idtransaction', 'transacao', 'idpagamento', 'paymentid', 'reference', 'referencia', 'txnid', 'idtxn'],
   endToEndId: ['endtoendid', 'e2eid', 'endtoend', 'ide2e', 'idendtoend'],
   pixId: ['pixid', 'idpix', 'txid'],
-  amount: ['valor', 'amount', 'valortransacao', 'valorcontestado', 'valordacompra', 'valorpix', 'vlr'],
+  amount: ['valor', 'amount', 'valortransacao', 'valorcontestado', 'valordacompra', 'valorpix', 'vlr', 'amountbrl', 'valorbrl'],
   transactionAt: [
     'datatransacao', 'datadatransacao', 'datacompra', 'datadacompra', 'datahoracompra',
     'datahoratransacao', 'transactionat', 'transactiondate', 'datapagamento', 'datahorapagamento',
-    'pagamentotransacao', 'datahora',
+    'pagamentotransacao', 'datahora', 'purchaseat', 'paidat', 'datadopagamento',
   ],
   openedAt: ['dataabertura', 'dataaberturamed', 'dataabertura med', 'aberturamed', 'openedat', 'datasolicitacao', 'datamed', 'datanotificacao'],
   responseDeadlineAt: ['prazo', 'prazoresposta', 'prazoderesposta', 'datalimite', 'datalimiteresposta', 'deadline', 'vencimento', 'dataprazo'],
@@ -146,9 +147,9 @@ const COLUMN_ALIASES: Record<ImportField, string[]> = {
   payerDetails: ['dadosdousuario', 'dadosusuario', 'dadosdopagador', 'payerdata', 'payerinfo'],
   requestingInstitution: ['instituicao', 'instituicaosolicitante', 'banco', 'ispb', 'instituicaorequerente', 'psp', 'participante', 'pspcriador', 'pspsolicitante'],
   productType: ['tipoproduto', 'tipodeproduto', 'producttype', 'tipo', 'segmento'],
-  payerName: ['nome', 'nomecliente', 'nomepagador', 'cliente', 'pagador', 'payername', 'nomedocliente', 'nomecomprador', 'nomedebitado', 'nomedobitado'],
+  payerName: ['nome', 'nomecliente', 'nomepagador', 'cliente', 'pagador', 'payername', 'nomedocliente', 'nomecomprador', 'nomedebitado', 'nomedobitado', 'customername'],
   payerDocument: ['cpf', 'cnpj', 'cpfcnpj', 'documento', 'documentocliente', 'documentopagador', 'payerdocument', 'cpfdocliente'],
-  payerEmail: ['email', 'emailcliente', 'emailpagador', 'payeremail', 'emaildocliente'],
+  payerEmail: ['email', 'emailcliente', 'emailpagador', 'payeremail', 'emaildocliente', 'customeremail'],
   payerPhone: ['telefone', 'celular', 'telefonecliente', 'payerphone', 'fone', 'whatsapp'],
   /**
    * `customer` entra aqui, e nao no pagador, porque este leitor le arquivo de
@@ -160,14 +161,42 @@ const COLUMN_ALIASES: Record<ImportField, string[]> = {
   orderReference: ['pedido', 'numeropedido', 'idpedido', 'orderid', 'order', 'referenciapedido'],
 };
 
+/**
+ * Apelidos que so valem quando ninguem melhor reivindica o campo.
+ *
+ * `id` e o caso que motivou isto. Em export de banco de dados, `id` e a chave
+ * da propria tabela — 1, 2, 3 — e o identificador que interessa vem em outra
+ * coluna, mais adiante no cabecalho. Como a primeira coluna reconhecida vencia,
+ * um arquivo com `id,...,txn_id` importava vinte e oito MEDs chamados "1" a
+ * "28", cada um sem valor, sem data e sem pagador, e sem um erro sequer: o
+ * numero de linha tinha virado o numero do MED. Nome generico agora espera; se
+ * nada mais aparecer, ele ainda serve.
+ */
+const WEAK_ALIASES: Partial<Record<ImportField, string[]>> = {
+  medId: ['id'],
+};
+
 const ALIAS_TO_FIELD = new Map<string, ImportField>();
+const WEAK_ALIAS_TO_FIELD = new Map<string, ImportField>();
+for (const [field, aliases] of Object.entries(WEAK_ALIASES) as [ImportField, string[]][]) {
+  for (const alias of aliases) WEAK_ALIAS_TO_FIELD.set(normalizeHeader(alias), field);
+}
 for (const [field, aliases] of Object.entries(COLUMN_ALIASES) as [ImportField, string[]][]) {
   ALIAS_TO_FIELD.set(normalizeHeader(field), field);
-  for (const alias of aliases) ALIAS_TO_FIELD.set(normalizeHeader(alias), field);
+  for (const alias of aliases) {
+    const key = normalizeHeader(alias);
+    if (WEAK_ALIAS_TO_FIELD.has(key)) continue;
+    ALIAS_TO_FIELD.set(key, field);
+  }
 }
 
 export function matchColumn(header: string): ImportField | null {
   return ALIAS_TO_FIELD.get(normalizeHeader(header)) ?? null;
+}
+
+/** Campo que este cabecalho preenche so na falta de coluna melhor. */
+export function matchWeakColumn(header: string): ImportField | null {
+  return WEAK_ALIAS_TO_FIELD.get(normalizeHeader(header)) ?? null;
 }
 
 /** Nomes de coluna sugeridos ao operador quando falta algo obrigatorio. */
@@ -475,23 +504,69 @@ export function parseMedImport(text: string): ParsedImport {
   const recognized: { header: string; field: ImportField }[] = [];
   const ignored: string[] = [];
   const fieldByIndex = new Map<number, ImportField>();
+  const claimed = (field: ImportField) => recognized.some((entry) => entry.field === field);
+  /** Coluna que serve de `medId` por ter valores em formato End-to-End. */
+  let medIdFromIndex: number | null = null;
 
+  // Passo 1: nomes proprios. Primeira coluna reconhecida para um campo vence;
+  // repetidas sao ignoradas.
+  const pending: { header: string; index: number }[] = [];
   headerRow.forEach((header, index) => {
     const field = matchColumn(header);
-    if (field && !fieldByIndex.has(index)) {
-      // Primeira coluna reconhecida para um campo vence; repetidas sao ignoradas.
-      if (recognized.some((entry) => entry.field === field)) {
+    if (field) {
+      if (claimed(field)) {
         ignored.push(header);
         return;
       }
       fieldByIndex.set(index, field);
       recognized.push({ header, field });
+      return;
+    }
+    if (matchWeakColumn(header)) {
+      pending.push({ header, index });
+      return;
+    }
+    if (header.length > 0) ignored.push(header);
+  });
+
+  // Passo 2: o identificador do MED pela forma, e nao pelo nome da coluna.
+  //
+  // O End-to-End ID tem uma forma que nenhum outro identificador do caso tem, e
+  // a instituicao usa justamente ele como numero do MED — os casos ja
+  // importados a mao tem o E2E ali. Quando o arquivo nao traz coluna de MED mas
+  // traz uma coluna de identificador cujos valores sao todos End-to-End, ela
+  // **e** o numero do MED. Nada e inventado: o valor ja estava na linha, e a
+  // forma e conferida em toda linha, nao adivinhada pela primeira.
+  //
+  // Vem antes do apelido generico de proposito. Num export com `id` (1, 2, 3) e
+  // `txn_id` (E2E), o `id` chegaria primeiro e venceria — e o MED ficaria com o
+  // numero da linha, que colide com o do proximo arquivo e nao aponta para
+  // transacao nenhuma.
+  const ID_FIELDS: ImportField[] = ['endToEndId', 'transactionId', 'pixId'];
+  if (!claimed('medId')) {
+    const dataRows = table.slice(1).filter((row) => !isSpreadsheetFooter(row));
+    for (const [index, field] of fieldByIndex) {
+      if (!ID_FIELDS.includes(field)) continue;
+      const values = dataRows.map((row) => (row[index] ?? '').trim()).filter((v) => v.length > 0);
+      if (values.length === 0 || !values.every(looksLikeEndToEndId)) continue;
+      medIdFromIndex = index;
+      recognized.push({ header: headerRow[index] ?? '', field: 'medId' });
+      break;
+    }
+  }
+
+  // Passo 3: nomes genericos preenchem o que sobrou sem dono.
+  for (const { header, index } of pending) {
+    const field = matchWeakColumn(header);
+    if (field && !claimed(field) && !fieldByIndex.has(index)) {
+      fieldByIndex.set(index, field);
+      recognized.push({ header, field });
     } else if (header.length > 0) {
       ignored.push(header);
     }
-  });
+  }
 
-  if (!recognized.some((entry) => entry.field === 'medId')) {
+  if (!claimed('medId')) {
     return {
       headers: headerRow,
       recognized,
@@ -508,6 +583,9 @@ export function parseMedImport(text: string): ParsedImport {
     fieldByIndex.forEach((field, columnIndex) => {
       values.set(field, rawRow[columnIndex] ?? '');
     });
+    // Uma coluna pode alimentar dois campos: a do End-to-End continua sendo o
+    // identificador da transacao **e** passa a ser o numero do MED.
+    if (medIdFromIndex !== null) values.set('medId', rawRow[medIdFromIndex] ?? '');
 
     const errors: string[] = [];
 

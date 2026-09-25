@@ -45,6 +45,21 @@ export const MED_STATUSES = [
 export type MedStatus = (typeof MED_STATUSES)[number];
 
 /**
+ * Desfechos que o operador declara.
+ *
+ * Sao os unicos status que o sistema **nao** tem como derivar: se a instituicao
+ * aceitou ou recusou a defesa, quem sabe e quem leu a resposta. O resto do
+ * quadro — falta evidencia, pronto para enviar — sai da evidencia que existe,
+ * e deixar alguem marcar "pronto para envio" com evidencia faltando seria o
+ * sistema afirmar algo que o caso nao sustenta.
+ *
+ * Mora no dominio, e nao na camada de servico, porque a tela precisa da lista
+ * para desenhar os botoes: importada de `medService`, ela arrastaria o Prisma
+ * inteiro para o bundle do navegador.
+ */
+export const DECLARABLE_OUTCOMES: MedStatus[] = ['SUBMITTED', 'ACCEPTED', 'REJECTED', 'EXPIRED'];
+
+/**
  * Reason declared by the requesting institution when opening the MED
  * (Mecanismo Especial de Devolucao). Drives which evidence is required.
  */

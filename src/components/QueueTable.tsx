@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, RefreshCw, Send, Trash2 } from 'lucide-react';
+import { CheckCheck, Download, RefreshCw, Send, Trash2 } from 'lucide-react';
 import {
   batchDeleteMedsAction,
   batchGenerateDefensesAction,
   batchPrepareSubmissionsAction,
+  batchSetMedOutcomeAction,
 } from '@/app/(console)/meds/actions';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,13 +19,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/med/StatusBadge';
 import { cn } from '@/lib/cn';
+import { MED_STATUS_LABEL } from '@/lib/labels';
 import { QUEUE_BAND_LABEL, type QueueBand } from '@/lib/urgency';
-import type { MedStatus } from '@/domain/types';
+import { DECLARABLE_OUTCOMES, type MedStatus } from '@/domain/types';
 
 /**
  * Fila de trabalho (briefing 3.8): agrupada por faixa de prazo, ordenada por
@@ -81,6 +91,8 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [cursor, setCursor] = useState(-1);
   const [confirming, setConfirming] = useState<null | 'submit'>(null);
+  // Desfecho escolhido no menu e ainda nao confirmado. `AUTOMATICO` reabre.
+  const [pendingOutcome, setPendingOutcome] = useState<null | MedStatus | 'AUTOMATICO'>(null);
   // Excluir nao usa a confirmacao de dois cliques das outras acoes: e a unica
   // que nao tem desfazer, entao pede uma janela que diz o que se perde.
   const [deleting, setDeleting] = useState(false);
@@ -105,21 +117,28 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
       return next;
     });
     setConfirming(null);
+    setPendingOutcome(null);
   };
 
   const allSelected = rows.length > 0 && selected.size === rows.length;
   const toggleAll = () => {
     setSelected(allSelected ? new Set() : new Set(rows.map((row) => row.id)));
     setConfirming(null);
+    setPendingOutcome(null);
   };
 
-  const runBatch = (action: (form: FormData) => Promise<void>) => {
+  const runBatch = (
+    action: (form: FormData) => Promise<void>,
+    extra: Record<string, string> = {},
+  ) => {
     const form = new FormData();
     form.set('medIds', JSON.stringify([...selected]));
+    for (const [key, value] of Object.entries(extra)) form.set(key, value);
     startTransition(async () => {
       await action(form);
       setSelected(new Set());
       setConfirming(null);
+      setPendingOutcome(null);
       router.refresh();
     });
   };
@@ -286,6 +305,54 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
                 <RefreshCw data-icon="inline-start" />
                 Regerar defesa ({selected.size})
               </Button>
+              {pendingOutcome ? (
+                <Button
+                  variant="default"
+                  size="sm"
+                  disabled={isPending}
+                  onClick={() =>
+                    runBatch(batchSetMedOutcomeAction, { outcome: pendingOutcome })
+                  }
+                >
+                  {isPending
+                    ? 'Marcando…'
+                    : pendingOutcome === 'AUTOMATICO'
+                      ? `Confirmar: voltar ${selected.size} ao automático`
+                      : `Confirmar: ${MED_STATUS_LABEL[pendingOutcome]} (${selected.size})`}
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={isPending}>
+                      <CheckCheck data-icon="inline-start" />
+                      Marcar desfecho ({selected.size})
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>O que a instituição respondeu</DropdownMenuLabel>
+                    {DECLARABLE_OUTCOMES.map((outcome) => (
+                      <DropdownMenuItem
+                        key={outcome}
+                        onSelect={() => {
+                          setConfirming(null);
+                          setPendingOutcome(outcome);
+                        }}
+                      >
+                        {MED_STATUS_LABEL[outcome]}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() => {
+                        setConfirming(null);
+                        setPendingOutcome('AUTOMATICO');
+                      }}
+                    >
+                      Voltar ao automático
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               <Button
                 variant="outline"
                 size="sm"

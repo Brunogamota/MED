@@ -238,6 +238,23 @@ export async function importDeliveryLog(
     medsByName.set(chave, lista);
   }
 
+  /**
+   * Numero do MED -> o MED. A ponte mais forte que existe aqui, e a unica que
+   * nao depende do arquivo de cobrancas ter casado antes.
+   *
+   * As outras pontes sao indiretas: `medsByTxn` e `medsByBuyer` so conhecem os
+   * MEDs que alguma linha de cobranca ja alcancou, e o nome, quando dois
+   * MEDs sao do mesmo comprador, nao distingue nada. Mas a instituicao usa o
+   * End-to-End como numero do MED, e quando o log de envio traz esse mesmo
+   * identificador na coluna da transacao, a linha aponta para um caso so, sem
+   * intermediario e sem comparar nome nem valor.
+   */
+  const medsByMedId = new Map<string, MatchableMed>();
+  for (const med of candidates) {
+    const chave = med.medId.trim().toLowerCase();
+    if (chave) medsByMedId.set(chave, med);
+  }
+
   const report = matchDeliveryLog(parsed.rows, candidates);
   const lines: DeliveryImportLine[] = [];
   // Comeca com os MEDs que nenhuma linha mencionou; os que casaram mas nao
@@ -419,6 +436,10 @@ export async function importDeliveryLog(
     // ela gera fica inteiro dentro da propria linha: data, message-id e link
     // sao os dela, e nao se misturam com os do e-mail de cobranca.
     const txn = row.transactionRef?.trim();
+    // O proprio numero do MED na coluna da transacao: exato, e vem antes de
+    // tudo. Nao precisa que o arquivo de cobrancas tenha casado nada.
+    const direto = txn ? medsByMedId.get(txn.toLowerCase()) : undefined;
+    const porMedId = direto ? [direto] : undefined;
     const porTxn = txn ? medsByTxn.get(txn) : undefined;
     const buyer = normalizeEmail(row.customerEmail);
     const porEmail = buyer ? medsByBuyer.get(buyer) : undefined;
@@ -436,8 +457,8 @@ export async function importDeliveryLog(
       : undefined;
     const porNome = porNomeTodos?.length === 1 ? porNomeTodos : undefined;
 
-    const meds = porTxn ?? porEmail ?? porNome;
-    const exata = porTxn !== undefined;
+    const meds = porMedId ?? porTxn ?? porEmail ?? porNome;
+    const exata = porMedId !== undefined || porTxn !== undefined;
     const ligadoPeloNome = meds !== undefined && meds === porNome;
 
     if (!meds && porNomeTodos && porNomeTodos.length > 1) {

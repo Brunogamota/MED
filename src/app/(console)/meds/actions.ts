@@ -398,6 +398,39 @@ export async function batchPrepareSubmissionsAction(form: FormData): Promise<voi
   revalidatePath('/meds');
 }
 
+/**
+ * Declara o mesmo desfecho para os casos selecionados.
+ *
+ * Preparar o envio e declarar que o envio aconteceu sao coisas diferentes:
+ * `batchPrepareSubmissionsAction` monta o payload, e ninguem fora do operador
+ * sabe se a instituicao recebeu. Faltava a segunda metade em lote — quem
+ * despacha um lote de defesas de uma vez marcava os casos um por um, e um lote
+ * de sessenta e cinco vira sessenta e cinco telas.
+ *
+ * Reabrir em lote pede a palavra `AUTOMATICO`, e nao campo vazio. Em lote,
+ * campo ausente e campo ilegivel chegam como vazio, e vazio significando
+ * "reabre tudo" transformaria um formulario truncado em sessenta e cinco
+ * desfechos apagados. Desfecho que nao e declaravel nao vira desfecho nenhum:
+ * `setMedOutcome` recusa, e o lote nao contorna.
+ */
+export async function batchSetMedOutcomeAction(form: FormData): Promise<void> {
+  const raw = text(form, 'outcome');
+  if (!raw) return;
+  const outcome = raw === 'AUTOMATICO' ? null : MED_STATUSES.includes(raw as MedStatus) ? (raw as MedStatus) : undefined;
+  if (outcome === undefined) return;
+  const auth = serverPageContext();
+  for (const medId of medIdsFrom(form)) {
+    try {
+      await setMedOutcome(auth, medId, outcome);
+      revalidatePath(`/meds/${medId}`);
+    } catch {
+      // Caso inelegível ou fora da organização: fica como está, e a fila mostra.
+    }
+  }
+  revalidatePath('/meds');
+  revalidatePath('/');
+}
+
 // ---------------------------------------------------------------------------
 // Importacao em lote
 // ---------------------------------------------------------------------------

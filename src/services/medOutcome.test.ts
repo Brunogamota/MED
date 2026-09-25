@@ -59,6 +59,20 @@ describe('desfecho declarado', () => {
     expect(entry?.source).toBe('MANUAL');
   });
 
+  it('o status que o motor calcula fica marcado como derivado', async () => {
+    // A abertura do caso recalcula o status, e essa mudanca e do motor. Ela
+    // saia do log carimbada `MANUAL` — o padrao de `recordAudit` — dizendo que
+    // alguem tinha marcado "aguardando evidencia" a mao. Num produto em que a
+    // origem de cada dado e o que sustenta a defesa, o log da origem errada
+    // e o mesmo defeito que inventar a evidencia.
+    const med = await novoMed();
+    const audit = await (await getRepository()).listAudit('org_a', med.id);
+    const derivada = audit.find(
+      (row) => row.action === 'MED_STATUS_CHANGED' && row.newValue === 'MISSING_EVIDENCE',
+    );
+    expect(derivada?.source).toBe('SYSTEM_DERIVED');
+  });
+
   it('declarar o mesmo desfecho duas vezes nao muda nada', async () => {
     const med = await novoMed();
     await setMedOutcome(auth, med.id, 'SUBMITTED');
