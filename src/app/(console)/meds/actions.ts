@@ -33,7 +33,7 @@ import {
 import { address, compact, dateTime, integer, number, text } from '@/lib/forms';
 import { looksZipped, readZipEntries, ZipError } from '@/lib/zip';
 import { looksXlsx, xlsxToCsv, XlsxError } from '@/lib/xlsx';
-import { importParsedMeds } from '@/services/importService';
+import { importParsedMeds, planImport, type ImportPlan } from '@/services/importService';
 import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentService';
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
 import { addCommunicationReconstruction } from '@/services/medService';
@@ -585,6 +585,12 @@ export interface ImportPreviewState {
   defaultOpenedAt: string | null;
   batchReference: string | null;
   parsed: ReturnType<typeof parseMedImport> | null;
+  /**
+   * O que vai entrar se confirmar, pelo mesmo caminho que a importacao usa.
+   * Calculado aqui, no servidor, porque `planImport` mora no servico: a tela e
+   * cliente, e importar de la levaria o Prisma para o bundle do navegador.
+   */
+  plan: ImportPlan | null;
   report: Awaited<ReturnType<typeof importParsedMeds>> | null;
   error: string | null;
 }
@@ -603,6 +609,7 @@ export async function previewImportAction(
       defaultOpenedAt,
       batchReference,
       parsed: null,
+      plan: null,
       report: null,
       error: read.error,
     };
@@ -615,16 +622,21 @@ export async function previewImportAction(
       defaultOpenedAt,
       batchReference,
       parsed: null,
+      plan: null,
       report: null,
       error: 'Cole o conteudo do arquivo ou selecione um arquivo CSV.',
     };
   }
 
+  const parsed = parseMedImport(csv);
   return {
     csv,
     defaultOpenedAt,
     batchReference,
-    parsed: parseMedImport(csv),
+    parsed,
+    plan: parsed.fatalError
+      ? null
+      : planImport(parsed, { defaultOpenedAt: defaultOpenedAt ?? undefined }),
     report: null,
     error: null,
   };
@@ -641,7 +653,15 @@ export async function confirmImportAction(
 
   const parsed = parseMedImport(csv);
   if (parsed.fatalError) {
-    return { csv, defaultOpenedAt, batchReference, parsed, report: null, error: parsed.fatalError };
+    return {
+      csv,
+      defaultOpenedAt,
+      batchReference,
+      parsed,
+      plan: null,
+      report: null,
+      error: parsed.fatalError,
+    };
   }
 
   const report = await importParsedMeds(auth, parsed, {
@@ -650,7 +670,16 @@ export async function confirmImportAction(
   });
 
   revalidatePath('/meds');
-  return { csv, defaultOpenedAt, batchReference, parsed, report, error: null };
+  revalidatePath('/');
+  return {
+    csv,
+    defaultOpenedAt,
+    batchReference,
+    parsed,
+    plan: planImport(parsed, { defaultOpenedAt: defaultOpenedAt ?? undefined }),
+    report,
+    error: null,
+  };
 }
 
 // ---------------------------------------------------------------------------

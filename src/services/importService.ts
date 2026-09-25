@@ -104,6 +104,50 @@ export function toCreateMedInput(
   return { input: parsed.data };
 }
 
+export interface ImportPlanLine {
+  line: number;
+  /** `true` quando esta linha vira um MED se o operador confirmar. */
+  ready: boolean;
+  /** O que falta, quando nao vira. Vazio quando vira. */
+  messages: string[];
+}
+
+export interface ImportPlan {
+  lines: ImportPlanLine[];
+  ready: number;
+  blocked: number;
+}
+
+/**
+ * O que acontece se o operador confirmar — decidido pelo **mesmo** caminho que
+ * decide de verdade.
+ *
+ * A conferencia contava so as linhas com erro de leitura, e a data de abertura
+ * ausente nao e erro de leitura: ela e barrada depois, em
+ * `toCreateMedInput`. Com o arquivo da adquirente, que nunca traz essa data, a
+ * tela dizia "28 prontas para importar", o botao prometia "Importar 28 MED(s)",
+ * e o resultado era 28 nao importados e a fila vazia. Promessa que a
+ * importacao nao cumpre e pior que recusa: quem opera vai embora achando que o
+ * lote entrou.
+ *
+ * Duplicata nao entra aqui, porque depende do que ja existe no banco. Esta
+ * funcao responde "a linha esta completa?", nao "a linha e nova?".
+ */
+export function planImport(parsed: ParsedImport, options: ImportOptions = {}): ImportPlan {
+  const lines = parsed.rows.map((row) => {
+    if (row.errors.length > 0) return { line: row.line, ready: false, messages: row.errors };
+    const built = toCreateMedInput(row, options);
+    if ('errors' in built) return { line: row.line, ready: false, messages: built.errors };
+    return { line: row.line, ready: true, messages: [] };
+  });
+
+  return {
+    lines,
+    ready: lines.filter((entry) => entry.ready).length,
+    blocked: lines.filter((entry) => !entry.ready).length,
+  };
+}
+
 async function importRow(
   auth: AuthContext,
   row: ImportedMedRow,

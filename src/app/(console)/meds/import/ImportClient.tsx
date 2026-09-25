@@ -61,7 +61,19 @@ export function ImportClient() {
   const state = confirmed ?? preview;
   const parsed = state?.parsed ?? null;
   const report = confirmed?.report ?? null;
-  const importable = parsed?.rows.filter((row) => row.errors.length === 0).length ?? 0;
+  // O numero vem do plano, e nao de contar linhas sem erro de leitura: data de
+  // abertura ausente nao e erro de leitura, e contando assim a tela prometia um
+  // lote inteiro que a importacao depois recusava.
+  const plan = state?.plan ?? null;
+  const importable = plan?.ready ?? 0;
+  const blocked = plan?.blocked ?? 0;
+  // Todas as linhas barradas pela mesma falta: e uma pendencia do lote, nao das
+  // linhas, e cabe dizer isso uma vez em cima em vez de repetir em 28 celulas.
+  const semDataDeAbertura =
+    plan !== null &&
+    plan.ready === 0 &&
+    plan.lines.length > 0 &&
+    plan.lines.every((entry) => entry.messages.some((m) => m.includes('Data de abertura')));
 
   return (
     <div className="space-y-4">
@@ -79,7 +91,7 @@ export function ImportClient() {
             <DateTimeField
               label="Data de abertura do lote"
               name="defaultOpenedAt"
-              hint="Usada só nas linhas em que o arquivo não traz a data."
+              hint="O arquivo da instituição normalmente não traz essa data. Sem ela, nenhuma linha entra."
             />
 
             <div className="grid gap-1.5">
@@ -152,8 +164,21 @@ export function ImportClient() {
             ) : null}
             <p className="text-muted-foreground">
               {parsed.rows.length} linha(s) lida(s), {importable} pronta(s) para importar,{' '}
-              {parsed.rows.length - importable} com pendência.
+              {blocked} com pendência.
             </p>
+            {semDataDeAbertura ? (
+              <div className="rounded-md bg-amber-600/10 px-3 py-2 text-amber-800 dark:text-amber-300">
+                <p className="font-medium">
+                  Nenhuma linha entra assim: falta a data de abertura do lote.
+                </p>
+                <p className="mt-1 text-xs">
+                  O arquivo foi lido inteiro — {parsed.rows.length} linha(s), sem erro de leitura.
+                  O que falta é a data em que a instituição abriu estes MEDs, que não vem no
+                  arquivo e o sistema não arbitra. Preencha “Data de abertura do lote” no passo 1 e
+                  analise de novo.
+                </p>
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-3 max-h-96 overflow-auto">
@@ -172,9 +197,11 @@ export function ImportClient() {
               <tbody>
                 {parsed.rows.map((row) => {
                   const result = report?.results.find((entry) => entry.line === row.line);
-                  const outcome = result?.outcome ?? (row.errors.length > 0 ? 'SKIPPED' : null);
+                  const planned = plan?.lines.find((entry) => entry.line === row.line);
+                  const pendente = planned ? !planned.ready : row.errors.length > 0;
+                  const outcome = result?.outcome ?? (pendente ? 'SKIPPED' : null);
                   return (
-                    <tr key={row.line} className={row.errors.length > 0 ? 'bg-amber-600/10' : ''}>
+                    <tr key={row.line} className={pendente ? 'bg-amber-600/10' : ''}>
                       <Td>{row.line}</Td>
                       <Td>
                         {result?.id ? (
@@ -215,7 +242,7 @@ export function ImportClient() {
                         ) : (
                           <span className="text-[10px] text-muted-foreground">pronta</span>
                         )}
-                        {(result?.messages ?? row.errors).map((message) => (
+                        {(result?.messages ?? planned?.messages ?? row.errors).map((message) => (
                           <span
                             key={message}
                             className="block text-[10px] text-muted-foreground"
@@ -241,7 +268,11 @@ export function ImportClient() {
                 disabled={confirmPending || importable === 0}
                 className="inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
               >
-                {confirmPending ? 'Importando…' : `Importar ${importable} MED(s)`}
+                {confirmPending
+                  ? 'Importando…'
+                  : importable === 0
+                    ? 'Nada para importar ainda'
+                    : `Importar ${importable} MED(s)`}
               </button>
             </form>
           ) : null}
