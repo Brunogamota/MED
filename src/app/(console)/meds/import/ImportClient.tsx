@@ -67,13 +67,14 @@ export function ImportClient() {
   const plan = state?.plan ?? null;
   const importable = plan?.ready ?? 0;
   const blocked = plan?.blocked ?? 0;
-  // Todas as linhas barradas pela mesma falta: e uma pendencia do lote, nao das
-  // linhas, e cabe dizer isso uma vez em cima em vez de repetir em 28 celulas.
+  // O arquivo da instituicao nao traz a data de abertura. Isso nao impede mais
+  // o lote de entrar — mas vale dizer o que o caso perde sem ela, uma vez em
+  // cima, enquanto ainda da para preencher o campo e analisar de novo.
   const semDataDeAbertura =
     plan !== null &&
-    plan.ready === 0 &&
-    plan.lines.length > 0 &&
-    plan.lines.every((entry) => entry.messages.some((m) => m.includes('Data de abertura')));
+    plan.ready > 0 &&
+    !state?.defaultOpenedAt &&
+    (parsed?.rows.every((row) => row.openedAt === null) ?? false);
 
   return (
     <div className="space-y-4">
@@ -91,7 +92,7 @@ export function ImportClient() {
             <DateTimeField
               label="Data de abertura do lote"
               name="defaultOpenedAt"
-              hint="O arquivo da instituição normalmente não traz essa data. Sem ela, nenhuma linha entra."
+              hint="Opcional. O arquivo da instituição normalmente não traz essa data — sem ela o caso entra sem data de abertura, e a defesa não cita quando o MED foi aberto."
             />
 
             <div className="grid gap-1.5">
@@ -167,15 +168,14 @@ export function ImportClient() {
               {blocked} com pendência.
             </p>
             {semDataDeAbertura ? (
-              <div className="rounded-md bg-amber-600/10 px-3 py-2 text-amber-800 dark:text-amber-300">
-                <p className="font-medium">
-                  Nenhuma linha entra assim: falta a data de abertura do lote.
-                </p>
-                <p className="mt-1 text-xs">
-                  O arquivo foi lido inteiro — {parsed.rows.length} linha(s), sem erro de leitura.
-                  O que falta é a data em que a instituição abriu estes MEDs, que não vem no
-                  arquivo e o sistema não arbitra. Preencha “Data de abertura do lote” no passo 1 e
-                  analise de novo.
+              <div className="rounded-md bg-muted/50 px-3 py-2">
+                <p className="font-medium">Estes MEDs entram sem data de abertura.</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  O arquivo não traz essa data, e o sistema não arbitra uma. Os casos entram
+                  normalmente — o que fica de fora é o evento de abertura na linha do tempo, a
+                  menção à data na defesa, e o relatório sai com “Não informada”. Se você sabe
+                  quando a instituição abriu este lote, preencha “Data de abertura do lote” no
+                  passo 1 e analise de novo. Se não sabe, pode importar assim.
                 </p>
               </div>
             ) : null}

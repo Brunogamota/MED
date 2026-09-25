@@ -51,7 +51,7 @@ export const createMedSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().length(3).default('BRL'),
   transactionAt: isoDateTime.optional(),
-  openedAt: isoDateTime,
+  openedAt: isoDateTime.nullish().transform((value) => value ?? null),
   responseDeadlineAt: isoDateTime.optional(),
   reason: z.enum(MED_REASONS),
   reasonDescription: nonEmpty.optional(),

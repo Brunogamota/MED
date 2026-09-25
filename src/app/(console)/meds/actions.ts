@@ -70,7 +70,10 @@ export async function createMedAction(form: FormData): Promise<void> {
       amount: number(form, 'amount'),
       currency: text(form, 'currency') ?? 'BRL',
       transactionAt: dateTime(form, 'transactionAt'),
-      openedAt: dateTime(form, 'openedAt') ?? new Date().toISOString(),
+      // Sem `?? agora`: campo vazio carimbava a hora do cadastro como se fosse
+      // a hora em que a instituicao abriu o MED, e essa data vai para a linha
+      // do tempo e para a defesa. Vazio agora fica vazio.
+      openedAt: dateTime(form, 'openedAt'),
       responseDeadlineAt: dateTime(form, 'responseDeadlineAt'),
       reason: text(form, 'reason'),
       reasonDescription: text(form, 'reasonDescription'),

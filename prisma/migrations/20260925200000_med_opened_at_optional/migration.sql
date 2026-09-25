@@ -1,0 +1,13 @@
+-- A data de abertura do MED passa a poder faltar.
+--
+-- O arquivo da adquirente nao traz essa coluna, e ninguem alem da instituicao
+-- conhece a data. Exigi-la recusava o lote inteiro — linhas completas, com
+-- valor, pagador, CPF e motivo — por um campo que nao existe na origem.
+--
+-- Nada passa a ser arbitrado no lugar dela: sem a data, o caso fica sem data.
+-- A linha do tempo nao ganha o evento de abertura, a narrativa nao cita quando
+-- o MED foi aberto, e o relatorio imprime "Nao informada".
+--
+-- Aditiva e reversivel na pratica: nenhuma linha existente perde valor, e os
+-- casos ja gravados continuam com a data que tinham.
+ALTER TABLE "Med" ALTER COLUMN "openedAt" DROP NOT NULL;

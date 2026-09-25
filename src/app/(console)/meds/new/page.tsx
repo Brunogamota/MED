@@ -23,7 +23,7 @@ export default function NewMedPage() {
             <Field label="Instituição solicitante" name="requestingInstitution" />
             <MoneyField label="Valor" name="amount" required />
             <Field label="Moeda" name="currency" defaultValue="BRL" />
-            <DateTimeField label="Abertura do MED" name="openedAt" required />
+            <DateTimeField label="Abertura do MED" name="openedAt" />
             <DateTimeField label="Prazo de resposta" name="responseDeadlineAt" />
             <DateTimeField label="Data da transação" name="transactionAt" />
             <Select label="Motivo" name="reason" options={MED_REASONS} labels={MED_REASON_LABEL} required />

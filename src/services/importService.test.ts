@@ -153,17 +153,30 @@ describe('importacao em lote', () => {
     ]);
   });
 
-  it('exige data de abertura, aceitando um valor declarado para o lote', async () => {
+  it('entra sem data de abertura, e a data continua ausente', async () => {
+    // O arquivo da adquirente nao traz essa coluna. Exigir o dado nao o faz
+    // aparecer — so recusaria o lote inteiro. Ele entra, e o que falta segue
+    // faltando: nada e arbitrado no lugar.
     const csv = 'MED ID;Valor\nMED-020;R$ 10,00';
 
     const semData = await importMedsFromText(auth, csv);
-    expect(semData.report?.skipped).toBe(1);
-    expect(semData.report?.results[0]?.messages.join(' ')).toContain('Data de abertura');
+    expect(semData.report?.created).toBe(1);
+    expect(semData.report?.skipped).toBe(0);
+
+    const criado = (await listMeds(auth, {})).find((row) => row.med.medId === 'MED-020');
+    expect(criado?.med.openedAt).toBeNull();
+  });
+
+  it('a data declarada para o lote vale nas linhas que nao trazem a sua', async () => {
+    const csv = 'MED ID;Valor\nMED-021;R$ 10,00';
 
     const comData = await importMedsFromText(auth, csv, {
       defaultOpenedAt: '2026-08-25T12:00:00.000Z',
     });
     expect(comData.report?.created).toBe(1);
+
+    const criado = (await listMeds(auth, {})).find((row) => row.med.medId === 'MED-021');
+    expect(criado?.med.openedAt).toBe('2026-08-25T12:00:00.000Z');
   });
 
   it('nao importa nada quando o arquivo nao tem coluna de identificador', async () => {

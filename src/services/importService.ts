@@ -65,14 +65,22 @@ export function toCreateMedInput(
   row: ImportedMedRow,
   options: ImportOptions,
 ): { input: CreateMedInput } | { errors: string[] } {
+  /**
+   * Data de abertura, quando existe.
+   *
+   * Ausente nao barra mais a linha. Ela barrava, e com o arquivo da adquirente
+   * — que nunca traz essa coluna — isso significava lote inteiro recusado: 28
+   * linhas completas, com valor, pagador, CPF e motivo, descartadas por um
+   * campo que ninguem tem. Exigir o dado nao o faz aparecer; so impede o resto
+   * de entrar.
+   *
+   * O que **nao** mudou: nada e arbitrado no lugar dela. Sem a data, o caso
+   * entra sem data — a linha do tempo nao ganha o evento de abertura, a
+   * narrativa nao cita quando o MED foi aberto, e o relatorio imprime "Nao
+   * informada". Um default aqui poria no documento uma data que nao aconteceu,
+   * e e disso que este produto nao vive.
+   */
   const openedAt = row.openedAt ?? options.defaultOpenedAt ?? null;
-  if (!openedAt) {
-    return {
-      errors: [
-        'Data de abertura do MED ausente. Inclua a coluna no arquivo ou informe uma data de abertura para o lote.',
-      ],
-    };
-  }
 
   const candidate = {
     medId: row.medId ?? undefined,
@@ -82,7 +90,7 @@ export function toCreateMedInput(
     amount: row.amount ?? undefined,
     currency: 'BRL',
     transactionAt: row.transactionAt ?? undefined,
-    openedAt,
+    openedAt: openedAt ?? undefined,
     responseDeadlineAt: row.responseDeadlineAt ?? undefined,
     reason: row.reason,
     reasonDescription: row.reasonDescription ?? undefined,

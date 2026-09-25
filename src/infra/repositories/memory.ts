@@ -89,8 +89,10 @@ export class InMemoryMedRepository
     for (const med of this.meds.values()) {
       if (med.organizationId !== organizationId) continue;
       if (filter.status && med.status !== filter.status) continue;
-      if (filter.openedFrom && med.openedAt < filter.openedFrom) continue;
-      if (filter.openedTo && med.openedAt > filter.openedTo) continue;
+      // Sem data de abertura o caso nao pertence a nenhum recorte por data:
+      // incluir seria afirmar que ele foi aberto na janela escolhida.
+      if (filter.openedFrom && (med.openedAt === null || med.openedAt < filter.openedFrom)) continue;
+      if (filter.openedTo && (med.openedAt === null || med.openedAt > filter.openedTo)) continue;
       if (search) {
         const haystack = [
           med.medId,
@@ -120,7 +122,9 @@ export class InMemoryMedRepository
       });
     }
 
-    rows.sort((a, b) => Date.parse(b.med.openedAt) - Date.parse(a.med.openedAt));
+    // Caso sem data de abertura vai para o fim, e nao para o topo: `Date.parse`
+    // de null e NaN, e NaN em comparador embaralha a ordem inteira.
+    rows.sort((a, b) => (Date.parse(b.med.openedAt ?? '') || 0) - (Date.parse(a.med.openedAt ?? '') || 0));
     return rows.slice(0, filter.limit ?? 50);
   }
 

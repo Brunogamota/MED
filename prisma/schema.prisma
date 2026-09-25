@@ -137,7 +137,7 @@ model Med {
   amountCents           Int
   currency              String       @db.VarChar(3)
   transactionAt         DateTime?
-  openedAt              DateTime
+  openedAt              DateTime?
   responseDeadlineAt    DateTime?
   reason                MedReason
   reasonDescription     String?

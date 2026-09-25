@@ -88,7 +88,7 @@ export function buildIntakeSeries(rows: MedListRow[], now = new Date(), days = 3
   }
 
   for (const row of rows) {
-    const openedAt = Date.parse(row.med.openedAt);
+    const openedAt = Date.parse(row.med.openedAt ?? '');
     if (Number.isNaN(openedAt)) continue;
     const bucket = byDay.get(isoDay(new Date(openedAt)));
     if (!bucket) continue;

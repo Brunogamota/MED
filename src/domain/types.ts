@@ -123,7 +123,16 @@ export interface Med {
   currency: string;
 
   transactionAt?: IsoDateTime | null;
-  openedAt: IsoDateTime;
+  /**
+   * Quando a instituicao abriu o MED.
+   *
+   * Pode faltar. O arquivo da adquirente nao traz essa data, e ninguem alem da
+   * instituicao a conhece — arbitrar uma poria no documento, na linha do tempo
+   * e no calculo de prazo um fato que nao aconteceu. Ausente, ela fica ausente:
+   * a linha do tempo nao ganha o evento, a narrativa nao cita a data, e o
+   * relatorio imprime "Nao informada".
+   */
+  openedAt: IsoDateTime | null;
   responseDeadlineAt?: IsoDateTime | null;
 
   reason: MedReason;

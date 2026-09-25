@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseMedImport } from '@/domain/import/csv';
-import { planImport } from '@/services/importService';
+import { planImport, toCreateMedInput } from '@/services/importService';
 
 /**
  * A conferencia e o plano tem de dar a mesma resposta que a importacao. Quando
@@ -17,18 +17,33 @@ const ARQUIVO = [
 ].join('\n');
 
 describe('plano da importacao', () => {
-  it('sem data de abertura declarada, nenhuma linha esta pronta', () => {
+  it('sem data de abertura declarada, a linha entra assim mesmo', () => {
     const parsed = parseMedImport(ARQUIVO);
 
-    // A leitura em si nao acusa nada: a linha esta completa como texto.
     expect(parsed.fatalError).toBeNull();
     expect(parsed.rows.at(0)?.errors).toEqual([]);
 
-    // E ainda assim ela nao entra. Era essa a divergencia.
+    // A data de abertura nao vem no arquivo da instituicao, e exigi-la recusava
+    // o lote inteiro. O caso entra sem ela; o que falta e reportado no caso, e
+    // nao usado para descartar o resto da linha.
     const plan = planImport(parsed, {});
-    expect(plan.ready).toBe(0);
-    expect(plan.blocked).toBe(1);
-    expect(plan.lines.at(0)?.messages.at(0)).toContain('Data de abertura');
+    expect(plan.ready).toBe(1);
+    expect(plan.blocked).toBe(0);
+  });
+
+  it('a data ausente nao vira data nenhuma, em lugar nenhum do caso', () => {
+    // O ponto de deixar entrar sem a data e que ela continue faltando. Um
+    // default aqui poria na linha do tempo, na narrativa e no relatorio uma
+    // abertura que nao aconteceu — que e o oposto do que este produto faz.
+    const parsed = parseMedImport(ARQUIVO);
+    expect(parsed.fatalError).toBeNull();
+    const row = parsed.rows.at(0);
+    expect(row?.openedAt).toBeNull();
+    if (!row) throw new Error('arquivo de teste sem linha');
+
+    const built = toCreateMedInput(row, {});
+    expect('errors' in built).toBe(false);
+    if (!('errors' in built)) expect(built.input.openedAt).toBeNull();
   });
 
   it('com data de abertura declarada, a linha esta pronta', () => {
@@ -67,7 +82,7 @@ describe('plano da importacao', () => {
     const misto = [
       'medId;Valor;Motivo;Data abertura',
       'MED-1;89,50;Golpe/Estelionato;24/09/2026 11:09',
-      'MED-2;19,90;Golpe/Estelionato;',
+      'MED-2;R$ mil reais;Golpe/Estelionato;24/09/2026 11:09',
     ].join('\n');
 
     const plan = planImport(parseMedImport(misto), {});
