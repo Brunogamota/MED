@@ -365,3 +365,35 @@ describe('log de envio que traz o numero do MED', () => {
     expect(report.unmatched).toBe(1);
   });
 });
+
+describe('substituir comprovantes antigos', () => {
+  const comId = (messageId: string, hora: string) =>
+    [
+      'customer_name,customer_email,amount_brl,purchase_at,message_id,status,delivered_at,product_url,smtp_response',
+      `Fulano de Tal,fulano@exemplo.com,32.80,2026-09-18 12:30:04,<${messageId}>,delivered,2026-09-18 ${hora},https://console.exemplo.com/p/abc,250 OK`,
+    ].join('\n');
+
+  const comprovantes = async () => {
+    const [row] = (await listMeds(auth, {})).filter((entry) => entry.med.medId === 'MED-ENTREGUE');
+    const medCase = await getCase(auth, row!.med.id);
+    return medCase.evidences
+      .filter((evidence) => evidence.type === 'DELIVERY_COMMUNICATION')
+      .map((evidence) => evidence.sourceReference);
+  };
+
+  it('sem a opcao, o caso fica com as duas versoes', async () => {
+    await importDeliveryLog(auth, comId('errado@mta07.exemplo.com.br', '12:31:50'), { generateReceipts: true });
+    await importDeliveryLog(auth, comId('certo@mta07.exemplo.com.br', '12:32:10'), { generateReceipts: true });
+    expect((await comprovantes()).sort()).toEqual(['certo@mta07.exemplo.com.br', 'errado@mta07.exemplo.com.br']);
+  });
+
+  it('com a opcao, fica so o do arquivo novo', async () => {
+    await importDeliveryLog(auth, comId('errado@mta07.exemplo.com.br', '12:31:50'), { generateReceipts: true });
+    const report = await importDeliveryLog(auth, comId('certo@mta07.exemplo.com.br', '12:32:10'), {
+      generateReceipts: true,
+      replacePreviousReceipts: true,
+    });
+    expect(report.replacedReceipts).toBe(1);
+    expect(await comprovantes()).toEqual(['certo@mta07.exemplo.com.br']);
+  });
+});

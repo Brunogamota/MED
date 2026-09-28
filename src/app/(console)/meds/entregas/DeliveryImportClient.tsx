@@ -113,6 +113,19 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
               </p>
             </div>
           </div>
+          <div className="flex items-start gap-3 rounded-lg border p-3">
+            <Checkbox id="substituirComprovantes" name="substituirComprovantes" />
+            <div className="grid gap-1 leading-snug">
+              <Label htmlFor="substituirComprovantes">
+                Substituir os comprovantes antigos destes casos
+              </Label>
+              <p className="text-muted-foreground text-sm">
+                Apaga os comprovantes que o caso já tinha e que não vieram deste arquivo. Use
+                quando este log é o certo e o anterior estava errado: duas versões do mesmo
+                envio, com message-ids diferentes, derrubam a defesa na conferência.
+              </p>
+            </div>
+          </div>
           <SubmitButton>Importar e registrar</SubmitButton>
         </form>
       </Panel>
@@ -233,6 +246,13 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
                 Registro anexado a {touched.length} caso{touched.length > 1 ? 's' : ''}. Nenhum
                 foi marcado como enviado à instituição. Confira os comprovantes antes de enviar.
               </p>
+              {report?.replacedReceipts ? (
+                <p className="mt-2 text-sm">
+                  {report.replacedReceipts} comprovante{report.replacedReceipts > 1 ? 's' : ''}{' '}
+                  antigo{report.replacedReceipts > 1 ? 's' : ''} apagado
+                  {report.replacedReceipts > 1 ? 's' : ''}.
+                </p>
+              ) : null}
               {report?.returnedToQueue ? (
                 <p className="mt-2 text-sm">
                   {report.returnedToQueue} caso{report.returnedToQueue > 1 ? 's' : ''} que estava
