@@ -233,6 +233,16 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
                 Registro anexado a {touched.length} caso{touched.length > 1 ? 's' : ''}. Nenhum
                 foi marcado como enviado à instituição. Confira os comprovantes antes de enviar.
               </p>
+              {report?.returnedToQueue ? (
+                <p className="mt-2 text-sm">
+                  {report.returnedToQueue} caso{report.returnedToQueue > 1 ? 's' : ''} que estava
+                  {report.returnedToQueue > 1 ? 'm' : ''} como Enviado voltou
+                  {report.returnedToQueue > 1 ? 'ram' : ''} para a fila.{' '}
+                  <Link href="/meds" className="font-medium hover:underline">
+                    Ver a fila
+                  </Link>
+                </p>
+              ) : null}
               <Link
                 href={`/meds/comprovantes?ids=${touched.join(',')}`}
                 className="mt-3 inline-block font-medium text-sm hover:underline"
