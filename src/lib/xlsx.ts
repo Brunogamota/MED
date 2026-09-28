@@ -95,8 +95,8 @@ function cellValue(xml: string, type: string | null, shared: string[]): string {
   return textOf(xml);
 }
 
-/** Linhas da primeira aba, cada uma com as celulas na posicao certa. */
-export function readXlsxRows(input: Uint8Array): string[][] {
+/** Todas as abas de dados, em ordem, cada uma como linhas com as celulas na posicao certa. */
+export function readXlsxSheets(input: Uint8Array): string[][][] {
   let entries;
   try {
     entries = readZipEntries(input, MAX_UNZIPPED);
@@ -111,33 +111,63 @@ export function readXlsxRows(input: Uint8Array): string[][] {
   }
 
   const byName = new Map(entries.map((entry) => [entry.name.replace(/^\/+/, ''), entry.bytes]));
-  const sheetName = [...byName.keys()]
+  const sheetNames = [...byName.keys()]
     .filter((name) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(name))
-    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
-    .at(0);
-  if (!sheetName) {
+    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  if (sheetNames.length === 0) {
     throw new XlsxError('A planilha não tem nenhuma aba de dados que o sistema saiba ler.');
   }
 
   const sharedEntry = byName.get('xl/sharedStrings.xml');
   const shared = sharedEntry ? sharedStrings(sharedEntry.toString('utf-8')) : [];
-  const sheet = (byName.get(sheetName) as Buffer).toString('utf-8');
 
-  const rows: string[][] = [];
-  for (const rowMatch of sheet.matchAll(/<row(?:\s[^>]*)?>([\s\S]*?)<\/row>|<row(?:\s[^>]*)?\/>/g)) {
-    const corpo = rowMatch[1] ?? '';
-    const linha: string[] = [];
-    for (const cellMatch of corpo.matchAll(/<c\s([^>]*?)\/>|<c\s([^>]*?)>([\s\S]*?)<\/c>/g)) {
-      const atributos = cellMatch[1] ?? cellMatch[2] ?? '';
-      const referencia = /\br="([^"]+)"/.exec(atributos)?.[1] ?? '';
-      const tipo = /\bt="([^"]+)"/.exec(atributos)?.[1] ?? null;
-      const indice = referencia ? columnIndex(referencia) : linha.length;
-      while (linha.length < indice) linha.push('');
-      linha[indice] = cellValue(cellMatch[3] ?? '', tipo, shared);
+  return sheetNames.map((sheetName) => {
+    const sheet = (byName.get(sheetName) as Buffer).toString('utf-8');
+    const rows: string[][] = [];
+    for (const rowMatch of sheet.matchAll(/<row(?:\s[^>]*)?>([\s\S]*?)<\/row>|<row(?:\s[^>]*)?\/>/g)) {
+      const corpo = rowMatch[1] ?? '';
+      const linha: string[] = [];
+      for (const cellMatch of corpo.matchAll(/<c\s([^>]*?)\/>|<c\s([^>]*?)>([\s\S]*?)<\/c>/g)) {
+        const atributos = cellMatch[1] ?? cellMatch[2] ?? '';
+        const referencia = /\br="([^"]+)"/.exec(atributos)?.[1] ?? '';
+        const tipo = /\bt="([^"]+)"/.exec(atributos)?.[1] ?? null;
+        const indice = referencia ? columnIndex(referencia) : linha.length;
+        while (linha.length < indice) linha.push('');
+        linha[indice] = cellValue(cellMatch[3] ?? '', tipo, shared);
+      }
+      rows.push(linha);
     }
-    rows.push(linha);
+    return rows;
+  });
+}
+
+/** Linhas da primeira aba, cada uma com as celulas na posicao certa. */
+export function readXlsxRows(input: Uint8Array): string[][] {
+  return readXlsxSheets(input)[0] ?? [];
+}
+
+const cabecalho = (row: string[]): string =>
+  row.map((cell) => cell.trim().toLowerCase()).join('\u0000').replace(/\u0000+$/, '');
+
+/**
+ * Linhas de todas as abas que tem o mesmo cabecalho da primeira.
+ *
+ * A instituicao manda um dia por aba. Lendo so a primeira, o lote entrava pela
+ * metade e parecia inteiro. Aba com outro cabecalho (resumo, grafico) nao e o
+ * lote, e fica de fora.
+ */
+function linhasDoLote(input: Uint8Array): string[][] {
+  const abas = readXlsxSheets(input)
+    .map((rows) => rows.filter((row) => row.some((cell) => cell.trim().length > 0)))
+    .filter((rows) => rows.length > 0);
+  const [primeira, ...resto] = abas;
+  if (!primeira) return [];
+  const header = cabecalho(primeira[0] ?? []);
+  const linhas = [...primeira];
+  for (const aba of resto) {
+    if (cabecalho(aba[0] ?? []) === header) linhas.push(...aba.slice(1));
   }
-  return rows;
+  return linhas;
 }
 
 /**
@@ -149,8 +179,7 @@ export function readXlsxRows(input: Uint8Array): string[][] {
  * ("Silva Junior, Antonio") partiria a linha em duas colunas silenciosamente.
  */
 export function xlsxToCsv(input: Uint8Array): string {
-  const rows = readXlsxRows(input);
-  const usadas = rows.filter((row) => row.some((cell) => cell.trim().length > 0));
+  const usadas = linhasDoLote(input);
   if (usadas.length === 0) throw new XlsxError('A planilha está vazia.');
 
   return usadas

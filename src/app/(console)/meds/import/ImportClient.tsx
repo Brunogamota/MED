@@ -87,7 +87,8 @@ export function ImportClient() {
             label="Arquivo do lote"
             extensions={['.csv', '.tsv', '.txt', '.xlsx', '.zip']}
             maxBytes={5 * 1024 * 1024}
-            hint="Até 5 MB. A planilha da instituição serve como veio: .xlsx, CSV, TSV, TXT ou um .zip com um deles dentro."
+            multiple
+            hint="Pode subir vários de uma vez (um por dia, por exemplo). Até 5 MB. A planilha da instituição serve como veio: .xlsx, CSV, TSV, TXT ou um .zip com um deles dentro."
           />
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
