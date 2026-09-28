@@ -8,6 +8,8 @@ import {
   type ImportPreviewState,
 } from '@/app/(console)/meds/actions';
 import { DateTimeField } from '@/components/fields';
+import { DeliveryImportClient } from '@/app/(console)/meds/entregas/DeliveryImportClient';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileDropField } from '@/components/ui/file-drop';
@@ -127,6 +129,19 @@ export function ImportClient() {
 
       {state?.error ? (
         <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{state.error}</p>
+      ) : null}
+
+      {state?.deliveryTexts ? (
+        <>
+          <Alert>
+            <AlertTitle>Este arquivo é log de entrega, não lote de MEDs</AlertTitle>
+            <AlertDescription>
+              Nenhum MED foi criado. O registro vai para os MEDs que já existem, pelo mesmo
+              caminho da importação de entregas.
+            </AlertDescription>
+          </Alert>
+          <DeliveryImportClient key={state.deliveryTexts.join('').length} texts={state.deliveryTexts} />
+        </>
       ) : null}
 
       {parsed?.fatalError ? (

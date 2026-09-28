@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { classifyOutcome, parseDeliveryLog, parseLogTimestamp } from '@/domain/import/deliveryLog';
+import { classifyOutcome, isDeliveryLog, parseDeliveryLog, parseLogTimestamp } from '@/domain/import/deliveryLog';
 
 /**
  * Export de MTA com os envios de confirmacao.
@@ -94,5 +94,21 @@ describe('log de entrega', () => {
     const errado = parseDeliveryLog('coluna_a,coluna_b\n1,2');
     expect(errado.fatalError).toMatch(/não parece um log de envio/);
     expect(errado.rows).toEqual([]);
+  });
+});
+
+describe('isDeliveryLog', () => {
+  it('reconhece o log de envio do provedor', () => {
+    const log = readFileSync(join(__dirname, 'fixtures/delivery-log.csv'), 'utf8');
+    expect(isDeliveryLog(log)).toBe(true);
+  });
+
+  it('nao confunde o lote de MEDs da instituicao com log de envio', () => {
+    const lote = readFileSync(join(__dirname, 'fixtures/psp-rejeitados.csv'), 'utf8');
+    expect(isDeliveryLog(lote)).toBe(false);
+  });
+
+  it('arquivo vazio nao e log', () => {
+    expect(isDeliveryLog('')).toBe(false);
   });
 });
