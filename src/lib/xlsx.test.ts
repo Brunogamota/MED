@@ -201,3 +201,28 @@ describe('planilha da adquirente ate o leitor de MEDs', () => {
     expect(row?.openedAt).toBeNull();
   });
 });
+
+describe('planilha com varias abas', () => {
+  const header = `<row r="1">${inline('A1', 'medId')}${inline('B1', 'Valor')}</row>`;
+
+  it('junta as abas que tem o mesmo cabecalho, um dia por aba', () => {
+    const csv = xlsxToCsv(
+      planilha(linhas(header, `<row r="2">${inline('A2', 'E-DIA-22')}${inline('B2', '12,90')}</row>`), {
+        'xl/worksheets/sheet2.xml': linhas(
+          header,
+          `<row r="2">${inline('A2', 'E-DIA-23')}${inline('B2', '57,90')}</row>`,
+        ),
+      }),
+    );
+    expect(csv.split('\n')).toEqual(['medId;Valor', 'E-DIA-22;12,90', 'E-DIA-23;57,90']);
+  });
+
+  it('deixa de fora aba com outras colunas', () => {
+    const csv = xlsxToCsv(
+      planilha(linhas(header, `<row r="2">${inline('A2', 'E-1')}${inline('B2', '1,00')}</row>`), {
+        'xl/worksheets/sheet2.xml': linhas(`<row r="1">${inline('A1', 'Resumo')}</row>`),
+      }),
+    );
+    expect(csv.split('\n')).toEqual(['medId;Valor', 'E-1;1,00']);
+  });
+});

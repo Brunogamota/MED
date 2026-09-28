@@ -4,6 +4,7 @@ import { getCase, listMeds } from '@/services/medService';
 import { NotFoundError } from '@/services/errors';
 import { parseCommunicationReceipt } from '@/domain/communication/receipt';
 import { ClientEmailView } from '@/components/ClientEmailView';
+import { ReceiptPrintsButton } from '@/components/ReceiptPrintsButton';
 import { resolveEndToEndId } from '@/domain/identifiers';
 import type { MedCase } from '@/domain/case';
 import type { Evidence } from '@/domain/types';
@@ -112,7 +113,7 @@ export default async function ComprovantesEmLotePage({
   const semPeca = casos.filter((medCase) => pecasDoCaso(medCase).length === 0);
 
   return (
-    <div className="mx-auto max-w-[680px] py-4">
+    <div className="mx-auto max-w-[680px] py-4" data-lote-comprovantes>
       <div className="mb-4 print:hidden">
         <div className="flex items-center justify-between">
           <Link href="/meds" className="text-xs text-muted-foreground hover:text-foreground">
@@ -122,6 +123,11 @@ export default async function ComprovantesEmLotePage({
             Ctrl/Cmd+P para salvar o lote em PDF.
           </span>
         </div>
+        {pecas.length > 0 ? (
+          <div className="mt-3">
+            <ReceiptPrintsButton />
+          </div>
+        ) : null}
         <p className="mt-3 text-sm">
           {pecas.length} comprovante{pecas.length === 1 ? '' : 's'} de {casos.length} caso
           {casos.length === 1 ? '' : 's'}.
@@ -161,11 +167,13 @@ export default async function ComprovantesEmLotePage({
             className={index > 0 ? 'break-before-page pt-6 print:pt-0' : ''}
           >
             <p className="mb-2 font-mono text-[11px] text-muted-foreground">{peca.medId}</p>
-            <ClientEmailView
-              receipt={receipt}
-              sourceReference={peca.evidence.sourceReference}
-              endToEndId={medCase ? resolveEndToEndId(medCase) : null}
-            />
+            <div data-print-name={peca.medId}>
+              <ClientEmailView
+                receipt={receipt}
+                sourceReference={peca.evidence.sourceReference}
+                endToEndId={medCase ? resolveEndToEndId(medCase) : null}
+              />
+            </div>
           </div>
         );
       })}

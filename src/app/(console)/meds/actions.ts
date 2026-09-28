@@ -545,21 +545,45 @@ async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | 
  * sentido — dezenas de "coluna ignorada" no lugar de dizer o que aconteceu.
  */
 async function readImportText(form: FormData): Promise<ImportRead> {
-  const file = form.get('file');
-  if (file instanceof File && file.size > 0) {
+  const tabelas: string[] = [];
+  for (const file of form.getAll('file')) {
+    if (!(file instanceof File) || file.size === 0) continue;
     const aberto = await openAsTexts(file);
     if (!aberto.ok) return aberto;
-    // Esta tela importa um lote de MEDs por vez: um zip com varias tabelas
-    // nao diz qual delas e o lote, e escolher a primeira seria adivinhar.
-    if (aberto.texts.length > 1) {
+    tabelas.push(...aberto.texts);
+  }
+  if (tabelas.length === 0) return { ok: true, csv: text(form, 'csv') ?? '' };
+  return juntarLotes(tabelas);
+}
+
+/**
+ * Varios arquivos (ou um zip com varios) do mesmo lote viram um lote so.
+ *
+ * A instituicao manda um arquivo por dia, e subir os dias juntos e o natural.
+ * Lendo so o primeiro, o resto ficava de fora sem aviso. O que se junta e so o
+ * que tem o mesmo cabecalho: tabela com outras colunas nao e o mesmo lote, e
+ * juntar poria valor na coluna errada.
+ */
+function juntarLotes(tabelas: string[]): ImportRead {
+  const partes = tabelas
+    .map((tabela) => tabela.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim())
+    .filter((tabela) => tabela.length > 0);
+  const [primeira, ...resto] = partes;
+  if (!primeira) return { ok: true, csv: '' };
+  const cabecalho = (tabela: string) => (tabela.split('\n', 1)[0] ?? '').trim().toLowerCase();
+  const header = cabecalho(primeira);
+  const linhas = [primeira];
+  for (const tabela of resto) {
+    if (cabecalho(tabela) !== header) {
       return {
         ok: false,
-        error: `"${file.name}" tem mais de uma tabela dentro. Envie o arquivo do lote de MEDs.`,
+        error:
+          'Os arquivos não têm as mesmas colunas, então não são o mesmo lote. Suba um tipo de arquivo por vez.',
       };
     }
-    return { ok: true, csv: aberto.texts[0] ?? '' };
+    linhas.push(tabela.slice(tabela.indexOf('\n') + 1));
   }
-  return { ok: true, csv: text(form, 'csv') ?? '' };
+  return { ok: true, csv: linhas.join('\n') };
 }
 
 /**
