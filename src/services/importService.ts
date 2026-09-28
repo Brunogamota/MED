@@ -3,6 +3,7 @@ import type { CreateMedInput } from '@/domain/schemas';
 import { createMedSchema } from '@/domain/schemas';
 import {
   createMedWithOutcome,
+  returnToQueueIfSubmitted,
   upsertCustomer,
   upsertOrder,
   upsertTransaction,
@@ -183,6 +184,8 @@ async function importRow(
 
       const orderInput = buildOrderInput(row);
       if (orderInput) await upsertOrder(auth, med.id, orderInput);
+    } else if (await returnToQueueIfSubmitted(auth, med.id)) {
+      messages.push('MED já existia como Enviado e voltou para a fila.');
     } else {
       messages.push('MED já existia e foi mantido como estava.');
     }

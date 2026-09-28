@@ -5,7 +5,7 @@ import { ForbiddenError } from '@/infra/auth/rbac';
 import type { AuthContext } from '@/infra/auth/context';
 import { importMedsFromText } from '@/services/importService';
 import { deriveEvidence } from '@/domain/evidence/derive';
-import { getCase, listMeds } from '@/services/medService';
+import { getCase, listMeds, setMedOutcome } from '@/services/medService';
 
 const auth: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'test:a' };
 const viewer: AuthContext = { organizationId: 'org_a', role: 'VIEWER', actor: 'test:viewer' };
@@ -46,6 +46,28 @@ describe('importacao em lote', () => {
     expect(report?.created).toBe(0);
     expect(report?.duplicated).toBe(2);
     expect(await listMeds(auth, {})).toHaveLength(2);
+  });
+
+  it('caso marcado como Enviado volta para a fila quando sobe de novo', async () => {
+    const { report: first } = await importMedsFromText(auth, CSV);
+    const id = first!.results.find((result) => result.medId === 'MED-001')!.id!;
+    await setMedOutcome(auth, id, 'SUBMITTED');
+
+    const { report } = await importMedsFromText(auth, CSV);
+
+    const again = report?.results.find((result) => result.medId === 'MED-001');
+    expect(again?.messages).toContain('MED já existia como Enviado e voltou para a fila.');
+    expect((await getCase(auth, id)).med.status).not.toBe('SUBMITTED');
+  });
+
+  it('resposta da instituicao nao e desfeita por subir de novo', async () => {
+    const { report: first } = await importMedsFromText(auth, CSV);
+    const id = first!.results.find((result) => result.medId === 'MED-001')!.id!;
+    await setMedOutcome(auth, id, 'ACCEPTED');
+
+    await importMedsFromText(auth, CSV);
+
+    expect((await getCase(auth, id)).med.status).toBe('ACCEPTED');
   });
 
   it('preenche Transação, Cliente e Pedido sozinho, sem passo manual depois', async () => {

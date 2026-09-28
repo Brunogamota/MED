@@ -23,6 +23,7 @@ import {
   addEvidence,
   getCase,
   listMeds,
+  returnToQueueIfSubmitted,
   upsertCustomer,
 } from '@/services/medService';
 import {
@@ -114,6 +115,8 @@ export interface DeliveryImportReport {
    * de qual arquivo.
    */
   touchedMedIds: string[];
+  /** Casos que estavam como Enviado e voltaram para a fila com esta importacao. */
+  returnedToQueue: number;
   /**
    * Liberacoes anteriores a cobranca, recusadas como comprovante.
    *
@@ -250,6 +253,7 @@ export async function importDeliveryLog(
     withoutMessageId: 0,
     duplicated: 0,
     touchedMedIds: [],
+    returnedToQueue: 0,
     anachronistic: 0,
     notDelivered: 0,
     unmatched: 0,
@@ -683,6 +687,11 @@ export async function importDeliveryLog(
     },
   });
 
+  let returnedToQueue = 0;
+  for (const medId of touched) {
+    if (await returnToQueueIfSubmitted(auth, medId)) returnedToQueue += 1;
+  }
+
   return {
     total: parsed.rows.length,
     recorded,
@@ -691,6 +700,7 @@ export async function importDeliveryLog(
     withoutMessageId,
     duplicated: parsed.duplicated.length,
     touchedMedIds: [...touched],
+    returnedToQueue,
     anachronistic,
     notDelivered,
     unmatched: report.unmatchedRows.length - accessLinked,

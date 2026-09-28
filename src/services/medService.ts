@@ -359,6 +359,23 @@ export async function setMedOutcome(
   return (await repository.getMed(auth.organizationId, medId)) ?? current;
 }
 
+/**
+ * Caso que sobe de novo volta para a fila, se estava so como Enviado.
+ *
+ * Enviado e declaracao de quem opera, e ate aqui ela vinha sendo feita por
+ * engano na tela de importacao — o caso sumia da fila sem ter ido a lugar
+ * nenhum. Subir o caso de novo e sinal de que ainda ha trabalho nele. Resposta
+ * da instituicao (aceito, recusado) e prazo vencido nao mudam: esses nao sao
+ * declaracao de envio, sao desfecho.
+ */
+export async function returnToQueueIfSubmitted(auth: AuthContext, medId: string): Promise<boolean> {
+  const repository = await getRepository();
+  const current = await repository.getMed(auth.organizationId, medId);
+  if (!current || current.status !== 'SUBMITTED') return false;
+  await setMedOutcome(auth, medId, null);
+  return true;
+}
+
 export async function upsertTransaction(
   auth: AuthContext,
   medId: string,

@@ -224,3 +224,36 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
 
   return { rows, fatalError: null };
 }
+
+/**
+ * Colunas que so um log de envio tem.
+ *
+ * Nome, e-mail e id da transacao aparecem tambem no arquivo da instituicao, e
+ * por isso nao servem para distinguir um do outro. Message-id, hora do envio,
+ * hora da entrega, resposta SMTP e primeiro acesso, sim: nenhum lote de MED
+ * traz isso.
+ */
+const DELIVERY_ONLY_FIELDS: LogField[] = [
+  'messageId',
+  'sentAt',
+  'deliveredAt',
+  'smtpResponse',
+  'firstAccessAt',
+];
+
+/**
+ * O arquivo e um log de envio, e nao um lote de MEDs?
+ *
+ * Existe para a importacao de MEDs reconhecer o arquivo que subiu pela porta
+ * errada e mandar para o fluxo de entregas, em vez de recusar o lote inteiro
+ * por nao achar a coluna do MED.
+ */
+export function isDeliveryLog(text: string): boolean {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return false;
+  const headerRow = parseDelimited(trimmed, detectDelimiter(trimmed))[0] ?? [];
+  return headerRow.some((header) => {
+    const field = ALIAS_TO_FIELD.get(normalizeHeader(header));
+    return field !== undefined && DELIVERY_ONLY_FIELDS.includes(field);
+  });
+}

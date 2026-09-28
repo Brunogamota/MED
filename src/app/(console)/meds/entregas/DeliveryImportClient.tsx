@@ -10,12 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Panel, MetricCell, MetricStrip } from '@/components/ui';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/cn';
-import {
-  importDeliveryLogAction,
-  markSubmittedAction,
-  type DeliveryImportState,
-  type MarkSubmittedState,
-} from '@/app/(console)/meds/actions';
+import { importDeliveryLogAction, type DeliveryImportState } from '@/app/(console)/meds/actions';
 import type { DeliveryOutcomeKind } from '@/services/deliveryImportService';
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -38,13 +33,13 @@ const KIND_TONE: Record<DeliveryOutcomeKind, string> = {
   INVALID: 'text-amber-700 dark:text-amber-400',
 };
 
-export function DeliveryImportClient() {
+/**
+ * `texts` vem preenchido quando o log subiu pela importacao de MEDs: o arquivo
+ * ja foi lido la, e aqui so falta dizer que mensagem ele registra.
+ */
+export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
   const [state, action] = useActionState<DeliveryImportState | null, FormData>(
     importDeliveryLogAction,
-    null,
-  );
-  const [sent, markSent] = useActionState<MarkSubmittedState | null, FormData>(
-    markSubmittedAction,
     null,
   );
   const report = state?.report ?? null;
@@ -52,6 +47,7 @@ export function DeliveryImportClient() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
+      {texts ? null : (
       <Alert>
         <AlertTitle>Suba os arquivos todos de uma vez</AlertTitle>
         <AlertDescription>
@@ -61,9 +57,21 @@ export function DeliveryImportClient() {
           juntos, ou o export único se o seu vier assim.
         </AlertDescription>
       </Alert>
+      )}
 
       <Panel title="Arquivo do provedor">
         <form action={action} className="space-y-4">
+          {texts ? (
+            <>
+              {texts.map((conteudo, index) => (
+                <input key={index} type="hidden" name="csv" value={conteudo} />
+              ))}
+              <p className="text-muted-foreground text-sm">
+                {texts.length} arquivo{texts.length > 1 ? 's' : ''} já lido
+                {texts.length > 1 ? 's' : ''}. Escolha a mensagem e registre.
+              </p>
+            </>
+          ) : (
           <FileDropField
             name="file"
             label="Export do provedor"
@@ -72,6 +80,7 @@ export function DeliveryImportClient() {
             multiple
             hint="Pode subir os arquivos de uma vez — cobranças e entregas juntos, ou um export único. Se vier zipado, sobe o .zip mesmo. Cada coluna que existir é aproveitada: id da transação, e-mail, message-id, URL do produto, primeiro acesso."
           />
+          )}
           <div className="grid gap-2">
             <Label htmlFor="modelo">Que mensagem este log registra</Label>
             <select
@@ -214,33 +223,32 @@ export function DeliveryImportClient() {
           ) : null}
 
           {touched.length > 0 ? (
-            <Panel title="Depois de enviar a defesa">
-              {sent?.marked ? (
-                <p className="text-sm">
-                  {sent.marked} caso{sent.marked > 1 ? 's' : ''} marcado
-                  {sent.marked > 1 ? 's' : ''} como Enviado.{' '}
-                  <Link href="/meds?view=enviados" className="font-medium hover:underline">
-                    Ver em Enviados
+            <Panel title="Próximo passo: conferir">
+              {/*
+                Importar entrega nao envia nada a instituicao, e o status
+                continua o que a evidencia diz. Marcar como Enviado e ato
+                separado, na fila, depois da conferencia.
+              */}
+              <p className="text-muted-foreground text-sm">
+                Registro anexado a {touched.length} caso{touched.length > 1 ? 's' : ''}. Nenhum
+                foi marcado como enviado à instituição. Confira os comprovantes antes de enviar.
+              </p>
+              {report?.returnedToQueue ? (
+                <p className="mt-2 text-sm">
+                  {report.returnedToQueue} caso{report.returnedToQueue > 1 ? 's' : ''} que estava
+                  {report.returnedToQueue > 1 ? 'm' : ''} como Enviado voltou
+                  {report.returnedToQueue > 1 ? 'ram' : ''} para a fila.{' '}
+                  <Link href="/meds" className="font-medium hover:underline">
+                    Ver a fila
                   </Link>
-                  .
                 </p>
-              ) : (
-                <>
-                  <p className="text-muted-foreground text-sm">
-                    Esta importação anexou registro a {touched.length} caso
-                    {touched.length > 1 ? 's' : ''}. Quando a defesa desses casos já tiver ido
-                    para a instituição, marque aqui — é a declaração de que foi enviada, e é o
-                    único passo que o sistema não tem como saber sozinho.
-                  </p>
-                  <form action={markSent} className="mt-3">
-                    <input type="hidden" name="medIds" value={JSON.stringify(touched)} />
-                    <SubmitButton>Enviar ({touched.length})</SubmitButton>
-                  </form>
-                  {sent?.error ? (
-                    <p className="mt-2 text-destructive text-sm">{sent.error}</p>
-                  ) : null}
-                </>
-              )}
+              ) : null}
+              <Link
+                href={`/meds/comprovantes?ids=${touched.join(',')}`}
+                className="mt-3 inline-block font-medium text-sm hover:underline"
+              >
+                Conferir os comprovantes ({touched.length})
+              </Link>
             </Panel>
           ) : null}
 

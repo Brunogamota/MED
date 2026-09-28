@@ -38,6 +38,7 @@ import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentSer
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
 import { addCommunicationReconstruction } from '@/services/medService';
 import { parseMedImport } from '@/domain/import/csv';
+import { isDeliveryLog } from '@/domain/import/deliveryLog';
 import {
   COMMUNICATION_TEMPLATES,
   EMAIL_SENDER_NAME,
@@ -577,8 +578,9 @@ async function readImportTexts(form: FormData): Promise<ImportReadMany> {
     csvs.push(...aberto.texts);
   }
   if (csvs.length === 0) {
-    const colado = text(form, 'csv');
-    if (colado) csvs.push(colado);
+    for (const entry of form.getAll('csv')) {
+      if (typeof entry === 'string' && entry.trim().length > 0) csvs.push(entry);
+    }
   }
   return { ok: true, csvs };
 }
@@ -595,6 +597,12 @@ export interface ImportPreviewState {
    */
   plan: ImportPlan | null;
   report: Awaited<ReturnType<typeof importParsedMeds>> | null;
+  /**
+   * Preenchido quando o arquivo e log de envio, e nao lote de MEDs: subiu pela
+   * porta errada. A tela passa esses textos ao fluxo de entregas em vez de
+   * recusar o lote por nao achar a coluna do MED.
+   */
+  deliveryTexts?: string[] | null;
   error: string | null;
 }
 
@@ -604,6 +612,22 @@ export async function previewImportAction(
 ): Promise<ImportPreviewState> {
   const defaultOpenedAt = dateTime(form, 'defaultOpenedAt') ?? null;
   const batchReference = text(form, 'batchReference') ?? null;
+
+  // Log de envio subido aqui por engano: nada e gravado como MED. Vai para o
+  // fluxo de entregas, que e onde ele casa com os MEDs que ja existem.
+  const all = await readImportTexts(form);
+  if (all.ok && all.csvs.some(isDeliveryLog)) {
+    return {
+      csv: '',
+      defaultOpenedAt,
+      batchReference,
+      parsed: null,
+      plan: null,
+      report: null,
+      deliveryTexts: all.csvs,
+      error: null,
+    };
+  }
 
   const read = await readImportText(form);
   if (!read.ok) {
