@@ -21,6 +21,7 @@ import { assertCan } from '@/infra/auth/rbac';
 import {
   addCommunicationReconstruction,
   addEvidence,
+  deleteCommunicationReconstruction,
   getCase,
   listMeds,
   returnToQueueIfSubmitted,
@@ -82,6 +83,17 @@ export interface DeliveryImportOptions {
    * o modelo e declarado aqui em vez de adivinhado pelo nome do arquivo.
    */
   receiptTemplate?: CommunicationTemplate;
+
+  /**
+   * Apaga os comprovantes de comunicacao que o caso ja tinha e que nao vieram
+   * deste arquivo.
+   *
+   * Para quando o log certo chega depois de um errado: sem isso o caso fica com
+   * as duas versoes do mesmo envio, e duas versoes com message-ids diferentes e
+   * o que derruba a defesa na conferencia. So age nos casos em que este arquivo
+   * gerou comprovante: caso sem peca nova nao perde a que tem.
+   */
+  replacePreviousReceipts?: boolean;
 }
 
 export interface DeliveryImportReport {
@@ -117,6 +129,8 @@ export interface DeliveryImportReport {
   touchedMedIds: string[];
   /** Casos que estavam como Enviado e voltaram para a fila com esta importacao. */
   returnedToQueue: number;
+  /** Comprovantes antigos apagados porque este arquivo trouxe a versao certa. */
+  replacedReceipts: number;
   /**
    * Liberacoes anteriores a cobranca, recusadas como comprovante.
    *
@@ -254,6 +268,7 @@ export async function importDeliveryLog(
     duplicated: 0,
     touchedMedIds: [],
     returnedToQueue: 0,
+    replacedReceipts: 0,
     anachronistic: 0,
     notDelivered: 0,
     unmatched: 0,
@@ -329,6 +344,14 @@ export async function importDeliveryLog(
   // alcancados. `Set` porque o mesmo MED pode ser tocado pela cobranca e pela
   // liberacao de acesso, e e um caso so.
   const touched = new Set<string>();
+  // Message-ids dos comprovantes gerados por esta importacao, por caso.
+  const gerados = new Map<string, Set<string>>();
+  const marcarGerado = (medId: string, messageId: string | null) => {
+    if (!messageId) return;
+    const conjunto = gerados.get(medId) ?? new Set<string>();
+    conjunto.add(messageId.trim());
+    gerados.set(medId, conjunto);
+  };
   let anachronistic = 0;
   let notDelivered = 0;
   let invalid = 0;
@@ -472,6 +495,7 @@ export async function importDeliveryLog(
         source: 'EMAIL',
         sourceReference: row.messageId ?? undefined,
       });
+      marcarGerado(med.id, row.messageId);
       receipts += 1;
     }
 
@@ -621,6 +645,7 @@ export async function importDeliveryLog(
           source: 'EMAIL',
           sourceReference: row.messageId ?? undefined,
         });
+        marcarGerado(med.id, row.messageId);
 
         // O primeiro acesso é o que responde "não recebi": mostra que a pessoa
         // usou o que comprou. Entra como evidência própria, com o message-id
@@ -687,6 +712,18 @@ export async function importDeliveryLog(
     },
   });
 
+  let replacedReceipts = 0;
+  if (options.replacePreviousReceipts) {
+    for (const [medId, doArquivo] of gerados) {
+      const medCase = await getCase(auth, medId);
+      for (const evidence of medCase.evidences) {
+        if (evidence.type !== 'DELIVERY_COMMUNICATION') continue;
+        if (doArquivo.has(evidence.sourceReference?.trim() ?? '')) continue;
+        if (await deleteCommunicationReconstruction(auth, medId, evidence.id)) replacedReceipts += 1;
+      }
+    }
+  }
+
   let returnedToQueue = 0;
   for (const medId of touched) {
     if (await returnToQueueIfSubmitted(auth, medId)) returnedToQueue += 1;
@@ -701,6 +738,7 @@ export async function importDeliveryLog(
     duplicated: parsed.duplicated.length,
     touchedMedIds: [...touched],
     returnedToQueue,
+    replacedReceipts,
     anachronistic,
     notDelivered,
     unmatched: report.unmatchedRows.length - accessLinked,

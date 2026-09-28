@@ -852,6 +852,7 @@ export async function importDeliveryLogAction(
   const modelo = form.get('modelo');
   const report = await importDeliveryLog(serverPageContext(), read.csvs, {
     generateReceipts: form.get('gerarComprovantes') === 'on',
+    replacePreviousReceipts: form.get('substituirComprovantes') === 'on',
     receiptTemplate: COMMUNICATION_TEMPLATES.includes(modelo as CommunicationTemplate)
       ? (modelo as CommunicationTemplate)
       : undefined,
