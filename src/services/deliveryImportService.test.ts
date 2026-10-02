@@ -446,3 +446,34 @@ describe('modelo automatico: fisico ou digital por venda', () => {
     expect((await pecas())[0]?.template).toBe('ORDER_TRACKING');
   });
 });
+
+describe('planilha de envio em portugues ligada pelo E2E', () => {
+  it('liga ao MED pelo E2E e gera o comprovante do tipo do produto', async () => {
+    await createMed(auth, {
+      medId: 'E18236120202609240950s05ae179c2b',
+      amount: 49.9,
+      currency: 'BRL',
+      openedAt: null,
+      transactionAt: '2026-09-24T09:50:00.000Z',
+      reason: 'FRAUD_SCAM',
+      payer: { name: 'Wildson Silva' },
+    });
+    const planilha = [
+      'Nome;E2E;Horário da compra;Lançado no sistema;Confirmação recebida;E-mail;Tipo do produto;URL de acesso / confirmação de pedido para logistica',
+      'Wildson Silva;E18236120202609240950s05ae179c2b;24/09/2026 06:50;24/09/2026 06:52;24/09/2026 06:52:07;wildson@exemplo.com;Físico;https://rastreio.exemplo.com/1',
+    ].join('\n');
+
+    const report = await importDeliveryLog(auth, planilha, {
+      generateReceipts: true,
+      receiptTemplate: 'AUTO',
+    });
+
+    expect(report.receipts + report.accessLinked).toBeGreaterThan(0);
+    const [row] = (await listMeds(auth, {})).filter(
+      (entry) => entry.med.medId === 'E18236120202609240950s05ae179c2b',
+    );
+    const medCase = await getCase(auth, row!.med.id);
+    const peca = medCase.evidences.find((evidence) => evidence.type === 'DELIVERY_COMMUNICATION');
+    expect((peca?.value as { template: string }).template).toBe('ORDER_TRACKING');
+  });
+});

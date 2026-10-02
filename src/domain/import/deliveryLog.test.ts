@@ -112,3 +112,36 @@ describe('isDeliveryLog', () => {
     expect(isDeliveryLog('')).toBe(false);
   });
 });
+
+describe('planilha de envio em portugues', () => {
+  const PLANILHA = [
+    'Nome;E2E;Horário da compra;Lançado no sistema;Confirmação recebida;E-mail;Tipo do produto;URL de acesso / confirmação de pedido para logistica',
+    'Fulano de Tal;E18236120202609240950s05ae179c2b;24/09/2026 06:50;24/09/2026 06:52;24/09/2026 06:52:07;fulano@exemplo.com;Digital;https://console.exemplo.com/p/1',
+    'Beltrana Silva;E00416968202609221447eFD2QZqmSuJ;22/09/2026 11:47;22/09/2026 11:48;;beltrana@exemplo.com;Físico;https://rastreio.exemplo.com/2',
+  ].join('\n');
+
+  it('reconhece todas as colunas', () => {
+    const { rows, fatalError } = parseDeliveryLog(PLANILHA);
+    expect(fatalError).toBeNull();
+    const [a, b] = rows;
+    expect(a?.customerName).toBe('Fulano de Tal');
+    expect(a?.transactionRef).toBe('E18236120202609240950s05ae179c2b');
+    expect(a?.purchaseAt).toBe('2026-09-24T09:50:00.000Z');
+    expect(a?.sentAt).toBe('2026-09-24T09:52:00.000Z');
+    expect(a?.deliveredAt).toBe('2026-09-24T09:52:07.000Z');
+    expect(a?.customerEmail).toBe('fulano@exemplo.com');
+    expect(a?.productType).toBe('DIGITAL');
+    expect(a?.productUrl).toBe('https://console.exemplo.com/p/1');
+    expect(b?.productType).toBe('PHYSICAL');
+  });
+
+  it('sem coluna de status, confirmacao preenchida e entrega e vazia nao e', () => {
+    const [a, b] = parseDeliveryLog(PLANILHA).rows;
+    expect(a?.outcome).toBe('DELIVERED');
+    expect(b?.outcome).toBe('OTHER');
+  });
+
+  it('le data de planilha xlsx (numero serial)', () => {
+    expect(parseLogTimestamp('46289.25')).toBe('2026-09-24T09:00:00.000Z');
+  });
+});
