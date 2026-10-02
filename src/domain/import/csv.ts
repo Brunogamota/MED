@@ -259,6 +259,30 @@ export function parseAmount(raw: string): number | null {
 const BR_OFFSET = '-03:00';
 
 /**
+ * Prazo de resposta como a planilha da instituicao escreve: "01/10",
+ * "01/10 (vencido)", "01/10/2026 18:00".
+ *
+ * O que vem depois da data (anotacao entre parenteses, "vencido") e ignorado.
+ * Sem ano, o ano e o da compra ou da abertura do caso; sem nenhum dos dois, o
+ * prazo fica ausente em vez de chutado. Fim do dia quando nao ha hora.
+ */
+export function parseDeadline(raw: string, reference: string | null): string | null {
+  const value = raw.replace(/\(.*?\)/g, ' ').trim();
+  if (value.length === 0) return null;
+  const full = parseDateTimeBr(value) ?? parseDateTimeBr(value.split(/\s+/)[0] ?? '');
+  if (full) return full;
+  const short = value.match(/^(\d{1,2})[/-](\d{1,2})(?![/-]\d)/);
+  if (!short || !reference) return null;
+  const year = Number(reference.slice(0, 4));
+  const day = short[1]!.padStart(2, '0');
+  const month = short[2]!.padStart(2, '0');
+  let iso = parseDateTimeBr(`${day}/${month}/${year} 23:59`);
+  // Prazo e sempre depois da compra: dezembro comprado, janeiro de prazo.
+  if (iso && iso < reference) iso = parseDateTimeBr(`${day}/${month}/${year + 1} 23:59`);
+  return iso;
+}
+
+/**
  * Aceita ISO-8601, dd/mm/aaaa e aaaa-mm-dd, com hora opcional.
  * Data ambigua ou incompleta vira null, e a linha e reportada como erro.
  */
@@ -621,7 +645,13 @@ export function parseMedImport(text: string): ParsedImport {
     };
 
     const transactionAt = parseOptionalDate('transactionAt', 'Data da compra');
-    const responseDeadlineAt = parseOptionalDate('responseDeadlineAt', 'Prazo de resposta');
+    // Prazo nunca barra a linha: MED vencido tambem precisa entrar, porque a
+    // instituicao costuma dar dias a mais para a defesa. O que nao der para ler
+    // fica sem prazo.
+    const responseDeadlineAt = parseDeadline(
+      cell(values, 'responseDeadlineAt'),
+      transactionAt ?? openedAt,
+    );
 
     const resolvedReason = resolveReason(cell(values, 'reason'));
     // Coluna propria de relato vence o texto do motivo: ela e o que o

@@ -162,3 +162,20 @@ describe('parseMedImport', () => {
     expect(parsed.rows[0]?.payerName).toBe('Souza, Maria');
   });
 });
+
+describe('prazo de resposta', () => {
+  it('le "01/10 (vencido)" com o ano da compra, no fim do dia', async () => {
+    const { parseDeadline } = await import('@/domain/import/csv');
+    expect(parseDeadline('01/10 (vencido)', '2026-09-24T13:37:00.000Z')).toBe('2026-10-02T02:59:00.000Z');
+  });
+  it('sem ano e sem data de referencia fica sem prazo', async () => {
+    const { parseDeadline } = await import('@/domain/import/csv');
+    expect(parseDeadline('01/10', null)).toBeNull();
+  });
+  it('prazo ilegivel nao barra a linha', async () => {
+    const { parseMedImport } = await import('@/domain/import/csv');
+    const parsed = parseMedImport('MED ID;Valor;Data da compra;Prazo;Motivo\nE003603052026092413371634db45c84;115,80;24/09/2026 10:37;01/10 (vencido);Golpe');
+    expect(parsed.rows[0]?.errors).toEqual([]);
+    expect(parsed.rows[0]?.responseDeadlineAt).toBe('2026-10-02T02:59:00.000Z');
+  });
+});

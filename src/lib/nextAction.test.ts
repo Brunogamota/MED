@@ -62,7 +62,7 @@ describe('nextAction', () => {
     expect(action.kind).toBe('critical');
   });
 
-  it('prazo vencido domina qualquer outro estado', () => {
+  it('prazo vencido nao trava: o caso segue com a proxima acao normal', () => {
     const medCase = makeCompleteCase();
     const action = nextAction({
       med: medCase.med,
@@ -72,7 +72,7 @@ describe('nextAction', () => {
       hoursRemaining: -2,
       lastEvidenceAt: null,
     });
-    expect(action.kind).toBe('expired');
+    expect(action.kind).not.toBe('expired');
   });
 
   it('caso enviado mostra o que esperar', () => {

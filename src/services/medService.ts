@@ -76,15 +76,9 @@ export function deriveStatus(
 ): MedStatus {
   if (TERMINAL_STATUSES.includes(medCase.med.status)) return medCase.med.status;
 
-  // A response window that has closed without a submission is EXPIRED, whatever
-  // the evidence looks like. Reporting READY_TO_SUBMIT past the deadline would
-  // be telling the operator something untrue about the case.
-  const deadline = medCase.med.responseDeadlineAt
-    ? Date.parse(medCase.med.responseDeadlineAt)
-    : null;
-  if (deadline !== null && !Number.isNaN(deadline) && deadline <= now.getTime()) {
-    return 'EXPIRED';
-  }
+  // Prazo vencido nao encerra o caso sozinho: a instituicao costuma aceitar a
+  // defesa dias depois. "Vencido" so quando alguem declara.
+  void now;
 
   const evidences = mergeEvidence(medCase.evidences, deriveEvidence(medCase));
   const assessment = assessEvidence({

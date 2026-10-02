@@ -269,7 +269,7 @@ describe('audit trail', () => {
 });
 
 describe('deadline expiry', () => {
-  it('marks a case EXPIRED once the response window closes without submission', async () => {
+  it('prazo vencido nao encerra o caso: segue liberado para defender', async () => {
     const med = await seedDeliveredCase(orgA);
     const medCase = await getCase(orgA, med.id);
 
@@ -280,7 +280,7 @@ describe('deadline expiry', () => {
     const afterDeadline = deriveStatus(medCase, true, new Date(deadline + 86_400_000));
 
     expect(beforeDeadline).toBe('READY_TO_SUBMIT');
-    expect(afterDeadline).toBe('EXPIRED');
+    expect(afterDeadline).toBe('READY_TO_SUBMIT');
   });
 
   it('does not expire a case that was already submitted', async () => {

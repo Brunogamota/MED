@@ -107,7 +107,7 @@ export function nextAction(input: NextActionInput): NextAction {
     };
   }
 
-  if (med.status === 'EXPIRED' || (hoursRemaining !== null && hoursRemaining < 0)) {
+  if (med.status === 'EXPIRED') {
     return { kind: 'expired', deadlineAt: med.responseDeadlineAt ?? null };
   }
 
