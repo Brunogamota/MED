@@ -397,3 +397,52 @@ describe('substituir comprovantes antigos', () => {
     expect(await comprovantes()).toEqual(['certo@mta07.exemplo.com.br']);
   });
 });
+
+describe('modelo automatico: fisico ou digital por venda', () => {
+  const LOG_TIPO = (tipo: string) =>
+    [
+      'customer_name,customer_email,amount_brl,purchase_at,message_id,status,delivered_at,product_url,smtp_response,tipo_produto',
+      `Fulano de Tal,fulano@exemplo.com,32.80,2026-09-18 12:30:04,<m1@mta03.exemplo.com.br>,delivered,2026-09-18 12:31:50,https://rastreio.exemplo.com/abc,250 OK,${tipo}`,
+    ].join('\n');
+
+  const pecas = async () => {
+    const [row] = (await listMeds(auth, {})).filter((entry) => entry.med.medId === 'MED-ENTREGUE');
+    const medCase = await getCase(auth, row!.med.id);
+    return medCase.evidences
+      .filter((evidence) => evidence.type === 'DELIVERY_COMMUNICATION')
+      .map((evidence) => evidence.value as { template: string; body: string; reference: string });
+  };
+
+  it('coluna do arquivo dizendo fisico gera acompanhamento do pedido', async () => {
+    const report = await importDeliveryLog(auth, LOG_TIPO('Físico'), {
+      generateReceipts: true,
+      receiptTemplate: 'AUTO',
+    });
+    expect(report.receiptsPhysical).toBe(1);
+    const [peca] = await pecas();
+    expect(peca?.template).toBe('ORDER_TRACKING');
+    expect(peca?.body).toMatch(/acompanhar o seu pedido até ser entregue/);
+    expect(peca?.reference).toBe('https://rastreio.exemplo.com/abc');
+  });
+
+  it('coluna dizendo digital gera acesso liberado', async () => {
+    const report = await importDeliveryLog(auth, LOG_TIPO('Digital'), {
+      generateReceipts: true,
+      receiptTemplate: 'AUTO',
+    });
+    expect(report.receiptsDigital).toBe(1);
+    const [peca] = await pecas();
+    expect(peca?.template).toBe('ACCESS_DELIVERY');
+    expect(peca?.body).toMatch(/Segue o seu acesso/);
+  });
+
+  it('sem tipo no arquivo nem no MED, usa o padrao e conta', async () => {
+    const report = await importDeliveryLog(auth, LOG_TIPO(''), {
+      generateReceipts: true,
+      receiptTemplate: 'AUTO',
+      unknownKind: 'PHYSICAL',
+    });
+    expect(report.receiptsUnknownKind).toBe(1);
+    expect((await pecas())[0]?.template).toBe('ORDER_TRACKING');
+  });
+});

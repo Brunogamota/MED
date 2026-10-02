@@ -86,18 +86,36 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
             <select
               id="modelo"
               name="modelo"
-              defaultValue="ACCESS_DELIVERY"
+              defaultValue="AUTO"
               className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
             >
-              <option value="ACCESS_DELIVERY">Entrega de acesso</option>
+              <option value="AUTO">Automático: físico ou digital de cada venda</option>
+              <option value="ACCESS_DELIVERY">Entrega de acesso (digital)</option>
+              <option value="ORDER_TRACKING">Acompanhamento do pedido (físico)</option>
               <option value="PURCHASE_CONFIRMATION">Confirmação de compra</option>
               <option value="DELIVERY_CONFIRMATION">Confirmação de entrega</option>
               <option value="GENERIC">Mensagem ao cliente</option>
             </select>
             <p className="text-muted-foreground text-sm">
-              Um log de confirmação de compra e um de liberação de acesso são idênticos por
-              dentro: os dois trazem message-id, hora e resposta SMTP. Quem sabe qual é você.
+              No automático, cada venda sai com a mensagem do tipo do produto: digital com o
+              acesso liberado, físico com o botão para acompanhar o pedido até a entrega. O tipo
+              vem da coluna do arquivo, quando existe, ou do MED.
             </p>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="tipoDesconhecido">
+              No automático, quando o tipo não estiver no arquivo nem no MED
+            </Label>
+            <select
+              id="tipoDesconhecido"
+              name="tipoDesconhecido"
+              defaultValue="DIGITAL"
+              className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
+            >
+              <option value="DIGITAL">Tratar como digital</option>
+              <option value="PHYSICAL">Tratar como físico</option>
+            </select>
           </div>
 
           <div className="flex items-start gap-3 rounded-lg border p-3">
@@ -152,6 +170,12 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
               tone={report.withFirstAccess > 0 ? 'success' : 'neutral'}
             />
             <MetricCell label="Comprovantes gerados" value={report.receipts} />
+            {report.receiptsPhysical > 0 ? (
+              <MetricCell label="Físicos (acompanhamento)" value={report.receiptsPhysical} />
+            ) : null}
+            {report.receiptsDigital > 0 ? (
+              <MetricCell label="Digitais (acesso)" value={report.receiptsDigital} />
+            ) : null}
             <MetricCell
               label="Acessos ligados"
               value={report.accessLinked}
@@ -231,6 +255,21 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
               <AlertDescription>
                 É a evidência que responde “não recebi”: mostra que o comprador usou o que
                 comprou. Entrega de e-mail sozinha só prova que a mensagem chegou.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {report.receiptsUnknownKind > 0 ? (
+            <Alert>
+              <AlertTitle>
+                {report.receiptsUnknownKind} comprovante
+                {report.receiptsUnknownKind > 1 ? 's' : ''} sem tipo de produto
+              </AlertTitle>
+              <AlertDescription>
+                Nem o arquivo nem o MED diziam se a venda era física ou digital, e saiu o padrão
+                escolhido acima. Confira esses casos antes de enviar, ou inclua no arquivo uma
+                coluna “tipo_produto” (físico ou digital) e importe de novo marcando a
+                substituição.
               </AlertDescription>
             </Alert>
           ) : null}

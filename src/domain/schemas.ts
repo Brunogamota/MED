@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { COMMUNICATION_TEMPLATES } from '@/domain/communication/receipt';
 import {
   DELIVERY_CHANNELS,
   DOCUMENT_KINDS,
@@ -206,7 +207,7 @@ export const createEvidenceSchema = z.object({
 export type CreateEvidenceInput = z.infer<typeof createEvidenceSchema>;
 
 export const createCommunicationSchema = z.object({
-  template: z.enum(['PURCHASE_CONFIRMATION', 'ACCESS_DELIVERY', 'DELIVERY_CONFIRMATION', 'GENERIC']),
+  template: z.enum(COMMUNICATION_TEMPLATES),
   from: nonEmpty,
   to: nonEmpty,
   toName: nonEmpty.optional(),

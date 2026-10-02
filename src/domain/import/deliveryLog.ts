@@ -1,4 +1,11 @@
-import { detectDelimiter, parseAmount, parseDelimited, normalizeHeader } from '@/domain/import/csv';
+import {
+  detectDelimiter,
+  normalizeHeader,
+  parseAmount,
+  parseDelimited,
+  resolveProductTypeValue,
+} from '@/domain/import/csv';
+import type { ProductType } from '@/domain/types';
 
 /**
  * Log de envio do provedor de e-mail.
@@ -47,6 +54,11 @@ export interface DeliveryLogRow {
   firstAccessAt: string | null;
   /** Tentativas de envio. Mais de uma indica reenvio, e a tela deve dizer. */
   attempts: number | null;
+  /**
+   * Tipo do produto da venda, quando o arquivo traz. Decide se o comprovante e
+   * de acompanhamento do pedido (fisico) ou de acesso liberado (digital).
+   */
+  productType: ProductType | null;
   errors: string[];
 }
 
@@ -56,6 +68,7 @@ export interface ParsedDeliveryLog {
 }
 
 const FIELD_ALIASES: Record<keyof Omit<DeliveryLogRow, 'line' | 'outcome' | 'errors'>, string[]> = {
+  productType: ['producttype', 'tipoproduto', 'tipodeproduto', 'tipo', 'categoria'],
   transactionRef: ['txnid', 'transactionid', 'idtransacao', 'reference'],
   purchaseAt: ['purchaseat', 'datacompra', 'compraem', 'purchasedate', 'eventts', 'datahora'],
   amount: ['amountbrl', 'amount', 'valor', 'valorbrl'],
@@ -218,6 +231,7 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
       orderRef: orNull(value('orderRef')),
       firstAccessAt,
       attempts: attempts !== null && Number.isFinite(attempts) ? attempts : null,
+      productType: resolveProductTypeValue(value('productType')),
       errors,
     };
   });

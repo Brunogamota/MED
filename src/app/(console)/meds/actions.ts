@@ -853,9 +853,13 @@ export async function importDeliveryLogAction(
   const report = await importDeliveryLog(serverPageContext(), read.csvs, {
     generateReceipts: form.get('gerarComprovantes') === 'on',
     replacePreviousReceipts: form.get('substituirComprovantes') === 'on',
-    receiptTemplate: COMMUNICATION_TEMPLATES.includes(modelo as CommunicationTemplate)
-      ? (modelo as CommunicationTemplate)
-      : undefined,
+    receiptTemplate:
+      modelo === 'AUTO'
+        ? 'AUTO'
+        : COMMUNICATION_TEMPLATES.includes(modelo as CommunicationTemplate)
+          ? (modelo as CommunicationTemplate)
+          : 'AUTO',
+    unknownKind: form.get('tipoDesconhecido') === 'PHYSICAL' ? 'PHYSICAL' : 'DIGITAL',
   });
   revalidatePath('/meds');
   return { report, error: report.fatalError };
