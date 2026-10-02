@@ -354,7 +354,7 @@ export async function importDeliveryLog(
   };
   if (parsed.fatalError) return empty;
 
-  const rows = await listMeds(auth, { limit: 1000 });
+  const rows = await listMeds(auth, {});
   const candidates: MatchableMed[] = rows.map((entry) => ({
     id: entry.med.id,
     medId: entry.med.medId,

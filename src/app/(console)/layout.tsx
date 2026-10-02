@@ -21,7 +21,7 @@ const OPEN_STATUSES: MedStatus[] = [
 /** Contadores da navegação. Falha de leitura não derruba o shell. */
 async function navCounts(): Promise<NavCounts> {
   try {
-    const rows = await listMeds(serverPageContext(), { limit: 200 });
+    const rows = await listMeds(serverPageContext(), {});
     const open = rows.filter((row) => OPEN_STATUSES.includes(row.med.status));
     const hours = open.map((row) => hoursUntil(row.med.responseDeadlineAt));
     return {

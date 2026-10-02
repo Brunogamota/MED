@@ -87,7 +87,7 @@ export default async function MedsPage({
   const openedFrom = de ? `${de}T00:00:00.000Z` : undefined;
   const openedTo = ate ? `${ate}T23:59:59.999Z` : undefined;
 
-  const all = await listMeds(auth, { limit: 200, openedFrom, openedTo });
+  const all = await listMeds(auth, { openedFrom, openedTo });
   const now = new Date();
 
   const open = all.filter((row) => OPEN_STATUSES.includes(row.med.status));

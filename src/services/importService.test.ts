@@ -222,3 +222,12 @@ describe('importacao em lote', () => {
     expect(await listMeds(other, {})).toHaveLength(2);
   });
 });
+
+describe('fila sem teto', () => {
+  it('lista todos os MEDs quando nao se pede limite', async () => {
+    const linhas = ['MED ID;Valor;Data da compra;Motivo'];
+    for (let i = 0; i < 260; i += 1) linhas.push(`MED-${i};10,00;24/09/2026 10:00;Golpe`);
+    await importMedsFromText(auth, linhas.join('\n'));
+    expect(await listMeds(auth, {})).toHaveLength(260);
+  });
+});
