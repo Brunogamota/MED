@@ -42,6 +42,7 @@ function TemplateIcon({ template }: { template: CommunicationTemplate }) {
         </svg>
       );
     case 'DELIVERY_CONFIRMATION':
+    case 'ORDER_TRACKING':
       return (
         <svg {...common} aria-hidden>
           <path d="m3.3 7 8.7 4.5L20.7 7" />

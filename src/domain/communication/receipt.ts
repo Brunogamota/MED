@@ -29,6 +29,7 @@ export const COMMUNICATION_TEMPLATES = [
   'PURCHASE_CONFIRMATION',
   'ACCESS_DELIVERY',
   'DELIVERY_CONFIRMATION',
+  'ORDER_TRACKING',
   'GENERIC',
 ] as const;
 export type CommunicationTemplate = (typeof COMMUNICATION_TEMPLATES)[number];
@@ -37,6 +38,7 @@ export const COMMUNICATION_TEMPLATE_LABEL: Record<CommunicationTemplate, string>
   PURCHASE_CONFIRMATION: 'Confirmação de compra',
   ACCESS_DELIVERY: 'Entrega de acesso',
   DELIVERY_CONFIRMATION: 'Confirmação de entrega',
+  ORDER_TRACKING: 'Acompanhamento do pedido',
   GENERIC: 'Mensagem ao cliente',
 };
 
@@ -124,6 +126,12 @@ export const REFERENCE_FIELD: Record<
     hint: 'Vira o botão "Rastrear pedido" no comprovante.',
     placeholder: 'AA123456789BR',
     buttonLabel: 'Rastrear pedido',
+  },
+  ORDER_TRACKING: {
+    label: 'Link de acompanhamento',
+    hint: 'Vira o botão "Acompanhar pedido" no comprovante.',
+    placeholder: 'https://... ou código de rastreio',
+    buttonLabel: 'Acompanhar pedido',
   },
   PURCHASE_CONFIRMATION: {
     label: 'Número do pedido',
@@ -251,10 +259,12 @@ function lastSavedReceipt(
 export function draftCommunication(
   medCase: MedCase,
   template: CommunicationTemplate,
+  options: { reuseSaved?: boolean } = {},
 ): CommunicationReceipt {
   // Retomar o que já foi escrito vem antes de propor um texto novo: o texto
-  // novo é um palpite do sistema, e o salvo é o que de fato foi enviado.
-  const previous = lastSavedReceipt(medCase, template);
+  // novo é um palpite do sistema, e o salvo é o que de fato foi enviado. A
+  // importação desliga isso: ela monta a peça com o envio que acabou de ler.
+  const previous = options.reuseSaved === false ? null : lastSavedReceipt(medCase, template);
   if (previous) return previous;
 
   const { customer, order, digitalDelivery, tracking, med } = medCase;
@@ -318,9 +328,70 @@ export function draftCommunication(
           `Obrigado pela preferência.`,
         reference: tracking?.trackingCode ?? null,
       };
+    case 'ORDER_TRACKING': {
+      const link = tracking?.trackingCode ?? null;
+      return { ...base, template, ...orderTrackingMessage(toName, link), reference: link };
+    }
     default:
       return { ...base, template, subject: '', body: '', reference: null };
   }
+}
+
+function firstNameGreeting(name: string | null | undefined): string {
+  const first = name?.trim().split(/\s+/)[0];
+  return first ? `Olá, ${first}` : 'Olá';
+}
+
+/**
+ * Mensagem de produto físico: o comprador acompanha o pedido até a entrega.
+ *
+ * O botão só é prometido no texto quando existe para onde ele levar. Sem link
+ * nem código, a frase não manda clicar em nada que a peça não mostra.
+ */
+export function orderTrackingMessage(
+  name: string | null | undefined,
+  link: string | null,
+): { subject: string; body: string } {
+  return {
+    subject: 'Obrigado pela sua compra',
+    body:
+      `${firstNameGreeting(name)}\n\nObrigado por comprar com a gente! ` +
+      (link
+        ? 'Clique no botão abaixo para acompanhar o seu pedido até ser entregue.'
+        : 'Você vai poder acompanhar o seu pedido até ser entregue.'),
+  };
+}
+
+/** Mensagem de produto digital: o acesso liberado. */
+export function accessDeliveryMessage(name: string | null | undefined): {
+  subject: string;
+  body: string;
+} {
+  return {
+    subject: 'Seu acesso está liberado',
+    body: `${firstNameGreeting(name)}\n\nSegue o seu acesso. Já está liberado.`,
+  };
+}
+
+/** O tipo de produto decide a mensagem: físico se acompanha, digital se acessa. */
+export type ProductKind = 'PHYSICAL' | 'DIGITAL';
+
+const DIGITAL_TYPES = new Set(['DIGITAL', 'INFOPRODUCT', 'SUBSCRIPTION', 'SAAS', 'TICKET', 'SERVICE']);
+
+/**
+ * Físico ou digital, a partir do tipo de produto do caso.
+ *
+ * Marketplace e "outro" não dizem qual é, e o que não se sabe fica sem resposta:
+ * quem decide nesse caso é o padrão que o operador escolheu na importação.
+ */
+export function productKindOf(productType: string | null | undefined): ProductKind | null {
+  if (!productType) return null;
+  if (productType === 'PHYSICAL') return 'PHYSICAL';
+  return DIGITAL_TYPES.has(productType) ? 'DIGITAL' : null;
+}
+
+export function templateForKind(kind: ProductKind): CommunicationTemplate {
+  return kind === 'PHYSICAL' ? 'ORDER_TRACKING' : 'ACCESS_DELIVERY';
 }
 
 /** Lê a reconstrução de volta do `value` da evidência, com validação leve. */

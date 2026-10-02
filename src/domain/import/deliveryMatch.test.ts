@@ -21,6 +21,7 @@ function row(overrides: Partial<DeliveryLogRow> = {}): DeliveryLogRow {
     orderRef: null,
     firstAccessAt: null,
     attempts: 1,
+    productType: null,
     errors: [],
     ...overrides,
   };

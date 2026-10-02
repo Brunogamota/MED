@@ -86,19 +86,23 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
             <select
               id="modelo"
               name="modelo"
-              defaultValue="ACCESS_DELIVERY"
+              defaultValue="AUTO"
               className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
             >
-              <option value="ACCESS_DELIVERY">Entrega de acesso</option>
+              <option value="AUTO">Automático: físico ou digital de cada venda</option>
+              <option value="ACCESS_DELIVERY">Entrega de acesso (digital)</option>
+              <option value="ORDER_TRACKING">Acompanhamento do pedido (físico)</option>
               <option value="PURCHASE_CONFIRMATION">Confirmação de compra</option>
               <option value="DELIVERY_CONFIRMATION">Confirmação de entrega</option>
               <option value="GENERIC">Mensagem ao cliente</option>
             </select>
             <p className="text-muted-foreground text-sm">
-              Um log de confirmação de compra e um de liberação de acesso são idênticos por
-              dentro: os dois trazem message-id, hora e resposta SMTP. Quem sabe qual é você.
+              No automático, cada venda sai com a mensagem do tipo do produto: digital com o
+              acesso liberado, físico com o botão para acompanhar o pedido até a entrega. O tipo
+              vem da coluna do arquivo, quando existe, ou do MED; sem tipo, sai como digital.
             </p>
           </div>
+
 
           <div className="flex items-start gap-3 rounded-lg border p-3">
             <Checkbox id="gerarComprovantes" name="gerarComprovantes" defaultChecked />
@@ -152,6 +156,12 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
               tone={report.withFirstAccess > 0 ? 'success' : 'neutral'}
             />
             <MetricCell label="Comprovantes gerados" value={report.receipts} />
+            {report.receiptsPhysical > 0 ? (
+              <MetricCell label="Físicos (acompanhamento)" value={report.receiptsPhysical} />
+            ) : null}
+            {report.receiptsDigital > 0 ? (
+              <MetricCell label="Digitais (acesso)" value={report.receiptsDigital} />
+            ) : null}
             <MetricCell
               label="Acessos ligados"
               value={report.accessLinked}

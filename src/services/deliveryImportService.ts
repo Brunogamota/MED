@@ -28,10 +28,16 @@ import {
   upsertCustomer,
 } from '@/services/medService';
 import {
+  accessDeliveryMessage,
   draftCommunication,
   EMAIL_SENDER_NAME,
+  orderTrackingMessage,
+  productKindOf,
+  templateForKind,
   type CommunicationTemplate,
+  type ProductKind,
 } from '@/domain/communication/receipt';
+import type { MedCase } from '@/domain/case';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
 import {
@@ -82,7 +88,13 @@ export interface DeliveryImportOptions {
    * message-id, hora e resposta SMTP. Quem sabe qual e quem opera, e por isso
    * o modelo e declarado aqui em vez de adivinhado pelo nome do arquivo.
    */
-  receiptTemplate?: CommunicationTemplate;
+  receiptTemplate?: CommunicationTemplate | 'AUTO';
+
+  /**
+   * Com o modelo automatico, o que usar quando nem o arquivo nem o caso dizem
+   * se o produto e fisico ou digital.
+   */
+  unknownKind?: ProductKind;
 
   /**
    * Apaga os comprovantes de comunicacao que o caso ja tinha e que nao vieram
@@ -101,6 +113,12 @@ export interface DeliveryImportReport {
   recorded: number;
   /** Comprovantes de comunicacao gerados a partir das entregas registradas. */
   receipts: number;
+  /** Dos comprovantes, quantos sairam como acompanhamento de pedido (fisico). */
+  receiptsPhysical: number;
+  /** Dos comprovantes, quantos sairam como acesso liberado (digital). */
+  receiptsDigital: number;
+  /** Comprovantes automaticos cujo tipo nao estava no arquivo nem no caso. */
+  receiptsUnknownKind: number;
   /** Liberacoes de acesso ligadas ao comprador pelo e-mail. */
   accessLinked: number;
   /**
@@ -184,9 +202,60 @@ function normalizeEmail(value: string | null): string | null {
  * instruir, e o que o rascunho da tela deixa entre colchetes para alguem
  * preencher sairia impresso na peca. Cada campo vem da propria linha do log.
  */
-function accessReceiptBody(name: string | null): string {
-  const greeting = name ? `Olá, ${name.trim().split(/\s+/)[0]}` : 'Olá';
-  return `${greeting}\n\nSegue o seu acesso. Já está liberado.`;
+interface ReceiptChoice {
+  template: CommunicationTemplate;
+  subject?: string;
+  body?: string;
+  reference: string | null;
+  kind: ProductKind | null;
+  kindKnown: boolean;
+}
+
+/**
+ * Que comprovante sai para esta entrega.
+ *
+ * Com o modelo automatico, o tipo do produto decide: fisico vira
+ * acompanhamento do pedido, digital vira acesso liberado. O tipo vem do
+ * arquivo quando ele traz a coluna, senao do caso; o que nenhum dos dois diz
+ * fica com o padrao que o operador escolheu, e o relatorio conta quantos foram.
+ *
+ * A mensagem e montada com o dado desta linha, e nao com a ultima peca salva
+ * no caso: reimportar o log certo tem de sair com o envio certo.
+ */
+function chooseReceipt(
+  row: DeliveryLogRow,
+  medCase: MedCase,
+  options: DeliveryImportOptions,
+): ReceiptChoice {
+  const chosen = options.receiptTemplate ?? 'ACCESS_DELIVERY';
+  const name = row.customerName ?? medCase.customer?.identification.name ?? medCase.med.payer.name ?? null;
+
+  let kind: ProductKind | null = null;
+  let kindKnown = true;
+  if (chosen === 'AUTO') {
+    kind =
+      productKindOf(row.productType) ??
+      productKindOf(medCase.med.productType ?? medCase.order?.productType ?? null);
+    if (!kind) {
+      kindKnown = false;
+      kind = options.unknownKind ?? 'DIGITAL';
+    }
+  } else if (chosen === 'ORDER_TRACKING') {
+    kind = 'PHYSICAL';
+  } else if (chosen === 'ACCESS_DELIVERY') {
+    kind = 'DIGITAL';
+  }
+
+  if (kind === 'PHYSICAL') {
+    const link = row.productUrl ?? medCase.tracking?.trackingCode ?? null;
+    return { template: templateForKind(kind), ...orderTrackingMessage(name, link), reference: link, kind, kindKnown };
+  }
+  if (kind === 'DIGITAL') {
+    const link = row.productUrl ?? medCase.digitalDelivery?.platform ?? null;
+    return { template: templateForKind(kind), ...accessDeliveryMessage(name), reference: link, kind, kindKnown };
+  }
+  const draft = draftCommunication(medCase, chosen as CommunicationTemplate, { reuseSaved: false });
+  return { template: draft.template, subject: draft.subject, body: draft.body, reference: draft.reference ?? null, kind: null, kindKnown: true };
 }
 
 function describeNotDelivered(row: DeliveryLogRow): string {
@@ -263,6 +332,9 @@ export async function importDeliveryLog(
     total: 0,
     recorded: 0,
     receipts: 0,
+    receiptsPhysical: 0,
+    receiptsDigital: 0,
+    receiptsUnknownKind: 0,
     accessLinked: 0,
     withoutMessageId: 0,
     duplicated: 0,
@@ -344,6 +416,14 @@ export async function importDeliveryLog(
   // alcancados. `Set` porque o mesmo MED pode ser tocado pela cobranca e pela
   // liberacao de acesso, e e um caso so.
   const touched = new Set<string>();
+  let receiptsPhysical = 0;
+  let receiptsDigital = 0;
+  let receiptsUnknownKind = 0;
+  const contarModelo = (choice: ReceiptChoice) => {
+    if (choice.kind === 'PHYSICAL') receiptsPhysical += 1;
+    if (choice.kind === 'DIGITAL') receiptsDigital += 1;
+    if (!choice.kindKnown) receiptsUnknownKind += 1;
+  };
   // Message-ids dos comprovantes gerados por esta importacao, por caso.
   const gerados = new Map<string, Set<string>>();
   const marcarGerado = (medId: string, messageId: string | null) => {
@@ -479,22 +559,21 @@ export async function importDeliveryLog(
       // e dela que saem destinatario, data e link. Sem recarregar, o
       // comprovante sairia com o caso de antes da importacao.
       const medCase = await getCase(auth, med.id);
-      const draft = draftCommunication(
-        medCase,
-        options.receiptTemplate ?? 'ACCESS_DELIVERY',
-      );
+      const draft = draftCommunication(medCase, 'ACCESS_DELIVERY', { reuseSaved: false });
+      const choice = chooseReceipt(row, medCase, options);
       await addCommunicationReconstruction(auth, med.id, {
-        template: draft.template,
+        template: choice.template,
         from: draft.from,
-        to: draft.to,
-        toName: draft.toName ?? undefined,
-        subject: draft.subject,
-        sentAt: draft.sentAt ?? undefined,
-        body: draft.body,
-        reference: draft.reference ?? undefined,
+        to: row.customerEmail ?? draft.to,
+        toName: (row.customerName ?? draft.toName) ?? undefined,
+        subject: choice.subject ?? draft.subject,
+        sentAt: momentOfSending ?? draft.sentAt ?? undefined,
+        body: choice.body ?? draft.body,
+        reference: choice.reference ?? undefined,
         source: 'EMAIL',
         sourceReference: row.messageId ?? undefined,
       });
+      contarModelo(choice);
       marcarGerado(med.id, row.messageId);
       receipts += 1;
     }
@@ -631,20 +710,22 @@ export async function importDeliveryLog(
 
         if (!options.generateReceipts) continue;
 
+        // Assunto genérico de propósito: o nome do produto na peça diz à
+        // instituição o que a pessoa comprou, e isso não é assunto dela.
+        const linkedChoice = chooseReceipt(row, await getCase(auth, med.id), options);
         await addCommunicationReconstruction(auth, med.id, {
-          template: options.receiptTemplate ?? 'ACCESS_DELIVERY',
+          template: linkedChoice.template,
           from: EMAIL_SENDER_NAME,
           to: row.customerEmail ?? '',
           toName: row.customerName ?? med.payerName ?? undefined,
-          // Assunto genérico de propósito: o nome do produto na peça diz à
-          // instituição o que a pessoa comprou, e isso não é assunto dela.
-          subject: 'Seu acesso está liberado',
+          subject: linkedChoice.subject ?? 'Seu acesso está liberado',
           sentAt,
-          body: accessReceiptBody(row.customerName ?? med.payerName),
-          reference: row.productUrl,
+          body: linkedChoice.body ?? '',
+          reference: linkedChoice.reference ?? undefined,
           source: 'EMAIL',
           sourceReference: row.messageId ?? undefined,
         });
+        contarModelo(linkedChoice);
         marcarGerado(med.id, row.messageId);
 
         // O primeiro acesso é o que responde "não recebi": mostra que a pessoa
@@ -733,6 +814,9 @@ export async function importDeliveryLog(
     total: parsed.rows.length,
     recorded,
     receipts,
+    receiptsPhysical,
+    receiptsDigital,
+    receiptsUnknownKind,
     accessLinked,
     withoutMessageId,
     duplicated: parsed.duplicated.length,
