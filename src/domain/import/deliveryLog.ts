@@ -68,18 +68,27 @@ export interface ParsedDeliveryLog {
 }
 
 const FIELD_ALIASES: Record<keyof Omit<DeliveryLogRow, 'line' | 'outcome' | 'errors'>, string[]> = {
-  productType: ['producttype', 'tipoproduto', 'tipodeproduto', 'tipo', 'categoria'],
-  transactionRef: ['txnid', 'transactionid', 'idtransacao', 'reference'],
-  purchaseAt: ['purchaseat', 'datacompra', 'compraem', 'purchasedate', 'eventts', 'datahora'],
+  productType: ['producttype', 'tipoproduto', 'tipodeproduto', 'tipodoproduto', 'tipo', 'categoria'],
+  transactionRef: ['txnid', 'transactionid', 'idtransacao', 'reference', 'e2e', 'e2eid', 'endtoend', 'endtoendid', 'idfimafim'],
+  purchaseAt: ['purchaseat', 'datacompra', 'compraem', 'purchasedate', 'eventts', 'datahora', 'horariodacompra', 'horariocompra', 'datadacompra'],
   amount: ['amountbrl', 'amount', 'valor', 'valorbrl'],
   customerName: ['customername', 'nomecliente', 'cliente', 'nome'],
   customerEmail: ['customeremail', 'emailcliente', 'email', 'destinatario', 'to'],
-  sentAt: ['confirmationsentat', 'sentat', 'enviadoem', 'dataenvio'],
+  sentAt: ['confirmationsentat', 'sentat', 'enviadoem', 'dataenvio', 'lancadonosistema', 'lancadoem'],
   messageId: ['messageid', 'idmensagem', 'msgid', 'smtpid', 'mailid', 'envelopeid', 'idenvio'],
   rawStatus: ['status', 'resultado', 'situacao'],
-  deliveredAt: ['deliveredat', 'entregueem', 'dataentrega'],
+  deliveredAt: ['deliveredat', 'entregueem', 'dataentrega', 'confirmacaorecebida', 'confirmacaorecebidaem'],
   smtpResponse: ['smtpresponse', 'respostasmtp', 'smtp', 'response'],
-  productUrl: ['producturl', 'urlproduto', 'urldoproduto', 'linkacesso', 'url'],
+  productUrl: [
+    'producturl',
+    'urlproduto',
+    'urldoproduto',
+    'linkacesso',
+    'url',
+    'urldeacesso',
+    'urldeacessoconfirmacaodepedidoparalogistica',
+    'urldeacessoconfirmacaodepedido',
+  ],
   productName: ['productname', 'produto', 'nomeproduto'],
   orderRef: ['orderid', 'pedido', 'idpedido', 'numeropedido'],
   firstAccessAt: ['firstaccessat', 'primeiroacesso', 'dataprimeiroacesso', 'acessoem'],
@@ -106,6 +115,30 @@ const BR_OFFSET = '-03:00';
 export function parseLogTimestamp(raw: string): string | null {
   const value = raw.trim();
   if (value.length === 0) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  // Data de planilha (.xlsx) chega como numero de dias desde 1899-12-30, com
+  // a hora na fracao. E o horario de Brasilia que estava na celula.
+  if (/^\d{5}(\.\d+)?$/.test(value)) {
+    const serial = Number(value);
+    if (serial < 20000 || serial > 80000) return null;
+    const ms = Math.round((serial - 25569) * 86400) * 1000;
+    const d = new Date(ms);
+    return parseLogTimestamp(
+      `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ` +
+        `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`,
+    );
+  }
+
+  // Formato brasileiro: 24/09/2026 07:06 ou 24/09/2026 07:06:29.
+  const br = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[\s,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (br) {
+    const [, dia, mes, ano, hora, minuto, segundo = '00'] = br as unknown as string[];
+    return parseLogTimestamp(
+      `${ano}-${pad(Number(mes))}-${pad(Number(dia))} ${pad(Number(hora))}:${minuto}:${segundo}`,
+    );
+  }
+
   const match = value.match(
     /^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})(?::(\d{2}))?/,
   );
@@ -171,6 +204,8 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     };
   }
 
+  const semColunaDeStatus = !reconhecidos.includes('rawStatus');
+
   const rows: DeliveryLogRow[] = table.slice(1).map((rawRow, index) => {
     const value = (field: LogField): string => {
       for (const [columnIndex, mapped] of fieldByIndex) {
@@ -193,7 +228,13 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     }
 
     const rawStatus = orNull(value('rawStatus'));
-    const outcome = classifyOutcome(rawStatus ?? '');
+    // Planilha sem coluna de status: a confirmacao de recebimento preenchida e
+    // o que diz que a mensagem chegou. Vazia, nao ha entrega a afirmar.
+    const outcome = semColunaDeStatus
+      ? value('deliveredAt').length > 0
+        ? 'DELIVERED'
+        : 'OTHER'
+      : classifyOutcome(rawStatus ?? '');
 
     // Entrega sem hora nao e entrega comprovada: o horario e metade do que a
     // instituicao confere. Recusa sem hora e esperado — nao houve entrega.
