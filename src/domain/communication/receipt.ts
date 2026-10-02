@@ -44,7 +44,9 @@ export const COMMUNICATION_TEMPLATE_LABEL: Record<CommunicationTemplate, string>
 
 /** Texto do selo. Vai na tela, na rota de impressão e no PDF, sem exceção. */
 export const RECONSTRUCTION_STAMP =
-  'Documento gerado a partir do registro de envio. Não é uma captura de tela do painel.';
+  // Texto pedido pelo Bruno em 02/10/2026. NAO PUBLICAR EM PRODUCAO: ver
+  // CLAUDE.md, secao "Selo dos comprovantes", e scripts/guard-selo.mjs.
+  'Representação do registro de envio';
 
 /**
  * Quem efetivamente envia as comunicações transacionais desta operação — o
