@@ -145,3 +145,16 @@ describe('planilha de envio em portugues', () => {
     expect(parseLogTimestamp('46289.25')).toBe('2026-09-24T09:00:00.000Z');
   });
 });
+
+describe('cabecalho com e-mail ou url no meio do nome', () => {
+  it('qualquer coluna com e-mail e o e-mail, com url e o link', () => {
+    const [row] = parseDeliveryLog(
+      [
+        'Nome,E2E,Horário da compra,Lançado no sistema ,Confirmação recebida ,E-mail sintético de teste,Tipo do produto,URL de acesso / tracking ',
+        'Fulano,E00416968202609171227tISg5WgulqA,17/09/2026 09:27,17/09/2026 09:28:13,17/09/2026 09:29:58,f@exemplo.com,Físico,https://track.exemplo.com/BR-1',
+      ].join('\n'),
+    ).rows;
+    expect(row?.customerEmail).toBe('f@exemplo.com');
+    expect(row?.productUrl).toBe('https://track.exemplo.com/BR-1');
+  });
+});

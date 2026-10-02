@@ -110,6 +110,16 @@ for (const [field, aliases] of Object.entries(FIELD_ALIASES) as [LogField, strin
  * o unico caminho; o que nao se faz e apresentar o instante como se o arquivo
  * o tivesse declarado — por isso o campo que registra a suposicao existe.
  */
+/**
+ * Cabecalho que nao bate exato: tem "email" no nome, e e o e-mail; tem "url"
+ * ou "link", e e o link. Nao importa o que vem antes ou depois.
+ */
+function fieldByPrefix(header: string): LogField | undefined {
+  if (header.includes('email')) return 'customerEmail';
+  if (header.includes('url') || header.includes('link')) return 'productUrl';
+  return undefined;
+}
+
 const BR_OFFSET = '-03:00';
 
 export function parseLogTimestamp(raw: string): string | null {
@@ -184,7 +194,7 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
 
   const fieldByIndex = new Map<number, LogField>();
   headerRow.forEach((header, index) => {
-    const field = ALIAS_TO_FIELD.get(normalizeHeader(header));
+    const field = ALIAS_TO_FIELD.get(normalizeHeader(header)) ?? fieldByPrefix(normalizeHeader(header));
     if (field && ![...fieldByIndex.values()].includes(field)) fieldByIndex.set(index, field);
   });
 

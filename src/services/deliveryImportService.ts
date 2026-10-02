@@ -661,8 +661,34 @@ export async function importDeliveryLog(
       continue;
     }
 
+    // Sem MED com esse E2E: dizer isso, e nao falar de valor e data.
+    if (!meds && txn && /^E[0-9A-Za-z]{31}$/.test(txn)) {
+      lines.push({
+        line: row.line,
+        medId: txn,
+        customerEmail: row.customerEmail,
+        kind: 'UNMATCHED',
+        message: `Nenhum MED com o E2E ${txn}. Importe esse MED no passo 1 e suba o arquivo de novo.`,
+      });
+      continue;
+    }
+
     const sentAt = row.deliveredAt ?? row.sentAt;
-    if (meds && row.productUrl && row.outcome === 'DELIVERED' && sentAt) {
+    if (porMedId && (!sentAt || row.outcome !== 'DELIVERED')) {
+      lines.push({
+        line: row.line,
+        medId: porMedId[0]?.medId ?? txn ?? null,
+        customerEmail: row.customerEmail,
+        kind: 'INVALID',
+        message:
+          'O MED existe, mas a linha não tem data de envio nem de confirmação de recebimento. ' +
+          'Sem data não há entrega a registrar.',
+      });
+      continue;
+    }
+    // Ligada pelo proprio E2E, a linha entra mesmo sem link: o caso e certo,
+    // e o comprovante so fica sem botao.
+    if (meds && (row.productUrl || porMedId) && row.outcome === 'DELIVERED' && sentAt) {
       // Uma liberação anterior à cobrança não prova a entrega **daquela**
       // cobrança: nada é entregue antes de ser comprado. O acesso é real e é
       // do mesmo comprador, mas veio de outra compra, de uma renovação ou de
@@ -701,7 +727,7 @@ export async function importDeliveryLog(
           channel: 'EMAIL',
           sentTo: row.customerEmail ?? undefined,
           sentAt,
-          platform: row.productUrl,
+          platform: row.productUrl ?? undefined,
           firstAccessAt: row.firstAccessAt ?? undefined,
           source: 'EMAIL',
           sourceProvider: providerOf(row.messageId),
@@ -726,6 +752,7 @@ export async function importDeliveryLog(
           sourceReference: row.messageId ?? undefined,
         });
         contarModelo(linkedChoice);
+        receipts += 1;
         marcarGerado(med.id, row.messageId);
 
         // O primeiro acesso é o que responde "não recebi": mostra que a pessoa
