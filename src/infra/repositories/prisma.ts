@@ -436,7 +436,8 @@ export class PrismaMedRepository
           : {}),
       },
       orderBy: { openedAt: 'desc' },
-      take: filter.limit ?? 50,
+      // Sem limite pedido, vem tudo: a fila tem de mostrar todos os casos.
+      take: filter.limit,
       include: {
         defenses: { orderBy: { version: 'desc' }, take: 1 },
         _count: { select: { evidences: true } },

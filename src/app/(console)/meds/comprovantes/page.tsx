@@ -89,7 +89,6 @@ export default async function ComprovantesEmLotePage({
     alvos = ids.split(',').map((value) => value.trim()).filter(Boolean);
   } else if (de || ate) {
     const rows = await listMeds(auth, {
-      limit: 500,
       openedFrom: de ? `${de}T00:00:00.000Z` : undefined,
       openedTo: ate ? `${ate}T23:59:59.999Z` : undefined,
     });

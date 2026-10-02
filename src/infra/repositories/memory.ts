@@ -125,7 +125,7 @@ export class InMemoryMedRepository
     // Caso sem data de abertura vai para o fim, e nao para o topo: `Date.parse`
     // de null e NaN, e NaN em comparador embaralha a ordem inteira.
     rows.sort((a, b) => (Date.parse(b.med.openedAt ?? '') || 0) - (Date.parse(a.med.openedAt ?? '') || 0));
-    return rows.slice(0, filter.limit ?? 50);
+    return filter.limit === undefined ? rows : rows.slice(0, filter.limit);
   }
 
   async updateMed(organizationId: string, id: string, patch: Partial<Med>): Promise<Med> {

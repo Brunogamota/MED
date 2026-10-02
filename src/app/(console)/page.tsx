@@ -16,7 +16,7 @@ const INTAKE_DAYS = 30;
 
 async function DashboardContent() {
   const now = new Date();
-  const rows = await listMeds(serverPageContext(), { limit: 200 });
+  const rows = await listMeds(serverPageContext(), {});
 
   return (
     <>
