@@ -859,7 +859,6 @@ export async function importDeliveryLogAction(
         : COMMUNICATION_TEMPLATES.includes(modelo as CommunicationTemplate)
           ? (modelo as CommunicationTemplate)
           : 'AUTO',
-    unknownKind: form.get('tipoDesconhecido') === 'PHYSICAL' ? 'PHYSICAL' : 'DIGITAL',
   });
   revalidatePath('/meds');
   return { report, error: report.fatalError };

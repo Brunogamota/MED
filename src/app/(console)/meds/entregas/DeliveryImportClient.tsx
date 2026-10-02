@@ -99,24 +99,10 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
             <p className="text-muted-foreground text-sm">
               No automático, cada venda sai com a mensagem do tipo do produto: digital com o
               acesso liberado, físico com o botão para acompanhar o pedido até a entrega. O tipo
-              vem da coluna do arquivo, quando existe, ou do MED.
+              vem da coluna do arquivo, quando existe, ou do MED; sem tipo, sai como digital.
             </p>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="tipoDesconhecido">
-              No automático, quando o tipo não estiver no arquivo nem no MED
-            </Label>
-            <select
-              id="tipoDesconhecido"
-              name="tipoDesconhecido"
-              defaultValue="DIGITAL"
-              className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
-            >
-              <option value="DIGITAL">Tratar como digital</option>
-              <option value="PHYSICAL">Tratar como físico</option>
-            </select>
-          </div>
 
           <div className="flex items-start gap-3 rounded-lg border p-3">
             <Checkbox id="gerarComprovantes" name="gerarComprovantes" defaultChecked />
@@ -255,21 +241,6 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
               <AlertDescription>
                 É a evidência que responde “não recebi”: mostra que o comprador usou o que
                 comprou. Entrega de e-mail sozinha só prova que a mensagem chegou.
-              </AlertDescription>
-            </Alert>
-          ) : null}
-
-          {report.receiptsUnknownKind > 0 ? (
-            <Alert>
-              <AlertTitle>
-                {report.receiptsUnknownKind} comprovante
-                {report.receiptsUnknownKind > 1 ? 's' : ''} sem tipo de produto
-              </AlertTitle>
-              <AlertDescription>
-                Nem o arquivo nem o MED diziam se a venda era física ou digital, e saiu o padrão
-                escolhido acima. Confira esses casos antes de enviar, ou inclua no arquivo uma
-                coluna “tipo_produto” (físico ou digital) e importe de novo marcando a
-                substituição.
               </AlertDescription>
             </Alert>
           ) : null}
