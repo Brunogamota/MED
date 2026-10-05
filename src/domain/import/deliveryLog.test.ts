@@ -64,9 +64,9 @@ describe('log de entrega', () => {
     expect(bounced[0]?.errors).toEqual([]);
   });
 
-  it('entrega sem hora e erro de linha: o horario e metade da prova', () => {
+  it('entrega sem hora da entrega vale pela hora do envio', () => {
     const row = parsed.rows.find((entry) => entry.customerName === 'Sem Hora Exemplo');
-    expect(row?.errors).toContain(
+    expect(row?.errors).not.toContain(
       'Status é entrega, mas a data da entrega está ausente ou ilegível.',
     );
   });
@@ -135,10 +135,10 @@ describe('planilha de envio em portugues', () => {
     expect(b?.productType).toBe('PHYSICAL');
   });
 
-  it('sem coluna de status, confirmacao preenchida e entrega e vazia nao e', () => {
+  it('sem coluna de status, data de envio ou de confirmacao preenchida e entrega', () => {
     const [a, b] = parseDeliveryLog(PLANILHA).rows;
     expect(a?.outcome).toBe('DELIVERED');
-    expect(b?.outcome).toBe('OTHER');
+    expect(b?.outcome).toBe('DELIVERED');
   });
 
   it('le data de planilha xlsx (numero serial)', () => {
@@ -156,5 +156,33 @@ describe('cabecalho com e-mail ou url no meio do nome', () => {
     ).rows;
     expect(row?.customerEmail).toBe('f@exemplo.com');
     expect(row?.productUrl).toBe('https://track.exemplo.com/BR-1');
+  });
+});
+
+describe('colunas com nome qualquer', () => {
+  it('reconhece pelo conteudo quando o cabecalho nao diz nada', () => {
+    const [row] = parseDeliveryLog(
+      [
+        'Cliente final;Codigo;Quando comprou;Disparo;Ok em;Contato;Produto;Onde acessar',
+        'Fulano de Tal;E00416968202609171227tISg5WgulqA;17/09/2026 09:27;17/09/2026 09:28:13;17/09/2026 09:29:58;f@exemplo.com;Físico;https://track.exemplo.com/1',
+      ].join('\n'),
+    ).rows;
+    expect(row?.transactionRef).toBe('E00416968202609171227tISg5WgulqA');
+    expect(row?.customerEmail).toBe('f@exemplo.com');
+    expect(row?.productUrl).toBe('https://track.exemplo.com/1');
+    expect(row?.sentAt).not.toBeNull();
+    expect(row?.outcome).toBe('DELIVERED');
+  });
+
+  it('datas sem nome reconhecivel entram como compra, envio e confirmacao', () => {
+    const [row] = parseDeliveryLog(
+      [
+        'A;B;C;D;E',
+        'E00416968202609171227tISg5WgulqA;17/09/2026 09:27;17/09/2026 09:28;17/09/2026 09:29;f@exemplo.com',
+      ].join('\n'),
+    ).rows;
+    expect(row?.purchaseAt).toBe('2026-09-17T12:27:00.000Z');
+    expect(row?.sentAt).toBe('2026-09-17T12:28:00.000Z');
+    expect(row?.deliveredAt).toBe('2026-09-17T12:29:00.000Z');
   });
 });
