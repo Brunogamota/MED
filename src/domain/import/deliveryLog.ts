@@ -111,12 +111,49 @@ for (const [field, aliases] of Object.entries(FIELD_ALIASES) as [LogField, strin
  * o tivesse declarado — por isso o campo que registra a suposicao existe.
  */
 /**
- * Cabecalho que nao bate exato: tem "email" no nome, e e o e-mail; tem "url"
- * ou "link", e e o link. Nao importa o que vem antes ou depois.
+ * Cabecalho que nao bate exato com nenhum nome conhecido: decide pela palavra
+ * que ele contem. "E-mail sintetico", "URL de acesso / tracking", "Data da
+ * confirmacao", "Horario do disparo" — o que importa e o que a coluna e, nao
+ * como cada cliente resolveu chama-la.
  */
+const HEADER_HINTS: [string[], LogField][] = [
+  [['messageid', 'idmensagem', 'idenvio', 'msgid', 'mailid'], 'messageId'],
+  [['e2e', 'endtoend', 'fimafim', 'idtransac', 'transactionid', 'txn'], 'transactionRef'],
+  [['email'], 'customerEmail'],
+  [['url', 'link'], 'productUrl'],
+  [['primeiroacesso', 'firstaccess'], 'firstAccessAt'],
+  [['confirm', 'receb', 'entreg', 'deliver'], 'deliveredAt'],
+  [['envi', 'lanc', 'disparo', 'sent'], 'sentAt'],
+  [['compra', 'pagamento', 'purchase', 'venda'], 'purchaseAt'],
+  [['tipo', 'categoria', 'natureza'], 'productType'],
+  [['status', 'situacao', 'resultado'], 'rawStatus'],
+  [['nome', 'cliente', 'comprador', 'destinatario', 'pagador', 'name'], 'customerName'],
+  [['valor', 'amount', 'preco'], 'amount'],
+  [['pedido', 'order'], 'orderRef'],
+];
+
 function fieldByPrefix(header: string): LogField | undefined {
-  if (header.includes('email')) return 'customerEmail';
-  if (header.includes('url') || header.includes('link')) return 'productUrl';
+  return HEADER_HINTS.find(([words]) => words.some((word) => header.includes(word)))?.[1];
+}
+
+const E2E_PATTERN = /^E[0-9A-Za-z]{31}$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * O que a coluna e, pelo que ela contem: quando o cabecalho nao diz nada que
+ * se reconheca, os valores dizem. Decide pela maioria das celulas preenchidas.
+ */
+function fieldByContent(values: string[]): LogField | 'date' | undefined {
+  const filled = values.map((value) => value.trim()).filter((value) => value.length > 0).slice(0, 30);
+  if (filled.length === 0) return undefined;
+  const share = (test: (value: string) => boolean) => filled.filter(test).length / filled.length;
+  if (share((v) => E2E_PATTERN.test(v)) >= 0.6) return 'transactionRef';
+  if (share((v) => EMAIL_PATTERN.test(v)) >= 0.6) return 'customerEmail';
+  if (share((v) => /^https?:\/\//i.test(v)) >= 0.6) return 'productUrl';
+  if (share((v) => parseLogTimestamp(v) !== null) >= 0.6) return 'date';
+  if (share((v) => resolveProductTypeValue(v) !== null) >= 0.6) return 'productType';
+  if (share((v) => /^<?[^\s@<>]+@[^\s@<>]+>?$/.test(v)) >= 0.6) return 'messageId';
+  if (share((v) => /^[A-Za-zÀ-ÿ'.]+(\s+[A-Za-zÀ-ÿ'.]+)+$/.test(v)) >= 0.6) return 'customerName';
   return undefined;
 }
 
@@ -198,6 +235,26 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     if (field && ![...fieldByIndex.values()].includes(field)) fieldByIndex.set(index, field);
   });
 
+  // Colunas que o cabecalho nao explicou: o conteudo decide. Datas sem nome
+  // reconhecivel entram, na ordem em que aparecem, como compra, envio e
+  // confirmacao — a ordem natural de qualquer planilha de envio.
+  const usados = () => new Set(fieldByIndex.values());
+  const datasSemNome: number[] = [];
+  headerRow.forEach((_, index) => {
+    if (fieldByIndex.has(index)) return;
+    const guess = fieldByContent(table.slice(1).map((row) => row[index] ?? ''));
+    if (guess === 'date') datasSemNome.push(index);
+    else if (guess && !usados().has(guess)) fieldByIndex.set(index, guess);
+  });
+  const ordemDasDatas: LogField[] = ['purchaseAt', 'sentAt', 'deliveredAt'];
+  const faltando = ordemDasDatas.filter((field) => !usados().has(field));
+  const restantes =
+    datasSemNome.length >= faltando.length ? faltando : faltando.slice(faltando.length - datasSemNome.length);
+  datasSemNome.forEach((index, i) => {
+    const field = restantes[i];
+    if (field) fieldByIndex.set(index, field);
+  });
+
   // O arquivo precisa ao menos parecer um log de envio. O message-id nao entra
   // aqui de proposito: ele decide se o envio e conferivel na origem, e isso e
   // exigencia de quem gera a peca de prova, nao de quem so quer o dado do
@@ -241,7 +298,7 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     // Planilha sem coluna de status: a confirmacao de recebimento preenchida e
     // o que diz que a mensagem chegou. Vazia, nao ha entrega a afirmar.
     const outcome = semColunaDeStatus
-      ? value('deliveredAt').length > 0
+      ? value('deliveredAt').length > 0 || value('sentAt').length > 0
         ? 'DELIVERED'
         : 'OTHER'
       : classifyOutcome(rawStatus ?? '');
@@ -250,7 +307,7 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     // instituicao confere. Recusa sem hora e esperado — nao houve entrega.
     const deliveredAt = orNull(value('deliveredAt'));
     const parsedDeliveredAt = deliveredAt ? parseLogTimestamp(deliveredAt) : null;
-    if (outcome === 'DELIVERED' && parsedDeliveredAt === null) {
+    if (outcome === 'DELIVERED' && parsedDeliveredAt === null && sentAt === null) {
       errors.push('Status é entrega, mas a data da entrega está ausente ou ilegível.');
     }
 
