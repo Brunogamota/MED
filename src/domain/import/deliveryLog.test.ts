@@ -186,3 +186,54 @@ describe('colunas com nome qualquer', () => {
     expect(row?.deliveredAt).toBe('2026-09-17T12:29:00.000Z');
   });
 });
+
+describe('planilha com Status, Reference e medId', () => {
+  const header =
+    'Nome\tValor\tData/hora da compra\tCPF\tPSP\tE2E\tReference\tTipo do produto\tE-mail\t' +
+    'Lançado no sistema\tStatus \tConfirmação de recebimento\tURL de acesso digital\t' +
+    'Detalhe informado\tmedId\tData/hora de envio\tData/hora da confirmação';
+  const e2e = 'E18236120202609251353s139a9ad5d9';
+  const linha = (status: string) =>
+    [
+      'Maria Souza',
+      '97,90',
+      '25/09/2026 10:53',
+      '123.456.789-00',
+      'Nubank',
+      e2e,
+      'REF-991',
+      'Digital',
+      'maria@exemplo.com',
+      'Sim',
+      status,
+      'Sim',
+      'https://acesso.exemplo.com/x',
+      'Acesso liberado',
+      e2e,
+      '25/09/2026 10:55',
+      '25/09/2026 11:02',
+    ].join('\t');
+
+  it('le as datas de verdade e reconhece o status em portugues', () => {
+    for (const status of ['Entregue', 'Enviado', 'Confirmado', 'Lançado', '']) {
+      const { rows, fatalError } = parseDeliveryLog(`${header}\n${linha(status)}`);
+      expect(fatalError).toBeNull();
+      const [row] = rows;
+      expect(row?.outcome).toBe('DELIVERED');
+      expect(row?.transactionRef).toBe(e2e);
+      expect(row?.sentAt).toBe(parseLogTimestamp('25/09/2026 10:55'));
+      expect(row?.deliveredAt).toBe(parseLogTimestamp('25/09/2026 11:02'));
+      expect(row?.purchaseAt).toBe(parseLogTimestamp('25/09/2026 10:53'));
+      expect(row?.customerEmail).toBe('maria@exemplo.com');
+      expect(row?.productType).toBe('DIGITAL');
+      expect(row?.errors).toEqual([]);
+    }
+  });
+
+  it('nao entregue explicito continua nao entregue', () => {
+    for (const status of ['Não entregue', 'Pendente', 'Bounce']) {
+      const { rows } = parseDeliveryLog(`${header}\n${linha(status)}`);
+      expect(rows[0]?.outcome).not.toBe('DELIVERED');
+    }
+  });
+});
