@@ -69,7 +69,20 @@ export interface ParsedDeliveryLog {
 
 const FIELD_ALIASES: Record<keyof Omit<DeliveryLogRow, 'line' | 'outcome' | 'errors'>, string[]> = {
   productType: ['producttype', 'tipoproduto', 'tipodeproduto', 'tipodoproduto', 'tipo', 'categoria'],
-  transactionRef: ['txnid', 'transactionid', 'idtransacao', 'reference', 'e2e', 'e2eid', 'endtoend', 'endtoendid', 'idfimafim'],
+  transactionRef: [
+    'txnid',
+    'transactionid',
+    'idtransacao',
+    'reference',
+    'e2e',
+    'e2eid',
+    'endtoend',
+    'endtoendid',
+    'idfimafim',
+    'medid',
+    'idmed',
+    'numerodomed',
+  ],
   purchaseAt: ['purchaseat', 'datacompra', 'compraem', 'purchasedate', 'eventts', 'datahora', 'horariodacompra', 'horariocompra', 'datadacompra'],
   amount: ['amountbrl', 'amount', 'valor', 'valorbrl'],
   customerName: ['customername', 'nomecliente', 'cliente', 'nome'],
@@ -157,6 +170,31 @@ function fieldByContent(values: string[]): LogField | 'date' | undefined {
   return undefined;
 }
 
+/**
+ * Quanto o conteudo da coluna combina com o campo, de 0 a 1. Usado so para
+ * desempatar duas colunas que o cabecalho mandou para o mesmo campo.
+ */
+function contentScore(field: LogField, values: string[]): number {
+  const filled = values.map((value) => value.trim()).filter((value) => value.length > 0).slice(0, 30);
+  if (filled.length === 0) return 0;
+  const share = (test: (value: string) => boolean) => filled.filter(test).length / filled.length;
+  switch (field) {
+    case 'purchaseAt':
+    case 'sentAt':
+    case 'deliveredAt':
+    case 'firstAccessAt':
+      return share((v) => parseLogTimestamp(v) !== null);
+    case 'transactionRef':
+      return share((v) => E2E_PATTERN.test(v));
+    case 'customerEmail':
+      return share((v) => EMAIL_PATTERN.test(v));
+    case 'productUrl':
+      return share((v) => /^https?:\/\//i.test(v));
+    default:
+      return 0.5;
+  }
+}
+
 const BR_OFFSET = '-03:00';
 
 export function parseLogTimestamp(raw: string): string | null {
@@ -178,9 +216,13 @@ export function parseLogTimestamp(raw: string): string | null {
   }
 
   // Formato brasileiro: 24/09/2026 07:06 ou 24/09/2026 07:06:29.
-  const br = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[\s,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  // Aceita tambem 24-09-2026, 24.09.26 e "24/09/2026 às 07:06".
+  const br = value.match(
+    /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})(?:[\s,T]+|\s*(?:às|as|-)\s*)(\d{1,2})[:h](\d{2})(?::(\d{2}))?/i,
+  );
   if (br) {
-    const [, dia, mes, ano, hora, minuto, segundo = '00'] = br as unknown as string[];
+    const [, dia, mes, anoBruto, hora, minuto, segundo = '00'] = br as unknown as string[];
+    const ano = anoBruto?.length === 2 ? `20${anoBruto}` : anoBruto;
     return parseLogTimestamp(
       `${ano}-${pad(Number(mes))}-${pad(Number(dia))} ${pad(Number(hora))}:${minuto}:${segundo}`,
     );
@@ -205,10 +247,64 @@ export function parseLogTimestamp(raw: string): string | null {
  */
 export function classifyOutcome(raw: string): DeliveryOutcome {
   const value = normalizeHeader(raw);
-  if (value === 'delivered' || value === 'entregue' || value === 'delivery') return 'DELIVERED';
-  if (value.includes('bounce') || value.includes('rejected') || value === 'failed') return 'BOUNCED';
+  if (value.length === 0) return 'OTHER';
+  if (isNegativeStatus(value)) {
+    return BOUNCE_STATUS.some((word) => value.includes(word)) ? 'BOUNCED' : 'OTHER';
+  }
+  if (EXACT_DELIVERED.includes(value) || DELIVERED_STATUS.some((word) => value.includes(word))) {
+    return 'DELIVERED';
+  }
   return 'OTHER';
 }
+
+function isNegativeStatus(normalized: string): boolean {
+  return (
+    normalized === 'no' ||
+    normalized.startsWith('nao') ||
+    NEGATIVE_STATUS.some((word) => normalized.includes(word))
+  );
+}
+
+/** Recusa explicita: o servidor de destino disse nao. */
+const BOUNCE_STATUS = ['bounce', 'rejected', 'rejeitad', 'recusad', 'devolvid', 'failed', 'falha', 'falhou', 'erro'];
+
+/**
+ * O que diz, com todas as letras, que nao houve entrega. Vem antes do teste
+ * positivo porque "nao entregue" contem "entregue".
+ */
+const NEGATIVE_STATUS = [
+  ...BOUNCE_STATUS,
+  'naoentreg',
+  'pendente',
+  'aguardando',
+  'emfila',
+  'queued',
+  'deferred',
+  'cancelad',
+  'invalid',
+  'semconfirm',
+];
+
+/** Como as planilhas brasileiras dizem "chegou". */
+const DELIVERED_STATUS = [
+  'delivered',
+  'delivery',
+  'entregue',
+  'entregu',
+  'enviado',
+  'enviada',
+  'confirmad',
+  'recebid',
+  'concluid',
+  'finalizad',
+  'liberad',
+  'aprovad',
+  'sucesso',
+  'success',
+];
+
+/** Curtos demais para procurar dentro de outra palavra ("ausente" tem "sent"). */
+const EXACT_DELIVERED = ['sent', 'ok', 'sim', 'yes', 'true', 'x'];
 
 /** Extrai o message-id sem os sinais de menor e maior, se vierem. */
 function cleanMessageId(raw: string): string | null {
@@ -229,10 +325,24 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     };
   }
 
+  // Duas colunas podem dizer a mesma coisa pelo nome: "Lancado no sistema" e
+  // "Data/hora de envio", "Confirmacao de recebimento" e "Data/hora da
+  // confirmacao", "Reference" e "E2E". Quem fica com o campo e a que tem o
+  // conteudo certo — a data de verdade, o E2E de verdade —, e nao a que veio
+  // primeiro. Empate fica com a primeira.
+  const dataRows = table.slice(1);
+  const columnValues = (index: number) => dataRows.map((row) => row[index] ?? '');
   const fieldByIndex = new Map<number, LogField>();
+  const bestScore = new Map<LogField, number>();
   headerRow.forEach((header, index) => {
     const field = ALIAS_TO_FIELD.get(normalizeHeader(header)) ?? fieldByPrefix(normalizeHeader(header));
-    if (field && ![...fieldByIndex.values()].includes(field)) fieldByIndex.set(index, field);
+    if (!field) return;
+    const score = contentScore(field, columnValues(index));
+    const current = bestScore.get(field);
+    if (current !== undefined && score <= current) return;
+    for (const [other, mapped] of fieldByIndex) if (mapped === field) fieldByIndex.delete(other);
+    fieldByIndex.set(index, field);
+    bestScore.set(field, score);
   });
 
   // Colunas que o cabecalho nao explicou: o conteudo decide. Datas sem nome
@@ -242,7 +352,7 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
   const datasSemNome: number[] = [];
   headerRow.forEach((_, index) => {
     if (fieldByIndex.has(index)) return;
-    const guess = fieldByContent(table.slice(1).map((row) => row[index] ?? ''));
+    const guess = fieldByContent(columnValues(index));
     if (guess === 'date') datasSemNome.push(index);
     else if (guess && !usados().has(guess)) fieldByIndex.set(index, guess);
   });
@@ -295,18 +405,25 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
     }
 
     const rawStatus = orNull(value('rawStatus'));
-    // Planilha sem coluna de status: a confirmacao de recebimento preenchida e
-    // o que diz que a mensagem chegou. Vazia, nao ha entrega a afirmar.
-    const outcome = semColunaDeStatus
-      ? value('deliveredAt').length > 0 || value('sentAt').length > 0
-        ? 'DELIVERED'
-        : 'OTHER'
-      : classifyOutcome(rawStatus ?? '');
-
     // Entrega sem hora nao e entrega comprovada: o horario e metade do que a
     // instituicao confere. Recusa sem hora e esperado — nao houve entrega.
     const deliveredAt = orNull(value('deliveredAt'));
     const parsedDeliveredAt = deliveredAt ? parseLogTimestamp(deliveredAt) : null;
+    const temData = parsedDeliveredAt !== null || sentAt !== null;
+
+    // Sem coluna de status, ou com um status que nao diz nem sim nem nao
+    // ("Lancado", "Processado", vazio): a data de envio ou de confirmacao e o
+    // que diz que a mensagem saiu. So um "nao" explicito — recusa, pendente,
+    // nao entregue — derruba uma linha datada.
+    const classified = classifyOutcome(rawStatus ?? '');
+    const negado = rawStatus !== null && isNegativeStatus(normalizeHeader(rawStatus));
+    const outcome: DeliveryOutcome = semColunaDeStatus
+      ? value('deliveredAt').length > 0 || value('sentAt').length > 0
+        ? 'DELIVERED'
+        : 'OTHER'
+      : classified === 'OTHER' && !negado && temData
+        ? 'DELIVERED'
+        : classified;
     if (outcome === 'DELIVERED' && parsedDeliveredAt === null && sentAt === null) {
       errors.push('Status é entrega, mas a data da entrega está ausente ou ilegível.');
     }
