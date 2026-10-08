@@ -42,6 +42,7 @@ import type { Evidence } from '@/domain/types';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
 import {
+  isPlaceholderValue,
   parseDeliveryLog,
   type DeliveryLogRow,
   type ParsedDeliveryLog,
@@ -229,7 +230,10 @@ function chooseReceipt(
   options: DeliveryImportOptions,
 ): ReceiptChoice {
   const chosen = options.receiptTemplate ?? 'ACCESS_DELIVERY';
-  const name = row.customerName ?? medCase.customer?.identification.name ?? medCase.med.payer.name ?? null;
+  const name =
+    [row.customerName, medCase.customer?.identification.name, medCase.med.payer.name].find(
+      (candidate) => !isPlaceholderValue(candidate),
+    ) ?? null;
 
   let kind: ProductKind | null = null;
   let kindKnown = true;
@@ -555,8 +559,12 @@ export async function importDeliveryLog(
       const gerada = await addCommunicationReconstruction(auth, med.id, {
         template: choice.template,
         from: draft.from,
-        to: row.customerEmail ?? draft.to,
-        toName: (row.customerName ?? draft.toName) ?? undefined,
+        // So endereco de verdade: o registro antigo pode ter guardado um nome
+        // ou um "Em branco" no lugar do e-mail.
+        to: row.customerEmail ?? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.to) ? draft.to : ''),
+        toName:
+          row.customerName ??
+          (isPlaceholderValue(draft.toName) ? undefined : (draft.toName ?? undefined)),
         subject: choice.subject ?? draft.subject,
         sentAt: momentOfSending ?? draft.sentAt ?? undefined,
         body: choice.body ?? draft.body,
@@ -734,7 +742,9 @@ export async function importDeliveryLog(
           template: linkedChoice.template,
           from: EMAIL_SENDER_NAME,
           to: row.customerEmail ?? '',
-          toName: row.customerName ?? med.payerName ?? undefined,
+          toName:
+            row.customerName ??
+            (isPlaceholderValue(med.payerName) ? undefined : (med.payerName ?? undefined)),
           subject: linkedChoice.subject ?? 'Seu acesso está liberado',
           sentAt,
           body: linkedChoice.body ?? '',

@@ -177,3 +177,20 @@ describe('o rascunho nao apaga o que o operador ja escreveu', () => {
     expect(draft.body).toContain('[Inclua aqui o link');
   });
 });
+
+describe('destinatario na peca', () => {
+  it('placeholder some e o nome sai no lugar certo, com a saudacao corrigida', () => {
+    const view = buildClientEmailView({
+      template: 'ACCESS_DELIVERY',
+      from: 'IronPay',
+      to: 'Alex de Oliveira Xavier',
+      toName: 'Padrão Nubank',
+      subject: 'Seu acesso está liberado',
+      sentAt: '2026-09-27T17:11:00.000Z',
+      body: 'Olá, Padrão\n\nSegue o seu acesso. Já está liberado.',
+    });
+    expect(view.toName).toBe('Alex de Oliveira Xavier');
+    expect(view.to).toBe('');
+    expect(view.paragraphs[0]).toBe('Olá, Alex');
+  });
+});
