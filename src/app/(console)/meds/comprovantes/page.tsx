@@ -54,8 +54,12 @@ function pecasDoCaso(medCase: MedCase): Peca[] {
   const porEnvio = new Map<string, Evidence>();
   for (const evidence of medCase.evidences) {
     if (evidence.type !== 'DELIVERY_COMMUNICATION') continue;
-    // Sem message-id nao da para afirmar que e o mesmo envio: cada uma entra.
-    const chave = evidence.sourceReference?.trim() || `evidencia:${evidence.id}`;
+    // Sem message-id, o mesmo modelo no mesmo instante e o mesmo envio:
+    // reimportar a planilha nao pode dobrar a peca no lote.
+    const receipt = parseCommunicationReceipt(evidence.value);
+    const chave =
+      evidence.sourceReference?.trim() ||
+      (receipt?.sentAt ? `envio:${receipt.template}:${receipt.sentAt}` : `evidencia:${evidence.id}`);
     const atual = porEnvio.get(chave);
     if (!atual || melhor(evidence, atual)) porEnvio.set(chave, evidence);
   }

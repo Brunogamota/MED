@@ -209,9 +209,9 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
                 {report.withoutMessageId > 1 ? 's' : ''} sem message-id
               </AlertTitle>
               <AlertDescription>
-                O dado entrou no caso — destinatário, horário, URL —, mas sem o message-id o
-                envio não é conferível na origem, e por isso não virou comprovante. Se o seu
-                provedor exporta essa coluna, suba o arquivo com ela e a peça sai.
+                O comprovante saiu com destinatário, horário e URL da planilha, mas sem o
+                identificador do provedor. Se o seu provedor exporta essa coluna, subir o
+                arquivo com ela deixa a peça conferível na origem.
               </AlertDescription>
             </Alert>
           ) : null}
