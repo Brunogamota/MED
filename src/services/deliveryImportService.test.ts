@@ -114,7 +114,7 @@ describe('importar log de envio', () => {
     expect(segundo.withFirstAccess).toBe(primeiro.withFirstAccess);
   });
 
-  it('sem message-id a entrega entra, mas nao vira comprovante', async () => {
+  it('sem message-id a entrega entra e vira comprovante', async () => {
     const SEM_ID = [
       'customer_name,customer_email,amount_brl,purchase_at,status,delivered_at,product_url',
       'Fulano de Tal,fulano@exemplo.com,32.80,2026-09-18 12:30:04,delivered,2026-09-18 12:31:50,https://console.exemplo.com/p/abc',
@@ -124,9 +124,7 @@ describe('importar log de envio', () => {
     expect(report.fatalError).toBeNull();
     expect(report.recorded).toBe(1);
     expect(report.withoutMessageId).toBe(1);
-    // O dado entra; a peca que afirmaria um envio inconferivel, nao.
-    expect(report.receipts).toBe(0);
-    expect(report.lines[0]?.message).toContain('sem comprovante');
+    expect(report.receipts).toBe(1);
 
     const repository = await getRepository();
     const med = (await repository.listMeds('org_a', {})).find(

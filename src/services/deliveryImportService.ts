@@ -38,6 +38,7 @@ import {
   type ProductKind,
 } from '@/domain/communication/receipt';
 import type { MedCase } from '@/domain/case';
+import type { Evidence } from '@/domain/types';
 import { recordDigitalDelivery } from '@/services/fulfillmentService';
 import { recordAudit } from '@/services/audit';
 import {
@@ -424,12 +425,13 @@ export async function importDeliveryLog(
     if (choice.kind === 'DIGITAL') receiptsDigital += 1;
     if (!choice.kindKnown) receiptsUnknownKind += 1;
   };
-  // Message-ids dos comprovantes gerados por esta importacao, por caso.
+  // Comprovantes gerados por esta importacao, por caso. Pelo id da evidencia,
+  // e nao pelo message-id: linha sem message-id tambem gera peca, e substituir
+  // as anteriores nao pode apagar a que acabou de ser gravada.
   const gerados = new Map<string, Set<string>>();
-  const marcarGerado = (medId: string, messageId: string | null) => {
-    if (!messageId) return;
+  const marcarGerado = (medId: string, evidence: Evidence) => {
     const conjunto = gerados.get(medId) ?? new Set<string>();
-    conjunto.add(messageId.trim());
+    conjunto.add(evidence.id);
     gerados.set(medId, conjunto);
   };
   let anachronistic = 0;
@@ -538,22 +540,11 @@ export async function importDeliveryLog(
 
     if (!row.messageId) withoutMessageId += 1;
 
-    // Comprovante so com message-id: a peca imprime o identificador que a
-    // instituicao cruza na origem, e sem ele ela afirmaria um envio que
-    // ninguem pode conferir. O registro fica; a peca, nao.
-    if (options.generateReceipts && !row.messageId) {
-      lines.push({
-        line: row.line,
-        medId: med.medId,
-        customerEmail: row.customerEmail,
-        kind: 'RECORDED',
-        message:
-          'Entrega registrada, sem comprovante: a linha não traz message-id, e sem ele o ' +
-          'envio não é conferível na origem. O dado entrou no caso.',
-      });
-      continue;
-    }
-
+    // Sem message-id a peca sai do mesmo jeito: a planilha do estabelecimento
+    // e o registro de envio que existe, e a linha traz destinatario e data.
+    // O que muda e so a procedencia — a peca nao imprime identificador que a
+    // linha nao tem. Barrar aqui deixava o lote inteiro sem comprovante quando
+    // a mesma linha, ligada pelo E2E, gerava peca normalmente.
     if (options.generateReceipts) {
       // Recarrega o caso: o rascunho le a entrega que acabou de ser gravada, e
       // e dela que saem destinatario, data e link. Sem recarregar, o
@@ -561,7 +552,7 @@ export async function importDeliveryLog(
       const medCase = await getCase(auth, med.id);
       const draft = draftCommunication(medCase, 'ACCESS_DELIVERY', { reuseSaved: false });
       const choice = chooseReceipt(row, medCase, options);
-      await addCommunicationReconstruction(auth, med.id, {
+      const gerada = await addCommunicationReconstruction(auth, med.id, {
         template: choice.template,
         from: draft.from,
         to: row.customerEmail ?? draft.to,
@@ -574,7 +565,7 @@ export async function importDeliveryLog(
         sourceReference: row.messageId ?? undefined,
       });
       contarModelo(choice);
-      marcarGerado(med.id, row.messageId);
+      marcarGerado(med.id, gerada);
       receipts += 1;
     }
 
@@ -739,7 +730,7 @@ export async function importDeliveryLog(
         // Assunto genérico de propósito: o nome do produto na peça diz à
         // instituição o que a pessoa comprou, e isso não é assunto dela.
         const linkedChoice = chooseReceipt(row, await getCase(auth, med.id), options);
-        await addCommunicationReconstruction(auth, med.id, {
+        const gerada = await addCommunicationReconstruction(auth, med.id, {
           template: linkedChoice.template,
           from: EMAIL_SENDER_NAME,
           to: row.customerEmail ?? '',
@@ -753,7 +744,7 @@ export async function importDeliveryLog(
         });
         contarModelo(linkedChoice);
         receipts += 1;
-        marcarGerado(med.id, row.messageId);
+        marcarGerado(med.id, gerada);
 
         // O primeiro acesso é o que responde "não recebi": mostra que a pessoa
         // usou o que comprou. Entra como evidência própria, com o message-id
@@ -826,7 +817,7 @@ export async function importDeliveryLog(
       const medCase = await getCase(auth, medId);
       for (const evidence of medCase.evidences) {
         if (evidence.type !== 'DELIVERY_COMMUNICATION') continue;
-        if (doArquivo.has(evidence.sourceReference?.trim() ?? '')) continue;
+        if (doArquivo.has(evidence.id)) continue;
         if (await deleteCommunicationReconstruction(auth, medId, evidence.id)) replacedReceipts += 1;
       }
     }
