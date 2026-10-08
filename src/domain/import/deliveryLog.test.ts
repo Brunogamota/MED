@@ -237,3 +237,18 @@ describe('planilha com Status, Reference e medId', () => {
     }
   });
 });
+
+describe('destinatario sem placeholder', () => {
+  const header = 'Nome\tE-mail\tE2E\tData/hora de envio';
+  const e2e = 'E208558752026092717040TGZWS3MB5Z';
+  it('"Padrão Nubank" no e-mail nao vira endereco', () => {
+    const { rows } = parseDeliveryLog(`${header}\nAlex de Oliveira Xavier\tPadrão Nubank\t${e2e}\t27/09/2026 14:11`);
+    expect(rows[0]?.customerName).toBe('Alex de Oliveira Xavier');
+    expect(rows[0]?.customerEmail).toBeNull();
+  });
+  it('nome na coluna de e-mail e "Em branco" no nome: o nome vale como nome', () => {
+    const { rows } = parseDeliveryLog(`${header}\nEm branco\tAlex de Oliveira Xavier\t${e2e}\t27/09/2026 14:11`);
+    expect(rows[0]?.customerName).toBe('Alex de Oliveira Xavier');
+    expect(rows[0]?.customerEmail).toBeNull();
+  });
+});

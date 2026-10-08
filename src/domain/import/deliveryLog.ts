@@ -195,6 +195,57 @@ function contentScore(field: LogField, values: string[]): number {
   }
 }
 
+/**
+ * Texto que a planilha usa para dizer "nao tem": "Em branco", "Padrao Nubank",
+ * "SEM DADO", "-". Nao e nome nem e-mail de ninguem, e no comprovante apareceria
+ * como destinatario.
+ */
+export function isPlaceholderValue(raw: string | null | undefined): boolean {
+  const value = normalizeHeader(raw ?? '');
+  if (value.length === 0) return true;
+  if (value.startsWith('padrao') || value.startsWith('default')) return true;
+  return [
+    'embranco',
+    'branco',
+    'semdado',
+    'semdados',
+    'semnome',
+    'sememail',
+    'naoinformado',
+    'naotem',
+    'nenhum',
+    'vazio',
+    'na',
+    'nd',
+    'none',
+    'null',
+    'undefined',
+  ].includes(value);
+}
+
+/**
+ * Nome e e-mail do destinatario, sem placeholder e sem um no lugar do outro.
+ *
+ * E-mail que nao e e-mail nao vai para o campo de e-mail: no comprovante ele
+ * sairia como endereco de envio. Quando a coluna de e-mail traz o nome da
+ * pessoa e a de nome nao traz nada que preste, o nome e aproveitado como nome.
+ */
+function destinatario(
+  rawName: string,
+  rawEmail: string,
+): { customerName: string | null; customerEmail: string | null } {
+  const name = rawName.trim();
+  const email = rawEmail.trim();
+  const emailValido = EMAIL_PATTERN.test(email) && !email.endsWith('.invalid');
+  const nomeValido = !isPlaceholderValue(name) && !EMAIL_PATTERN.test(name);
+  const emailEhNome =
+    !emailValido && !isPlaceholderValue(email) && /^[A-Za-zÀ-ÿ'.]+(\s+[A-Za-zÀ-ÿ'.]+)+$/.test(email);
+  return {
+    customerName: nomeValido ? name : emailEhNome ? email : null,
+    customerEmail: emailValido ? email : EMAIL_PATTERN.test(name) ? name : null,
+  };
+}
+
 const BR_OFFSET = '-03:00';
 
 export function parseLogTimestamp(raw: string): string | null {
@@ -443,8 +494,7 @@ export function parseDeliveryLog(text: string): ParsedDeliveryLog {
       transactionRef: orNull(value('transactionRef')),
       purchaseAt: value('purchaseAt').length > 0 ? parseLogTimestamp(value('purchaseAt')) : null,
       amount: rawAmount.length > 0 ? parseAmount(rawAmount) : null,
-      customerName: orNull(value('customerName')),
-      customerEmail: orNull(value('customerEmail')),
+      ...destinatario(value('customerName'), value('customerEmail')),
       sentAt,
       messageId,
       outcome,

@@ -1,6 +1,7 @@
 import type { EvidenceSource, IsoDateTime, JsonValue } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import { formatDateTimeSmart } from '@/lib/format';
+import { isPlaceholderValue } from '@/domain/import/deliveryLog';
 
 /**
  * Comprovante de comunicação — reconstrução da mensagem que o estabelecimento
@@ -204,19 +205,53 @@ function deriveAction(
   return { kind: 'NOTE', valueLabel: 'Referência', value, display: displayReference(value) };
 }
 
+/**
+ * Destinatario como a peca mostra: sem "Em branco"/"Padrao Nubank" no lugar do
+ * nome e sem nome no lugar do e-mail. Comprovantes gravados antes da limpeza
+ * na importacao saem certos sem precisar regerar.
+ */
+function displayRecipient(receipt: CommunicationReceipt): { to: string; toName: string | null } {
+  const to = receipt.to.trim();
+  const toIsEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) && !to.endsWith('.invalid');
+  const name = receipt.toName?.trim() ?? '';
+  const nameOk = !isPlaceholderValue(name) && !name.includes('@');
+  const toLooksLikeName = !toIsEmail && !isPlaceholderValue(to) && /^[A-Za-zÀ-ÿ'.]+(\s+[A-Za-zÀ-ÿ'.]+)+$/.test(to);
+  return {
+    to: toIsEmail ? to : '',
+    toName: nameOk ? name : toLooksLikeName ? to : null,
+  };
+}
+
+/**
+ * A saudacao gravada pode ter saido de um placeholder ("Olá, Em" de "Em
+ * branco"). Ela e derivada do nome, entao acompanha o destinatario corrigido.
+ */
+function fixGreeting(paragraphs: string[], toName: string | null): string[] {
+  const first = paragraphs[0];
+  const match = first?.match(/^Olá,\s*(\S+)$/);
+  if (!first || !match) return paragraphs;
+  const firstName = toName?.split(/\s+/)[0] ?? null;
+  if (firstName && match[1] === firstName) return paragraphs;
+  return [firstName ? `Olá, ${firstName}` : 'Olá', ...paragraphs.slice(1)];
+}
+
 export function buildClientEmailView(receipt: CommunicationReceipt): ClientEmailView {
+  const recipient = displayRecipient(receipt);
   return {
     template: receipt.template,
     from: receipt.from,
     fromInitial: (receipt.from.trim()[0] ?? '?').toUpperCase(),
-    to: receipt.to,
-    toName: receipt.toName ?? null,
+    to: recipient.to,
+    toName: recipient.toName,
     subject: receipt.subject,
     sentAtLabel: formatDateTimeSmart(receipt.sentAt),
-    paragraphs: receipt.body
-      .split(/\n{2,}/)
-      .map((paragraph) => paragraph.trim())
-      .filter((paragraph) => paragraph.length > 0),
+    paragraphs: fixGreeting(
+      receipt.body
+        .split(/\n{2,}/)
+        .map((paragraph) => paragraph.trim())
+        .filter((paragraph) => paragraph.length > 0),
+      recipient.toName,
+    ),
     reference: receipt.reference ?? null,
     action: deriveAction(receipt.template, receipt.reference),
     stamp: RECONSTRUCTION_STAMP,
@@ -280,7 +315,8 @@ export function draftCommunication(
   const base = { from: EMAIL_SENDER_NAME, to, toName, sentAt };
   // Saudacao com o primeiro nome quando o caso tem o nome. E como a mensagem
   // transacional de verdade abre; "Ola," sozinho so aparece quando nao ha nome.
-  const greeting = toName ? `Olá, ${toName.trim().split(/\s+/)[0]}` : 'Olá';
+  const greeting =
+    toName && !isPlaceholderValue(toName) ? `Olá, ${toName.trim().split(/\s+/)[0]}` : 'Olá';
 
   switch (template) {
     case 'PURCHASE_CONFIRMATION':
