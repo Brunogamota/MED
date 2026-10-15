@@ -157,6 +157,7 @@ export function AnimatedBadge({
   return (
     <motion.span
       layout
+      data-badge-status={status}
       transition={SPRING_LAYOUT}
       className={cn(
         'relative inline-flex w-fit shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full border font-medium tabular-nums',

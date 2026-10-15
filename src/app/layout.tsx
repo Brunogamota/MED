@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, Inter, JetBrains_Mono, Manrope, Sora } from 'next/font/google';
+import { Inter, JetBrains_Mono, Plus_Jakarta_Sans } from 'next/font/google';
 import { APP_CONFIG } from '@/config/app';
 import { MotionProvider } from '@/components/layout/motion-provider';
 import { ThemeProvider } from '@/components/layout/theme-provider';
@@ -30,13 +30,11 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-/* Ambiente Bulls Cash: outra família de títulos, de corpo e de número. */
-const sora = Sora({ subsets: ['latin'], variable: '--font-sora', display: 'swap' });
-const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
-const plexMono = IBM_Plex_Mono({
+/* Ambiente Bulls Cash: Plus Jakarta Sans em tudo — título, corpo e número. */
+const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-plex-mono',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-jakarta',
   display: 'swap',
 });
 
@@ -71,11 +69,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="pt-BR"
       data-skin={skin}
-      className={`${sans.variable} ${mono.variable} ${sora.variable} ${manrope.variable} ${plexMono.variable}`}
+      className={`${sans.variable} ${mono.variable} ${jakarta.variable}`}
       suppressHydrationWarning
     >
       <body>
-        <ThemeProvider>
+        {/* O Bulls Cash é claro sempre: o tema do sistema não escurece o ambiente. */}
+        <ThemeProvider forcedTheme={skin === 'bulls' ? 'light' : undefined}>
           <MotionProvider>
             <TooltipProvider>{children}</TooltipProvider>
           </MotionProvider>

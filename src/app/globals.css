@@ -56,6 +56,50 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  /* Papéis próprios do ambiente Bulls Cash. Só têm valor sob
+     `html[data-skin='bulls']`; fora dele a utilidade não pinta nada. */
+  --color-bulls-bg: var(--bulls-bg);
+  --color-bulls-bg-2: var(--bulls-bg-2);
+  --color-bulls-ink: var(--bulls-ink);
+  --color-bulls-ink-2: var(--bulls-ink-2);
+  --color-bulls-ink-3: var(--bulls-ink-3);
+  --color-bulls-ink-4: var(--bulls-ink-4);
+  --color-bulls-line: var(--bulls-line);
+  --color-bulls-line-strong: var(--bulls-line-strong);
+  --color-bulls-brand: var(--bulls-brand);
+  --color-bulls-brand-strong: var(--bulls-brand-strong);
+  --color-bulls-brand-deep: var(--bulls-brand-deep);
+  --color-bulls-lilac: var(--bulls-lilac);
+  --color-bulls-brand-soft: var(--bulls-brand-soft);
+  --color-bulls-brand-wash: var(--bulls-brand-wash);
+  --color-bulls-success: var(--bulls-success);
+  --color-bulls-success-soft: var(--bulls-success-soft);
+  --color-bulls-success-ink: var(--bulls-success-ink);
+  --color-bulls-warning: var(--bulls-warning);
+  --color-bulls-warning-soft: var(--bulls-warning-soft);
+  --color-bulls-warning-ink: var(--bulls-warning-ink);
+  --color-bulls-error: var(--bulls-error);
+  --color-bulls-error-soft: var(--bulls-error-soft);
+  --color-bulls-error-ink: var(--bulls-error-ink);
+  --color-bulls-neutral-soft: var(--bulls-neutral-soft);
+  --color-bulls-av-1: var(--bulls-av-1);
+  --color-bulls-av-1-ink: var(--bulls-av-1-ink);
+  --color-bulls-av-2: var(--bulls-av-2);
+  --color-bulls-av-2-ink: var(--bulls-av-2-ink);
+  --color-bulls-av-3: var(--bulls-av-3);
+  --color-bulls-av-3-ink: var(--bulls-av-3-ink);
+  --color-bulls-av-4: var(--bulls-av-4);
+  --color-bulls-av-4-ink: var(--bulls-av-4-ink);
+  --color-bulls-av-5: var(--bulls-av-5);
+  --color-bulls-av-5-ink: var(--bulls-av-5-ink);
+  --color-bulls-av-6: var(--bulls-av-6);
+  --color-bulls-av-6-ink: var(--bulls-av-6-ink);
+  --color-bulls-on-brand: var(--bulls-on-brand);
+  --shadow-bulls: var(--bulls-shadow);
+  --shadow-bulls-brand: var(--bulls-shadow-brand);
+  --shadow-bulls-pill: var(--bulls-shadow-pill);
+  --shadow-bulls-hover: var(--bulls-shadow-hover);
+  --shadow-bulls-hero: var(--bulls-shadow-hero);
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
@@ -246,22 +290,80 @@ input[type='number']::-webkit-inner-spin-button {
 .animate-delay-1200 { animation-delay: 1200ms; }
 .animate-delay-1400 { animation-delay: 1400ms; }
 
+
 /* =========================================================================
-   Ambiente Bulls Cash (`<html data-skin="bulls">`)
+   Ambiente Bulls Cash (`<html data-skin="bulls">`) — "Bento Claro"
 
    Outro ambiente, não outro tema: tipografia, raio, superfícies e cor são
-   todos daqui. Paleta roxa da marca sobre azul-noite; no claro, lavanda.
-   O seletor por atributo no <html> ganha de `:root` e de `.dark`, então o
-   resto do console não precisa saber que existe ambiente.
+   todos daqui. Chão lavanda, cartões brancos de raio largo com sombra macia,
+   roxo da marca e Plus Jakarta Sans em tudo.
+
+   Só claro. O layout raiz força o tema claro neste ambiente, e o bloco
+   `html.dark[data-skin='bulls']` repete os mesmos valores para o caso de a
+   classe `.dark` chegar por outro caminho — a paleta não muda com ela.
+
+   As regras ficam fora de camada de propósito: precisam ganhar das classes
+   que as primitivas trazem (`rounded-lg`, `ring-1`…). Tudo é escopado pelo
+   atributo no <html>, então o Jade não vê nada disto.
    ========================================================================= */
 
-html[data-skin='bulls'] {
-  --radius: 0.95rem;
-  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  --font-bulls-heading: var(--font-sora), var(--font-manrope), sans-serif;
+html[data-skin='bulls'],
+html.dark[data-skin='bulls'] {
+  color-scheme: light;
 
-  --background: #faf7ff;
+  /* Paleta própria */
+  --bulls-bg: #f7f5ff;
+  --bulls-bg-2: #faf7ff;
+  --bulls-surface: #ffffff;
+  --bulls-ink: #1b1030;
+  --bulls-ink-2: #4a3d63;
+  /* #8A7BA8 não passa de 3,8:1 no branco: fica para eixo e ornamento.
+     Texto auxiliar usa o tom acima, que passa de 5,7:1. */
+  --bulls-ink-3: #6e5f8d;
+  --bulls-ink-4: #8a7ba8;
+  --bulls-line: #ece6f8;
+  --bulls-line-strong: #ddd2f3;
+  --bulls-brand: #a855f7;
+  --bulls-brand-strong: #9333ea;
+  --bulls-brand-deep: #7c3aed;
+  --bulls-lilac: #c084fc;
+  --bulls-brand-soft: #f3e8ff;
+  --bulls-brand-wash: #faf5ff;
+  --bulls-success: #10b981;
+  --bulls-success-soft: #ecfdf5;
+  --bulls-success-ink: #047857;
+  --bulls-warning: #f59e0b;
+  --bulls-warning-soft: #fffbeb;
+  --bulls-warning-ink: #b45309;
+  --bulls-error: #ef4444;
+  --bulls-error-soft: #fef2f2;
+  --bulls-error-ink: #b91c1c;
+  --bulls-neutral-soft: #f3f0f9;
+  /* Fundos de avatar: decorativos, sem significado. */
+  --bulls-av-1: #f3e8ff;
+  --bulls-av-1-ink: #7c3aed;
+  --bulls-av-2: #ede9fe;
+  --bulls-av-2-ink: #5b21b6;
+  --bulls-av-3: #fce7f3;
+  --bulls-av-3-ink: #9d174d;
+  --bulls-av-4: #e0f2fe;
+  --bulls-av-4-ink: #075985;
+  --bulls-av-5: #fef3c7;
+  --bulls-av-5-ink: #92400e;
+  --bulls-av-6: #dcfce7;
+  --bulls-av-6-ink: #166534;
+  --bulls-shadow: 0 1px 2px rgb(27 16 48 / 0.04), 0 14px 36px -18px rgb(91 33 182 / 0.22);
+  --bulls-shadow-hover: 0 2px 4px rgb(27 16 48 / 0.05), 0 22px 48px -20px rgb(91 33 182 / 0.32);
+  --bulls-shadow-hero: 0 24px 56px -24px rgb(124 58 237 / 0.65);
+  --bulls-shadow-brand: 0 8px 18px -8px rgb(124 58 237 / 0.7);
+  --bulls-shadow-pill: 0 8px 20px -8px rgb(27 16 48 / 0.45);
+  /* Texto e traço sobre a marca (roxo sólido ou degradê). */
+  --bulls-on-brand: #ffffff;
+  --bulls-gradient: linear-gradient(135deg, #7c3aed 0%, #9333ea 55%, #a855f7 100%);
+
+  /* Papéis do shadcn */
+  --radius: 1rem;
+  --background: #f7f5ff;
   --foreground: #1b1030;
   --card: #ffffff;
   --card-foreground: #1b1030;
@@ -269,173 +371,402 @@ html[data-skin='bulls'] {
   --popover-foreground: #1b1030;
   --primary: #9333ea;
   --primary-foreground: #ffffff;
-  --secondary: #f1e9fe;
+  --secondary: #f3eeff;
   --secondary-foreground: #3b1670;
-  --muted: #f3eefc;
-  --muted-foreground: #6b5b86;
-  --accent: #efe6fd;
+  --muted: #f4f0fc;
+  --muted-foreground: #6e5f8d;
+  --accent: #f3e8ff;
   --accent-foreground: #3b1670;
-  --destructive: #dc2626;
-  --border: #e6dcf8;
-  --input: #e0d3f7;
+  --destructive: #ef4444;
+  --border: #ece6f8;
+  --input: #e4daf7;
   --ring: #a855f7;
   --chart-1: #a855f7;
-  --chart-2: #8b5cf6;
-  --chart-3: #c084fc;
-  --chart-4: #7c3aed;
-  --chart-5: #e9d5ff;
+  --chart-2: #c084fc;
+  --chart-3: #7c3aed;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
   --sidebar: #ffffff;
   --sidebar-foreground: #1b1030;
   --sidebar-primary: #9333ea;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #efe6fd;
+  --sidebar-accent: #f3e8ff;
   --sidebar-accent-foreground: #3b1670;
-  --sidebar-border: #e6dcf8;
+  --sidebar-border: #ece6f8;
   --sidebar-ring: #a855f7;
 
-  --bulls-line: #e6dcf8;
-  --bulls-chip: #ffffffb3;
-  --bulls-bar: #faf7ffd9;
-  --bulls-glow: #a855f72e;
-}
-
-html.dark[data-skin='bulls'] {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --card: #0f172a;
-  --card-foreground: #f8fafc;
-  --popover: #0f172a;
-  --popover-foreground: #f8fafc;
-  --primary: #a855f7;
-  --primary-foreground: #ffffff;
-  --secondary: #1e293b;
-  --secondary-foreground: #f8fafc;
-  --muted: #1e293b;
-  --muted-foreground: #94a3b8;
-  --accent: #1e293b;
-  --accent-foreground: #f8fafc;
-  --destructive: #ef4444;
-  --border: #334155;
-  --input: #334155;
-  --ring: #a855f7;
-  --chart-1: #a855f7;
-  --chart-2: #8b5cf6;
-  --chart-3: #c084fc;
-  --chart-4: #10b981;
-  --chart-5: #f59e0b;
-  --sidebar: #0f172a;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #a855f7;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1e293b;
-  --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #334155;
-  --sidebar-ring: #a855f7;
-
-  --bulls-line: #334155;
-  --bulls-chip: #0f172acc;
-  --bulls-bar: #020617d9;
-  --bulls-glow: #a855f740;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, 'SF Mono', monospace;
 }
 
 html[data-skin='bulls'] body {
-  letter-spacing: -0.005em;
+  background: var(--bulls-bg);
+  color: var(--bulls-ink);
 }
 
-html[data-skin='bulls'] :is(h1, h2, h3, .font-heading) {
-  font-family: var(--font-bulls-heading);
-  letter-spacing: -0.02em;
+html[data-skin='bulls'] ::selection {
+  background: var(--bulls-brand-soft);
+  color: var(--bulls-brand-deep);
 }
 
-/* Chão com brilho roxo no topo — a assinatura do ambiente. */
-.bulls-floor {
-  background:
-    radial-gradient(1200px 520px at 15% -10%, var(--bulls-glow), transparent 60%),
-    radial-gradient(900px 420px at 100% 0%, var(--bulls-glow), transparent 55%),
-    var(--background);
-}
+/* --- Cabeçalho de página ------------------------------------------------ */
 
-.bulls-icon-button {
-  display: inline-flex;
-  height: 2.5rem;
-  width: 2.5rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid var(--bulls-line);
-  background: var(--bulls-chip);
-  color: var(--muted-foreground);
-  transition: color 150ms, border-color 150ms;
-}
-.bulls-icon-button:hover {
-  color: var(--foreground);
-  border-color: var(--primary);
-}
-
-/* --- Peças do console no ambiente Bulls Cash --------------------------- */
-
-/* Cabeçalho de página: título grande em Sora com filete roxo à esquerda. */
-html[data-skin='bulls'] [data-page-header] > div:first-child {
-  position: relative;
-  padding-left: 1rem;
-}
-html[data-skin='bulls'] [data-page-header] > div:first-child::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.35rem;
-  bottom: 0.35rem;
-  width: 4px;
-  border-radius: 9999px;
-  background: linear-gradient(180deg, var(--chart-3), var(--primary));
-}
-html[data-skin='bulls'] [data-page-header] h1 {
-  font-size: 1.85rem;
+html[data-skin='bulls'] [data-page-header] h1,
+html[data-skin='bulls'] [data-bulls-title] {
+  font-size: clamp(1.75rem, 1.4rem + 1vw, 2.125rem);
   font-weight: 700;
   line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--bulls-ink);
+}
+html[data-skin='bulls'] [data-page-header] h1 {
+  overflow-wrap: anywhere;
+}
+html[data-skin='bulls'] [data-page-header] h1 + p {
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--bulls-ink-3);
+}
+html[data-skin='bulls'] [data-slot='breadcrumb-link'],
+html[data-skin='bulls'] [data-slot='breadcrumb-page'] {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+html[data-skin='bulls'] [data-slot='breadcrumb-link'] {
+  color: var(--bulls-brand-strong);
 }
 
-/* Cartões: vidro sobre o chão, raio largo, borda com brilho no topo. */
+/* --- Cartão ------------------------------------------------------------- */
+
 html[data-skin='bulls'] [data-slot='card'] {
-  border-radius: 1.4rem;
+  --card-spacing: 1.375rem;
+  border-radius: 24px;
   border: 1px solid var(--bulls-line);
-  background:
-    linear-gradient(180deg, color-mix(in oklab, var(--primary) 7%, transparent), transparent 140px),
-    color-mix(in oklab, var(--card) 88%, transparent);
-  box-shadow: 0 20px 45px -30px color-mix(in oklab, var(--primary) 55%, transparent);
-  backdrop-filter: blur(10px);
+  background: var(--bulls-surface);
+  box-shadow: var(--bulls-shadow);
+}
+html[data-skin='bulls'] [data-slot='card'][data-size='sm'] {
+  --card-spacing: 1rem;
+  border-radius: 18px;
 }
 html[data-skin='bulls'] [data-slot='card-title'] {
-  font-family: var(--font-bulls-heading);
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+  letter-spacing: -0.01em;
+  color: var(--bulls-ink);
+}
+html[data-skin='bulls'] [data-slot='card-description'] {
+  color: var(--bulls-ink-3);
+  font-size: 0.8125rem;
+}
+html[data-skin='bulls'] [data-slot='card-footer'] {
+  border-color: var(--bulls-line);
+  background: var(--bulls-bg-2);
+  color: var(--bulls-ink-3);
 }
 
-/* Botões e campos: pílula. */
+/* Faixa de métricas do caso: sem o degradê do Jade, branco liso. */
+html[data-skin='bulls'] section > [data-slot='card'] {
+  background-image: none;
+}
+
+/* --- Botão: pílula ------------------------------------------------------ */
+
 html[data-skin='bulls'] [data-slot='button'] {
   border-radius: 9999px;
   font-weight: 600;
+  letter-spacing: -0.005em;
 }
-html[data-skin='bulls'] :is([data-slot='input'], [data-slot='textarea'], select) {
-  border-radius: 0.85rem;
-  background: color-mix(in oklab, var(--card) 70%, transparent);
+html[data-skin='bulls'] [data-slot='button'][data-size='default'] {
+  height: 2.5rem;
+  padding-inline: 1.05rem;
+  font-size: 0.84375rem;
+}
+html[data-skin='bulls'] [data-slot='button'][data-size='lg'] {
+  height: 2.75rem;
+  padding-inline: 1.25rem;
+}
+html[data-skin='bulls'] [data-slot='button'][data-size='sm'] {
+  height: 2.125rem;
+  padding-inline: 0.85rem;
+  font-size: 0.8125rem;
+}
+html[data-skin='bulls'] [data-slot='button'][data-size^='icon'] {
+  padding-inline: 0;
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='default'] {
+  border-color: transparent;
+  background: var(--bulls-gradient);
+  color: #fff;
+  box-shadow: 0 8px 20px -10px rgb(124 58 237 / 0.7), inset 0 1px rgb(255 255 255 / 0.18);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='default']:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 10px 24px -10px rgb(124 58 237 / 0.8), inset 0 1px rgb(255 255 255 / 0.18);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='outline'] {
+  border-color: var(--bulls-line-strong);
+  background: var(--bulls-surface);
+  color: var(--bulls-ink-2);
+  box-shadow: 0 1px 2px rgb(27 16 48 / 0.04);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='outline']:hover {
+  background: var(--bulls-brand-wash);
+  color: var(--bulls-ink);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='ghost'] {
+  color: var(--bulls-ink-2);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='ghost']:hover {
+  background: var(--bulls-brand-wash);
+  color: var(--bulls-brand-deep);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='secondary'] {
+  background: var(--bulls-brand-soft);
+  color: var(--bulls-brand-deep);
+}
+html[data-skin='bulls'] [data-slot='button'][data-variant='destructive'] {
+  background: var(--bulls-error-soft);
+  color: var(--bulls-error-ink);
 }
 
-/* Tabela: cabeçalho em versalete, linhas com respiro e realce roxo. */
-html[data-skin='bulls'] :is([data-slot='table-head'], thead th) {
-  font-size: 0.68rem;
+/* --- Campos ------------------------------------------------------------- */
+
+html[data-skin='bulls'] :is([data-slot='input'], [data-slot='select-trigger'], select) {
+  min-height: 2.5rem;
+  border-radius: 0.875rem;
+  border-color: var(--bulls-line-strong);
+  background-color: var(--bulls-bg-2);
+  color: var(--bulls-ink);
+  box-shadow: none;
+}
+html[data-skin='bulls'] :is([data-slot='textarea'], textarea) {
+  border-radius: 1rem;
+  border-color: var(--bulls-line-strong);
+  background-color: var(--bulls-bg-2);
+  color: var(--bulls-ink);
+}
+html[data-skin='bulls'] :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'], select, textarea):focus-visible {
+  border-color: var(--bulls-brand);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(168 85 247 / 0.2);
+}
+html[data-skin='bulls'] [data-slot='input-group'] {
+  border-radius: 0.875rem;
+  border-color: var(--bulls-line-strong);
+  background-color: var(--bulls-bg-2);
+}
+html[data-skin='bulls'] [data-slot='input-group'] [data-slot='input-group-control'] {
+  background: transparent;
+  border: 0;
+  min-height: 0;
+}
+html[data-skin='bulls'] [data-slot='label'] {
+  color: var(--bulls-ink-2);
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
+}
+html[data-skin='bulls'] [data-slot='checkbox'] {
+  border-radius: 0.3rem;
+  border-color: var(--bulls-line-strong);
+}
+html[data-skin='bulls'] [data-slot='checkbox'][data-state='checked'] {
+  border-color: var(--bulls-brand-strong);
+  background: var(--bulls-brand-strong);
+}
+html[data-skin='bulls'] [data-slot='switch'][data-state='checked'] {
+  background: var(--bulls-brand-strong);
+}
+
+/* --- Tabela ------------------------------------------------------------- */
+
+html[data-skin='bulls'] :is([data-slot='table-head'], thead th) {
+  height: 2.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bulls-ink-3);
+}
+html[data-skin='bulls'] :is([data-slot='table-row'], tbody tr, thead tr) {
+  border-color: var(--bulls-line);
 }
 html[data-skin='bulls'] :is([data-slot='table-row'], tbody tr):hover {
-  background: color-mix(in oklab, var(--primary) 8%, transparent);
+  background: var(--bulls-brand-wash);
 }
+html[data-skin='bulls'] [data-slot='table-cell'] {
+  padding-block: 0.8rem;
+}
+
+/* --- Selos -------------------------------------------------------------- */
+
 html[data-skin='bulls'] [data-slot='badge'] {
   border-radius: 9999px;
-  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+html[data-skin='bulls'] [data-slot='badge'][data-variant='outline'] {
+  border-color: var(--bulls-line-strong);
+  background: var(--bulls-bg-2);
+  color: var(--bulls-ink-2);
+}
+html[data-skin='bulls'] [data-slot='badge'][data-variant='secondary'] {
+  background: var(--bulls-neutral-soft);
+  color: var(--bulls-ink-2);
+}
+html[data-skin='bulls'] [data-slot='badge'][data-variant='default'] {
+  background: var(--bulls-brand-soft);
+  color: var(--bulls-brand-deep);
+}
+
+/* Status do MED (AnimatedBadge): pílula macia com o tom do estado. */
+html[data-skin='bulls'] [data-badge-status] {
+  font-weight: 600;
+}
+html[data-skin='bulls'] [data-badge-status='success'] {
+  border-color: color-mix(in oklab, var(--bulls-success) 22%, transparent);
+  background: var(--bulls-success-soft);
+  color: var(--bulls-success-ink);
+}
+html[data-skin='bulls'] [data-badge-status='warning'] {
+  border-color: color-mix(in oklab, var(--bulls-warning) 26%, transparent);
+  background: var(--bulls-warning-soft);
+  color: var(--bulls-warning-ink);
+}
+html[data-skin='bulls'] [data-badge-status='danger'] {
+  border-color: color-mix(in oklab, var(--bulls-error) 22%, transparent);
+  background: var(--bulls-error-soft);
+  color: var(--bulls-error-ink);
+}
+html[data-skin='bulls'] [data-badge-status='info'] {
+  border-color: color-mix(in oklab, var(--bulls-brand) 24%, transparent);
+  background: var(--bulls-brand-soft);
+  color: var(--bulls-brand-deep);
+}
+html[data-skin='bulls'] :is([data-badge-status='neutral'], [data-badge-status='loading']) {
+  border-color: var(--bulls-line-strong);
+  background: var(--bulls-neutral-soft);
+  color: var(--bulls-ink-2);
+}
+
+/* --- Abas: segmento em pílula ------------------------------------------ */
+
+html[data-skin='bulls'] [data-tabs-nav] {
+  border: 0;
+}
+html[data-skin='bulls'] [data-tabs-nav] > ul {
+  margin: 0;
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background: var(--bulls-neutral-soft);
+  padding: 0.25rem;
+  scrollbar-width: none;
+}
+html[data-skin='bulls'] [data-tabs-nav] a {
+  height: 2.125rem;
+  border: 0;
+  border-radius: 9999px;
+  padding-inline: 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--bulls-ink-3);
+}
+html[data-skin='bulls'] [data-tabs-nav] a:hover {
+  color: var(--bulls-ink);
+}
+html[data-skin='bulls'] [data-tabs-nav] a[aria-current='page'] {
+  background: var(--bulls-surface);
+  color: var(--bulls-brand-deep);
+  box-shadow: 0 1px 2px rgb(27 16 48 / 0.08), 0 4px 10px -4px rgb(124 58 237 / 0.25);
+}
+html[data-skin='bulls'] [data-slot='tabs-list'] {
+  border-radius: 9999px;
+  background: var(--bulls-neutral-soft);
+  padding: 0.25rem;
+}
+html[data-skin='bulls'] [data-slot='tabs-trigger'] {
+  border-radius: 9999px;
+  font-weight: 600;
+  color: var(--bulls-ink-3);
+}
+html[data-skin='bulls'] [data-slot='tabs-trigger'][data-state='active'] {
+  background: var(--bulls-surface);
+  color: var(--bulls-brand-deep);
+  box-shadow: 0 1px 2px rgb(27 16 48 / 0.08), 0 4px 10px -4px rgb(124 58 237 / 0.25);
+}
+
+/* --- Avisos, vazio, barra de progresso ------------------------------- */
+
+html[data-skin='bulls'] [data-slot='alert'] {
+  border-radius: 18px;
+  border-color: var(--bulls-line);
+  background: var(--bulls-bg-2);
+}
+html[data-skin='bulls'] [data-slot='empty'] {
+  border-radius: 24px;
+}
+html[data-skin='bulls'] [data-slot='empty-title'] {
+  font-weight: 600;
+  color: var(--bulls-ink);
+}
+html[data-skin='bulls'] [data-slot='empty-icon'] {
+  border-radius: 1rem;
+  background: var(--bulls-brand-soft);
+  color: var(--bulls-brand-strong);
+}
+html[data-skin='bulls'] [data-slot='progress'] {
+  background: var(--bulls-neutral-soft);
+}
+html[data-skin='bulls'] [data-slot='progress-indicator'] {
+  background: var(--bulls-brand);
+}
+html[data-skin='bulls'] [data-slot='item'] {
+  border-radius: 18px;
+}
+
+/* --- Sobreposições: menu, diálogo, gaveta, popover ------------------ */
+
+html[data-skin='bulls'] :is([data-slot='dropdown-menu-content'], [data-slot='popover-content'], [data-slot='select-content']) {
+  border-radius: 18px;
+  border: 1px solid var(--bulls-line);
+  box-shadow: var(--bulls-shadow-hover);
+}
+html[data-skin='bulls'] :is([data-slot='dropdown-menu-item'], [data-slot='select-item']) {
+  border-radius: 12px;
+}
+html[data-skin='bulls'] [data-slot='dialog-content'] {
+  border-radius: 28px;
+  border: 1px solid var(--bulls-line);
+  box-shadow: var(--bulls-shadow-hover);
+}
+html[data-skin='bulls'] [data-slot='sheet-content'] {
+  border-color: var(--bulls-line);
+}
+html[data-skin='bulls'] [data-slot='command'] {
+  border-radius: 20px;
+}
+html[data-skin='bulls'] :is([data-slot='dialog-overlay'], [data-slot='sheet-overlay']) {
+  background: rgb(27 16 48 / 0.28);
+  backdrop-filter: blur(3px);
+}
+
+/* Bloco de seção com borda e fundo próprios que não é Card (contas, lotes). */
+html[data-skin='bulls'] [data-bulls-surface] {
+  border-radius: 24px;
+  border: 1px solid var(--bulls-line);
+  background: var(--bulls-surface);
+  box-shadow: var(--bulls-shadow);
+}
+
+@media print {
+  html[data-skin='bulls'] body {
+    background: #fff;
+  }
+}
+
+html[data-skin='bulls'] [data-slot='alert'].text-destructive,
+html[data-skin='bulls'] [data-slot='alert'][class*='text-destructive'] {
+  border-color: color-mix(in oklab, var(--bulls-error) 22%, transparent);
+  background: var(--bulls-error-soft);
+  color: var(--bulls-error-ink);
 }

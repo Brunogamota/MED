@@ -254,6 +254,7 @@ export function CommunicationPanel({
                     skin={skin}
                     sourceReference={evidence.sourceReference}
                     endToEndId={resolveEndToEndId(medCase)}
+                    trackingEvents={medCase.tracking?.events}
                   />
                 </li>
               );

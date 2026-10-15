@@ -13,7 +13,7 @@ export const SKINS = {
   },
   bulls: {
     label: 'Bulls Cash',
-    description: 'Barra de comando no topo, roxo profundo, Sora e Manrope.',
+    description: 'Barra lateral recolhível, bento claro em lavanda e roxo, Plus Jakarta Sans.',
   },
 } as const;
 

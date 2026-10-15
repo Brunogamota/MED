@@ -340,7 +340,7 @@ export default async function MedDetailPage({
       <OutcomePanel medId={med.id} status={med.status} />
 
       {/* Abas — sublinhado 2px, sem caixa */}
-      <nav className="border-b border-border">
+      <nav data-tabs-nav className="border-b border-border">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
           {TABS.map((entry) => (
             <li key={entry.key}>

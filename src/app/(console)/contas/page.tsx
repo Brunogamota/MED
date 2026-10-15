@@ -27,6 +27,7 @@ export default async function ContasPage() {
           return (
             <li
               key={account.id}
+              data-bulls-surface
               className="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground"
             >
               <div className="min-w-0">
@@ -51,7 +52,7 @@ export default async function ContasPage() {
         })}
       </ul>
 
-      <section className="rounded-xl border bg-card p-4 text-card-foreground">
+      <section data-bulls-surface className="rounded-xl border bg-card p-4 text-card-foreground">
         <h2 className="mb-3 font-medium">Nova conta</h2>
         <CreateAccountForm />
       </section>

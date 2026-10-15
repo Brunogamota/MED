@@ -1,10 +1,18 @@
 import Link from 'next/link';
-import { MailCheck, Plus, Upload } from 'lucide-react';
+import { Inbox, MailCheck, Plus, Upload } from 'lucide-react';
 import { serverPageContext } from '@/infra/auth/context';
 import { listMeds } from '@/services/medService';
+import { getActiveAccount } from '@/services/accountService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { QueueTable, type QueueRow } from '@/components/QueueTable';
 import { QueueDateFilter } from '@/components/med/QueueDateFilter';
 import { countdownText, formatAmount, hoursUntil, maskDocument } from '@/lib/format';
@@ -70,6 +78,8 @@ function toQueueRow(row: MedListRow, now: Date): QueueRow {
     status: row.med.status,
     nextActionLabel: NEXT_ACTION_BY_STATUS[row.med.status],
     band: queueBand(hours),
+    endToEndId: row.med.endToEndId ?? null,
+    hoursRemaining: hours,
   };
 }
 
@@ -80,6 +90,8 @@ export default async function MedsPage({
 }) {
   const { view, de, ate } = await searchParams;
   const auth = await serverPageContext();
+  const account = await getActiveAccount();
+  const bulls = account.skin === 'bulls';
 
   // O dia escolhido vira intervalo aqui, num lugar so: `de` abre no primeiro
   // instante do dia e `ate` fecha no ultimo, para que escolher o mesmo dia nos
@@ -124,11 +136,21 @@ export default async function MedsPage({
   return (
     <div className="@container/main flex flex-col gap-4 md:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-semibold text-2xl tracking-tight">MEDs</h1>
-          <p className="text-muted-foreground text-sm">Qual caso atender agora, em ordem de urgência.</p>
-        </div>
-        <div className="flex items-center gap-2">
+        {bulls ? (
+          <div>
+            <p className="text-[13px] font-semibold text-bulls-brand-strong">{account.name}</p>
+            <h1 data-bulls-title className="mt-1">
+              Contestações
+            </h1>
+            <p className="mt-1.5 text-[14px] text-bulls-ink-3">Qual caso atender agora, em ordem de urgência.</p>
+          </div>
+        ) : (
+          <div>
+            <h1 className="font-semibold text-2xl tracking-tight">MEDs</h1>
+            <p className="text-muted-foreground text-sm">Qual caso atender agora, em ordem de urgência.</p>
+          </div>
+        )}
+        <div className={cn('flex items-center gap-2', bulls && 'flex-wrap')}>
           <Button asChild variant="outline">
             <Link href="/meds/entregas">
               <MailCheck data-icon="inline-start" />
@@ -150,7 +172,8 @@ export default async function MedsPage({
         </div>
       </div>
 
-      <nav className="border-b">
+      <div className={bulls ? 'flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between' : 'contents'}>
+      <nav data-tabs-nav className="border-b">
         <ul className="-mb-px flex gap-1 overflow-x-auto">
           {VIEWS.map((entry) => {
             const active = (view ?? '') === entry.key;
@@ -175,12 +198,18 @@ export default async function MedsPage({
       </nav>
 
       <QueueDateFilter view={view} from={de} to={ate} />
+      </div>
 
       {rows.length === 0 ? (
         <Card>
           <CardContent>
             <Empty>
               <EmptyHeader>
+                {bulls ? (
+                  <EmptyMedia variant="icon" className="size-12">
+                    <Inbox className="size-5" />
+                  </EmptyMedia>
+                ) : null}
                 <EmptyTitle>
                   {filtered
                     ? 'Nada no período escolhido'
@@ -212,7 +241,7 @@ export default async function MedsPage({
           </CardContent>
         </Card>
       ) : (
-        <QueueTable rows={rows} />
+        <QueueTable rows={rows} skin={account.skin} />
       )}
     </div>
   );

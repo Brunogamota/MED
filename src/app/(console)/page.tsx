@@ -9,6 +9,9 @@ import { QueuePreview } from '@/components/dashboard/QueuePreview';
 import { buildDashboardMetrics, buildIntakeSeries } from '@/lib/dashboard';
 import { serverPageContext } from '@/infra/auth/context';
 import { listMeds } from '@/services/medService';
+import { getActiveAccount } from '@/services/accountService';
+import { buildBullsHome } from '@/lib/bullsHome';
+import { BullsHome } from '@/components/skins/bulls/bulls-home';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +44,36 @@ function DashboardSkeleton() {
   );
 }
 
-export default function DashboardPage() {
+/** Visão geral do Bulls Cash: o bento, com os MEDs da conta. */
+async function BullsDashboard({ accountName }: { accountName: string }) {
+  const now = new Date();
+  const rows = await listMeds((await serverPageContext()), {});
+  return <BullsHome accountName={accountName} data={buildBullsHome(rows, now)} />;
+}
+
+function BullsDashboardSkeleton() {
+  return (
+    <div className="skeleton-defer flex flex-col gap-5">
+      <Skeleton className="h-20 w-72 rounded-3xl" />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <Skeleton className="h-[340px] rounded-[28px] lg:col-span-5" />
+        <Skeleton className="h-[340px] rounded-[28px] lg:col-span-7" />
+      </div>
+      <Skeleton className="h-80 rounded-[28px]" />
+    </div>
+  );
+}
+
+export default async function DashboardPage() {
+  const account = await getActiveAccount();
+  if (account.skin === 'bulls') {
+    return (
+      <Suspense fallback={<BullsDashboardSkeleton />}>
+        <BullsDashboard accountName={account.name} />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="@container/main flex flex-col gap-4 md:gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
