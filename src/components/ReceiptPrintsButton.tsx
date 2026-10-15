@@ -18,7 +18,7 @@ export function ReceiptPrintsButton() {
     setBusy(true);
     const lote = document.querySelector<HTMLElement>('[data-lote-comprovantes]');
     try {
-      const [{ toBlob }, { default: JSZip }] = await Promise.all([
+      const [{ toBlob, getFontEmbedCSS }, { default: JSZip }] = await Promise.all([
         import('html-to-image'),
         import('jszip'),
       ]);
@@ -30,17 +30,36 @@ export function ReceiptPrintsButton() {
       lote?.style.setProperty('max-width', '1000px');
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-      const zip = new JSZip();
+      // O que deixava lento: a cada print o html-to-image baixava e embutia as
+      // fontes da página de novo, e com `cacheBust` refazia até as imagens.
+      // As fontes são as mesmas em todas as peças: embute uma vez só e reusa.
+      const fontEmbedCSS = await getFontEmbedCSS(cards[0]!);
+
+      const nomes = new Map<HTMLElement, string>();
       const usados = new Map<string, number>();
       for (const [index, card] of cards.entries()) {
-        setStatus(`Gerando ${index + 1} de ${cards.length}…`);
         const base = card.dataset.printName ?? `comprovante-${index + 1}`;
         const vez = (usados.get(base) ?? 0) + 1;
         usados.set(base, vez);
-        const blob = await toBlob(card, { pixelRatio: 2, cacheBust: true });
-        if (blob) zip.file(`${vez > 1 ? `${base}_${vez}` : base}.png`, blob);
+        nomes.set(card, `${vez > 1 ? `${base}_${vez}` : base}.png`);
       }
-      const arquivo = await zip.generateAsync({ type: 'blob' });
+
+      // Quatro por vez: o navegador desenha em paralelo sem travar a aba.
+      const zip = new JSZip();
+      let feitos = 0;
+      const fila = [...cards];
+      const trabalhador = async () => {
+        for (let card = fila.shift(); card; card = fila.shift()) {
+          const blob = await toBlob(card, { pixelRatio: 2, fontEmbedCSS });
+          if (blob) zip.file(nomes.get(card)!, blob);
+          feitos += 1;
+          setStatus(`Gerando ${feitos} de ${cards.length}…`);
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(4, cards.length) }, trabalhador));
+
+      // PNG já vem comprimido: comprimir de novo no zip só gasta tempo.
+      const arquivo = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
       const url = URL.createObjectURL(arquivo);
       const link = document.createElement('a');
       link.href = url;

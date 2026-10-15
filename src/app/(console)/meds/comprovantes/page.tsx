@@ -105,19 +105,26 @@ export default async function ComprovantesEmLotePage({
     alvos = [];
   }
 
-  const casos: MedCase[] = [];
-  for (const id of alvos) {
-    try {
-      casos.push(await getCase(auth, id));
-    } catch (error) {
-      // Caso fora da organizacao ou apagado no meio do caminho: sai da lista
-      // em vez de derrubar a pagina inteira do lote.
-      if (!(error instanceof NotFoundError)) throw error;
+  // Oito leituras por vez: um lote de centenas de casos, um por um, passava
+  // do tempo da página.
+  const lidos: (MedCase | null)[] = new Array(alvos.length).fill(null);
+  let proximo = 0;
+  const ler = async () => {
+    while (proximo < alvos.length) {
+      const indice = proximo++;
+      try {
+        lidos[indice] = await getCase(auth, alvos[indice]!);
+      } catch (error) {
+        // Caso fora da organizacao ou apagado no meio do caminho: sai da lista
+        // em vez de derrubar a pagina inteira do lote.
+        if (!(error instanceof NotFoundError)) throw error;
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(8, alvos.length) }, ler));
+  const casos = lidos.filter((medCase): medCase is MedCase => medCase !== null);
 
   const pecas = casos.flatMap(pecasDoCaso);
-  const semPeca = casos.filter((medCase) => pecasDoCaso(medCase).length === 0);
 
   return (
     <div
@@ -129,7 +136,6 @@ export default async function ComprovantesEmLotePage({
           accountName={accountName}
           pecas={pecas.length}
           casos={casos.length}
-          semPeca={semPeca.map((medCase) => medCase.med.medId)}
           semSelecao={alvos.length === 0}
           de={de}
           ate={ate}
@@ -153,20 +159,6 @@ export default async function ComprovantesEmLotePage({
           {pecas.length} comprovante{pecas.length === 1 ? '' : 's'} de {casos.length} caso
           {casos.length === 1 ? '' : 's'}.
         </p>
-        {semPeca.length > 0 ? (
-          <div className="mt-2 rounded-md bg-amber-600/10 px-3 py-2 text-amber-800 text-xs dark:text-amber-300">
-            <p className="font-medium">
-              {semPeca.length} caso{semPeca.length === 1 ? '' : 's'} sem comprovante, fora do lote:
-            </p>
-            <p className="mt-1">
-              {semPeca.map((medCase) => medCase.med.medId).join(', ')}
-            </p>
-            <p className="mt-1">
-              Ou não houve envio registrado, ou o envio não foi concluído. Sem registro não há peça
-              — e afirmar entrega que o log não mostra é o que derruba o lote inteiro na conferência.
-            </p>
-          </div>
-        ) : null}
       </div>
       )}
 

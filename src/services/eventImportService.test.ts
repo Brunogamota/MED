@@ -158,7 +158,7 @@ describe('logs básicos não são histórico', () => {
 describe('planilhas Bulls', () => {
   const PEDIDOS_BULLS = [
     'MED,Pedido Bulls,Data/Hora do Pagamento,Status Financeiro,Comprador,Documento,Valor,Instituição Pagadora,Reference,Classificação,Contato,Etapa Atual,Atualizado em,Parceiro de Origem,Pedido Externo,Origem,Etapa no Parceiro,Ref. Parceiro,Console do Pedido',
-    'MED-1,BLS-1,01/10/2026 10:00,Pago,Fulano,,"R$ 100,00",BANCO INTER S.A.,R1,Físico,f@exemplo.com,Encaminhado,02/10/2026,Parceiro X,EXT-1,Site,Recebido,REF-1,https://console.exemplo.com/BLS-1',
+    'MED-1,BLS-1,01/10/2026 10:00,Pago,Fulano,,"R$ 100,00",BANCO INTER S.A.,R1,Físico,f@exemplo.com,Encaminhado,02/10/2026 14:00,Parceiro X,EXT-1,Site,Recebido,REF-1,https://console.exemplo.com/BLS-1',
   ].join('\n');
   const LINHA_DO_TEMPO = [
     'Pedido Bulls,MED,Etapa,Registrado em,Módulo,Código,Recurso,Parceiro,Pedido Externo,Ref. Parceiro,Detalhe',
@@ -181,5 +181,15 @@ describe('planilhas Bulls', () => {
     expect(medCase.order?.externalId).toBe('BLS-1');
     expect(medCase.order?.productType).toBe('PHYSICAL');
     expect(medCase.tracking?.events.length).toBeGreaterThanOrEqual(2);
+    expect(report.receipts).toBe(1);
+    expect(medCase.evidences.filter((e) => e.type === 'DELIVERY_COMMUNICATION')).toHaveLength(1);
+  });
+
+  it('só a aba de pedidos: etapa atual com data vira marco e gera o comprovante', async () => {
+    const report = await importArksFiles(auth, { eventos: [], pedidos: [PEDIDOS_BULLS] }, { generateReceipts: true });
+    expect(report.receipts).toBe(1);
+    const medCase = await getCase(auth, report.touchedMedIds[0] ?? '');
+    expect(medCase.tracking?.events.map((e) => e.status)).toEqual(['IN_PRODUCTION']);
+    expect(medCase.tracking?.events[0]?.sourceReference).toBe('planilha de pedidos, linha 2');
   });
 });

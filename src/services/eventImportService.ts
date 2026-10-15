@@ -174,11 +174,38 @@ export async function importArksFiles(
     pedidos: pedidoPorMed.size,
   };
 
+  // A etapa atual da aba de pedidos, com a data em que foi registrada, é
+  // marco como os da linha do tempo: o mesmo sistema da loja, a mesma origem.
+  // Sem data, fica de fora — etapa sem data não é afirmação.
+  for (const [chave, pedido] of pedidoPorMed) {
+    if (!pedido.statusAtual || !pedido.atualizadoEm) continue;
+    const lista = chavesEventos.get(chave) ?? [];
+    lista.push({
+      line: pedido.line,
+      medRef: pedido.medRef,
+      pedido: pedido.pedido,
+      evento: pedido.statusAtual,
+      occurredAt: pedido.atualizadoEm,
+      rawOccurredAt: pedido.atualizadoEm,
+      canal: null,
+      codigo: `planilha de pedidos, linha ${pedido.line}`,
+      url: pedido.url,
+      observacao: null,
+      distribuidor: pedido.distribuidor,
+      idExterno: pedido.idNoFornecedor,
+      refFornecedor: null,
+    });
+    chavesEventos.set(chave, lista);
+  }
+
   const todas = new Set([...pedidoPorMed.keys(), ...chavesEventos.keys()]);
   report.total = todas.size;
   const tocados = new Set<string>();
 
-  for (const chave of todas) {
+  // Um MED por vez levava minutos num lote de centenas e estourava o tempo da
+  // função. Os MEDs são independentes: quatro em paralelo.
+  const fila = [...todas];
+  const processar = async (chave: string): Promise<void> => {
     const linhasEvento = chavesEventos.get(chave) ?? [];
     const pedido = pedidoPorMed.get(chave);
     const medRef = pedido?.medRef ?? linhasEvento[0]?.medRef ?? chave;
@@ -196,7 +223,7 @@ export async function importArksFiles(
           linhasEvento.length > 0 ? ` (${linhasEvento.length} eventos na planilha)` : ''
         }. Importe o MED primeiro.`,
       });
-      continue;
+      return;
     }
 
     const partes: string[] = [];
@@ -322,6 +349,7 @@ export async function importArksFiles(
           const link =
             linhasEvento.find((row) => row.url && row.pedido && row.url.endsWith(row.pedido))?.url ??
             linhasEvento.find((row) => row.url)?.url ??
+            pedido?.url ??
             null;
           const primeiro = atualizado.tracking?.events
             .map((evento) => evento.occurredAt)
@@ -359,7 +387,7 @@ export async function importArksFiles(
         kind: 'RECORDED',
         message: `Já estava registrado: ${partes.join('; ')}.`,
       });
-      continue;
+      return;
     }
 
     if (!gravou) {
@@ -376,7 +404,7 @@ export async function importArksFiles(
               ? 'Pedido sem natureza (físico/digital) e o MED também não tem: nada registrado.'
               : 'A planilha só traz pagamento para este MED — nenhuma etapa de envio para registrar.',
       });
-      continue;
+      return;
     }
 
     tocados.add(med.id);
@@ -389,9 +417,19 @@ export async function importArksFiles(
       message: `${partes.join('; ')}.`.replace(/^./, (c) => c.toUpperCase()),
     };
     report.lines.push(linha);
-  }
+  };
+  const trabalhador = async () => {
+    for (let chave = fila.shift(); chave !== undefined; chave = fila.shift()) {
+      await processar(chave);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, fila.length) }, trabalhador));
+  report.lines.sort((a, b) => a.line - b.line);
 
-  report.touchedMedIds = [...tocados];
+  // Na ordem da planilha, não na ordem em que o paralelo terminou.
+  report.touchedMedIds = [...todas]
+    .map((chave) => porMedId.get(chave)?.id)
+    .filter((id): id is string => id !== undefined && tocados.has(id));
   // MEDs da organização que a planilha não mencionou.
   report.medsWithoutDelivery = rows
     .filter((entry) => !todas.has(entry.med.medId.trim().toLowerCase()))
