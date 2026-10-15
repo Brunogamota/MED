@@ -1,36 +1,59 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { Suspense, useSyncExternalStore, type ReactNode } from 'react';
 import {
+  AlarmClock,
   ArrowLeftRight,
-  ChevronDown,
-  CircleGauge,
-  FileStack,
-  FolderInput,
+  Check,
+  ChevronsUpDown,
+  FileUp,
+  Inbox,
+  LayoutGrid,
   LogOut,
-  MoonStar,
-  PackageCheck,
+  Menu,
   Plug,
+  ReceiptText,
   Search,
-  SunMedium,
-  UsersRound,
+  ShieldCheck,
+  Truck,
+  Users,
+  X,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { BullsMark } from '@/components/skins/bulls/bulls-mark';
 import { SearchTrigger } from '@/components/layout/search-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { switchAccountAction } from '@/app/(console)/contas/actions';
 import { signOutAction } from '@/app/login/actions';
+import { bullsInitials } from '@/components/skins/bulls/parts';
+import { activeNavFor, type NavId } from '@/components/skins/bulls/nav';
+import {
+  Sidebar,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarItem,
+  SidebarNav,
+  SidebarSection,
+  SidebarToggle,
+  useSidebar,
+  type SidebarVariant,
+} from './sidebar';
 
 /* ==========================================================================
-   Ambiente Bulls Cash
+   Ambiente Bulls Cash — "Bento Claro"
 
-   Nada aqui vem do ambiente Jade. Lá é trilho lateral em dois níveis; aqui a
-   navegação é uma barra de comando no topo, com a régua de situação logo
-   abaixo (abertos, vencendo, enviados) e, no celular, um dock no rodapé.
-   Fontes Sora e Manrope, raio largo, roxo sobre azul-noite.
+   Barra lateral flutuante e recolhível (vira trilho de ícones no desktop),
+   barra superior com gaveta no celular. Toda contagem vem do layout, que lê
+   os MEDs da conta: nada aqui é número de exemplo.
    ========================================================================== */
 
 export interface BullsCounts {
@@ -46,160 +69,361 @@ export interface BullsAccount {
   active: boolean;
 }
 
-interface NavItem {
-  href: string;
+interface NavEntry {
+  id: NavId;
   label: string;
-  icon: typeof CircleGauge;
-  match: (pathname: string) => boolean;
+  href: string;
+  icon: React.ReactNode;
+  badge?: { value: number; tone: 'brand' | 'warning' };
 }
 
-const NAV: NavItem[] = [
-  { href: '/', label: 'Visão geral', icon: CircleGauge, match: (p) => p === '/' },
-  {
-    href: '/meds',
-    label: 'Contestações',
-    icon: FileStack,
-    match: (p) =>
-      p.startsWith('/meds') && !p.startsWith('/meds/import') && !p.startsWith('/meds/entregas'),
-  },
-  { href: '/meds/import', label: 'Importar', icon: FolderInput, match: (p) => p.startsWith('/meds/import') },
-  {
-    href: '/meds/entregas',
-    label: 'Envios',
-    icon: PackageCheck,
-    match: (p) => p.startsWith('/meds/entregas'),
-  },
-  { href: '/integracoes', label: 'Conexões', icon: Plug, match: (p) => p.startsWith('/integracoes') },
-  { href: '/equipe', label: 'Equipe', icon: UsersRound, match: (p) => p.startsWith('/equipe') },
-];
+const iconProps = { className: 'size-[18px]', strokeWidth: 1.75, 'aria-hidden': true } as const;
 
-const noop = () => () => {};
-
-/** "Bulls Cash" → "BC"; uma palavra só → as duas primeiras letras. */
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const letters = words.length > 1 ? words.slice(0, 2).map((word) => word[0]) : [...(words[0] ?? '').slice(0, 2)];
-  return letters.join('').toUpperCase();
+function sections(counts: BullsCounts): { label: string; items: NavEntry[] }[] {
+  return [
+    {
+      label: 'Operação',
+      items: [
+        { id: 'visao-geral', label: 'Visão geral', href: '/', icon: <LayoutGrid {...iconProps} /> },
+        {
+          id: 'contestacoes',
+          label: 'Contestações',
+          href: '/meds',
+          icon: <Inbox {...iconProps} />,
+          badge: counts.open > 0 ? { value: counts.open, tone: 'brand' } : undefined,
+        },
+        {
+          id: 'vencendo',
+          label: 'Vencendo',
+          href: '/meds?view=vencendo',
+          icon: <AlarmClock {...iconProps} />,
+          badge: counts.dueSoon > 0 ? { value: counts.dueSoon, tone: 'warning' } : undefined,
+        },
+      ],
+    },
+    {
+      label: 'Dados',
+      items: [
+        { id: 'importar-meds', label: 'Importar MEDs', href: '/meds/import', icon: <FileUp {...iconProps} /> },
+        { id: 'importar-envios', label: 'Importar envios', href: '/meds/entregas', icon: <Truck {...iconProps} /> },
+        { id: 'comprovantes', label: 'Comprovantes', href: '/meds/comprovantes', icon: <ReceiptText {...iconProps} /> },
+      ],
+    },
+    {
+      label: 'Ajustes',
+      items: [
+        { id: 'conexoes', label: 'Conexões', href: '/integracoes', icon: <Plug {...iconProps} /> },
+        { id: 'equipe', label: 'Equipe', href: '/equipe', icon: <Users {...iconProps} /> },
+      ],
+    },
+  ];
 }
 
-function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const hydrated = useSyncExternalStore(
-    noop,
-    () => true,
-    () => false,
-  );
-  const dark = hydrated ? resolvedTheme !== 'light' : true;
+function CountBadge({ value, tone }: { value: number; tone: 'brand' | 'warning' }) {
   return (
-    <button
-      type="button"
-      onClick={() => setTheme(dark ? 'light' : 'dark')}
-      aria-label={dark ? 'Usar tema claro' : 'Usar tema escuro'}
-      className="bulls-icon-button"
+    <span
+      className={cn(
+        'rounded-full px-2 py-1 text-[11px] leading-none font-semibold tabular-nums',
+        tone === 'warning' ? 'bg-bulls-warning-soft text-bulls-warning-ink' : 'bg-bulls-neutral-soft text-bulls-ink-2',
+      )}
     >
-      {dark ? <SunMedium className="size-[18px]" /> : <MoonStar className="size-[18px]" />}
-    </button>
+      {value}
+    </span>
   );
 }
 
-function AccountMenu({ accounts }: { accounts: BullsAccount[] }) {
-  const current = accounts.find((account) => account.active);
+function ProductMark({ size = 'default' }: { size?: 'default' | 'sm' }) {
   return (
-    <details className="bulls-account group relative">
-      <summary className="flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-[color:var(--bulls-line)] bg-[color:var(--bulls-chip)] pr-3 pl-1.5 text-sm [&::-webkit-details-marker]:hidden">
-        <span className="flex size-7 items-center justify-center rounded-full bg-primary font-heading font-semibold text-primary-foreground text-xs">
-          {initials(current?.name ?? '')}
-        </span>
-        <span className="hidden max-w-36 truncate sm:inline">{current?.name}</span>
-        <ChevronDown className="size-4 opacity-60 transition-transform group-open:rotate-180" />
-      </summary>
-      <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-[color:var(--bulls-line)] bg-popover p-1.5 text-popover-foreground shadow-2xl">
-        <p className="px-3 pt-2 pb-1 font-heading text-[11px] text-muted-foreground uppercase tracking-[0.14em]">
-          Trocar de conta
-        </p>
-        {accounts.map((account) => (
-          <form key={account.id} action={switchAccountAction}>
-            <input type="hidden" name="conta" value={account.id} />
-            <button
-              type="submit"
-              disabled={account.active}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm hover:bg-accent disabled:opacity-100"
-            >
-              <span className="truncate">{account.name}</span>
-              {account.active ? (
-                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] text-primary">
-                  em uso
-                </span>
-              ) : null}
-            </button>
-          </form>
-        ))}
-        <div className="my-1 h-px bg-border" />
-        <Link
-          href="/contas"
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm hover:bg-accent"
+    <div
+      className={cn(
+        'flex shrink-0 items-center justify-center bg-gradient-to-br from-bulls-lilac via-bulls-brand to-bulls-brand-deep text-bulls-on-brand shadow-bulls-brand',
+        size === 'sm' ? 'size-8 rounded-[10px]' : 'size-9 rounded-[12px]',
+      )}
+    >
+      <ShieldCheck className={size === 'sm' ? 'size-4' : 'size-[18px]'} strokeWidth={2} aria-hidden="true" />
+    </div>
+  );
+}
+
+function Brand() {
+  const { collapsed } = useSidebar();
+  return (
+    <Link href="/" className="flex min-w-0 items-center gap-3 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <ProductMark />
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-[15px] leading-tight font-bold tracking-tight text-foreground">Defesa MED</p>
+          <p className="truncate text-[12px] leading-tight text-bulls-ink-3">Console de MED</p>
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function SearchButton() {
+  const { collapsed } = useSidebar();
+  return (
+    <SearchTrigger
+      trigger={(open) => (
+        <button
+          type="button"
+          onClick={open}
+          aria-label="Buscar MED ou tela"
+          title={collapsed ? 'Buscar (⌘K)' : undefined}
+          className={cn(
+            'flex h-10 items-center gap-2.5 rounded-2xl border border-bulls-line bg-bulls-bg-2 text-[13px] text-bulls-ink-3 outline-none',
+            'transition-colors hover:border-bulls-line-strong hover:bg-bulls-brand-wash hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',
+            collapsed ? 'mx-auto w-10 justify-center' : 'mx-3 w-[calc(100%-1.5rem)] px-3',
+          )}
         >
-          <ArrowLeftRight className="size-4" />
-          Gerenciar contas
-        </Link>
-        <form action={signOutAction}>
-          <button
-            type="submit"
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent"
-          >
-            <LogOut className="size-4" />
-            Sair
-          </button>
-        </form>
-      </div>
-    </details>
+          <Search className="size-4 shrink-0" aria-hidden="true" />
+          {!collapsed && (
+            <>
+              <span className="flex-1 truncate text-left">Buscar MED ou CPF</span>
+              <kbd className="rounded-md border border-bulls-line bg-card px-1.5 py-0.5 font-sans text-[10.5px] font-semibold text-bulls-ink-3">
+                ⌘K
+              </kbd>
+            </>
+          )}
+        </button>
+      )}
+    />
   );
 }
 
-function Ribbon({ counts }: { counts: BullsCounts }) {
-  const view = useSearchParams().get('view');
-  const chips = [
-    { href: '/meds', label: 'Em aberto', value: counts.open, active: false, tone: 'base' },
-    {
-      href: '/meds?view=vencendo',
-      label: 'Vencendo em 72h',
-      value: counts.dueSoon,
-      active: view === 'vencendo',
-      tone: counts.hasUrgent ? 'hot' : 'base',
-    },
-    { href: '/meds?view=prontos', label: 'Prontos', value: null, active: view === 'prontos', tone: 'base' },
-    { href: '/meds?view=bloqueados', label: 'Sem evidência', value: null, active: view === 'bloqueados', tone: 'base' },
-    {
-      href: '/meds?view=enviados',
-      label: 'Enviados',
-      value: counts.submitted,
-      active: view === 'enviados',
-      tone: 'base',
-    },
-  ] as const;
+function AccountSwitcher({ accounts, demoMode }: { accounts: BullsAccount[]; demoMode: boolean }) {
+  const { collapsed } = useSidebar();
+  const current = accounts.find((account) => account.active);
+  const [pending, startTransition] = React.useTransition();
+  const name = current?.name ?? '';
+
+  const switchTo = (id: string) => {
+    const form = new FormData();
+    form.set('conta', id);
+    startTransition(async () => {
+      await switchAccountAction(form);
+    });
+  };
+
   return (
-    <div className="border-[color:var(--bulls-line)] border-b">
-      <div className="mx-auto flex max-w-[1320px] items-center gap-2 overflow-x-auto px-4 py-2.5 md:px-8 [scrollbar-width:none]">
-        {chips.map((chip) => (
-          <Link
-            key={chip.href}
-            href={chip.href}
-            className={cn(
-              'flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs transition-colors',
-              chip.active
-                ? 'border-primary bg-primary/12 text-foreground'
-                : 'border-[color:var(--bulls-line)] text-muted-foreground hover:text-foreground',
-            )}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Conta ativa: ${name}. Trocar de conta`}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-2xl border border-bulls-line bg-bulls-bg-2 p-2 text-left outline-none',
+            'transition-colors hover:border-bulls-line-strong hover:bg-bulls-brand-wash focus-visible:ring-2 focus-visible:ring-ring',
+            collapsed && 'w-auto justify-center border-transparent bg-transparent p-1',
+            pending && 'opacity-70',
+          )}
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-bulls-ink text-[12px] font-bold tracking-wide text-bulls-on-brand">
+            {bullsInitials(name)}
+          </span>
+          {!collapsed && (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13.5px] leading-tight font-semibold text-foreground">{name}</span>
+                <span className="block truncate text-[12px] leading-tight text-bulls-ink-3">
+                  {pending ? 'Trocando…' : demoMode ? 'Conta ativa · modo demo' : 'Conta ativa'}
+                </span>
+              </span>
+              <ChevronsUpDown className="size-4 shrink-0 text-bulls-ink-3" aria-hidden="true" />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-64 p-1.5">
+        <DropdownMenuLabel className="text-[11px] font-semibold tracking-[0.08em] text-bulls-ink-3 uppercase">
+          Trocar de conta
+        </DropdownMenuLabel>
+        {accounts.map((account) => (
+          <DropdownMenuItem
+            key={account.id}
+            disabled={account.active || pending}
+            onSelect={() => switchTo(account.id)}
+            className="gap-2.5 py-2 data-disabled:opacity-100"
           >
-            {chip.tone === 'hot' ? <span className="size-1.5 rounded-full bg-destructive" /> : null}
-            {chip.label}
-            {chip.value !== null ? (
-              <span className="font-heading font-semibold text-foreground tabular-nums">{chip.value}</span>
-            ) : null}
-          </Link>
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-bulls-brand-soft text-[11px] font-bold text-bulls-brand-deep">
+              {bullsInitials(account.name)}
+            </span>
+            <span className="min-w-0 flex-1 truncate font-medium">{account.name}</span>
+            {account.active ? <Check className="size-4 text-bulls-brand-strong" aria-label="em uso" /> : null}
+          </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="gap-2.5 py-2">
+          <Link href="/contas">
+            <ArrowLeftRight className="size-4" aria-hidden="true" />
+            Gerenciar contas
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2.5 py-2"
+          onSelect={() => {
+            startTransition(async () => {
+              await signOutAction();
+            });
+          }}
+        >
+          <LogOut className="size-4" aria-hidden="true" />
+          Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+interface ShellData {
+  accounts: BullsAccount[];
+  counts: BullsCounts;
+  demoMode: boolean;
+}
+
+function NavTree({
+  variant,
+  active,
+  data,
+  onNavigate,
+  className,
+}: {
+  variant: SidebarVariant;
+  active: NavId | null;
+  data: ShellData;
+  onNavigate?: () => void;
+  className?: string;
+}) {
+  return (
+    <Sidebar variant={variant} className={className}>
+      <SidebarHeader>
+        <Brand />
+        <SidebarToggle className="ml-auto" />
+      </SidebarHeader>
+      <div className="pb-2">
+        <SearchButton />
+      </div>
+      <SidebarNav onClick={onNavigate}>
+        {sections(data.counts).map((section) => (
+          <SidebarSection key={section.label} label={section.label}>
+            {section.items.map((item) => (
+              <SidebarItem
+                key={item.id}
+                icon={item.icon}
+                active={active === item.id}
+                href={item.href}
+                badge={item.badge ? <CountBadge value={item.badge.value} tone={item.badge.tone} /> : undefined}
+              >
+                {item.label}
+              </SidebarItem>
+            ))}
+          </SidebarSection>
+        ))}
+      </SidebarNav>
+      <SidebarFooter>
+        <AccountSwitcher accounts={data.accounts} demoMode={data.demoMode} />
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+/** A visão da fila (`?view=`) decide entre Contestações e Vencendo. */
+function useActiveNav(): NavId | null {
+  const pathname = usePathname() ?? '/';
+  const view = useSearchParams().get('view');
+  return activeNavFor(pathname, view);
+}
+
+function DesktopNav({ data }: { data: ShellData }) {
+  const active = useActiveNav();
+  return <NavTree variant="collapsible" active={active} data={data} className={DESKTOP_CLASS} />;
+}
+
+function PathOnlyDesktopNav({ data }: { data: ShellData }) {
+  const pathname = usePathname() ?? '/';
+  return <NavTree variant="collapsible" active={activeNavFor(pathname, null)} data={data} className={DESKTOP_CLASS} />;
+}
+
+const DESKTOP_CLASS = 'rounded-[28px] border border-bulls-line bg-card shadow-bulls';
+
+function MobileNav({ data, accountName }: { data: ShellData; accountName: string }) {
+  const pathname = usePathname() ?? '/';
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div
+      data-print-hide
+      className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-bulls-line bg-bulls-bg/90 px-4 py-3 backdrop-blur md:hidden"
+    >
+      <Link href="/" className="flex min-w-0 items-center gap-2.5">
+        <ProductMark size="sm" />
+        <div className="min-w-0 leading-tight">
+          <p className="text-[14px] font-bold tracking-tight">Defesa MED</p>
+          <p className="truncate text-[11.5px] text-bulls-ink-3">{accountName}</p>
+        </div>
+      </Link>
+      <div className="flex items-center gap-2">
+        <SearchTrigger
+          trigger={(openSearch) => (
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-label="Buscar"
+              className="flex size-10 items-center justify-center rounded-2xl border border-bulls-line bg-card text-bulls-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Search className="size-[18px]" aria-hidden="true" />
+            </button>
+          )}
+        />
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              aria-label="Abrir menu"
+              className="flex size-10 items-center justify-center rounded-2xl border border-bulls-line bg-card text-bulls-ink-2 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Menu className="size-5" aria-hidden="true" />
+            </button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            showCloseButton={false}
+            className="w-[300px] gap-0 border-bulls-line bg-card p-0 font-sans text-foreground"
+          >
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <SheetDescription className="sr-only">Navegação do console</SheetDescription>
+            <SheetClose asChild>
+              <button
+                type="button"
+                aria-label="Fechar menu"
+                className="absolute top-5 right-4 z-10 flex size-8 items-center justify-center rounded-xl text-bulls-ink-3 hover:bg-bulls-brand-wash"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </SheetClose>
+            <React.Suspense
+              fallback={
+                <NavTree variant="default" active={activeNavFor(pathname, null)} data={data} className="h-full w-full!" />
+              }
+            >
+              <MobileNavTree data={data} onNavigate={() => setOpen(false)} />
+            </React.Suspense>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
+  );
+}
+
+function MobileNavTree({ data, onNavigate }: { data: ShellData; onNavigate: () => void }) {
+  const active = useActiveNav();
+  return (
+    <NavTree
+      variant="default"
+      active={active}
+      data={data}
+      className="h-full w-full!"
+      onNavigate={() => onNavigate()}
+    />
   );
 }
 
@@ -214,105 +438,25 @@ export function BullsShell({
   accounts: BullsAccount[];
   counts: BullsCounts;
   demoMode: boolean;
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
-  const pathname = usePathname() ?? '/';
+  const data: ShellData = { accounts, counts, demoMode };
   return (
-    <div className="bulls-floor flex min-h-svh flex-col">
-      <header data-print-hide className="sticky top-0 z-40 bg-[color:var(--bulls-bar)] backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-[1320px] items-center gap-3 px-4 md:px-8">
-          <Link href="/" className="flex shrink-0 items-center gap-2.5" aria-label={`${accountName} — início`}>
-            <BullsMark size={34} />
-            <span className="hidden flex-col leading-none sm:flex">
-              <span className="font-heading font-bold text-[15px] uppercase tracking-[0.18em]">
-                {accountName}
-              </span>
-              <span className="mt-1 text-[10px] text-muted-foreground uppercase tracking-[0.22em]">
-                Defesa de MED
-              </span>
-            </span>
-          </Link>
+    <div className="flex min-h-svh w-full bg-bulls-bg">
+      {/* Desktop: barra flutuante, recolhível até virar trilho de ícones. */}
+      <aside data-print-hide className="sticky top-0 hidden h-svh shrink-0 p-3 pr-0 md:block">
+        {/* A barra lê `?view=`, e useSearchParams exige limite de Suspense. */}
+        <React.Suspense fallback={<PathOnlyDesktopNav data={data} />}>
+          <DesktopNav data={data} />
+        </React.Suspense>
+      </aside>
 
-          <nav aria-label="Seções" className="mx-auto hidden lg:block">
-            <ul className="flex items-center gap-0.5 rounded-2xl border border-[color:var(--bulls-line)] bg-[color:var(--bulls-chip)] p-1">
-              {NAV.map((item) => {
-                const active = item.match(pathname);
-                const Icon = item.icon;
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      className={cn(
-                        'flex h-9 items-center gap-2 rounded-xl px-3.5 text-[13px] transition-all',
-                        active
-                          ? 'bg-primary font-semibold text-primary-foreground shadow-[0_6px_20px_-6px_var(--primary)]'
-                          : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                      )}
-                    >
-                      <Icon className="size-4" />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          <div className="ml-auto flex items-center gap-1.5 lg:ml-0">
-            {demoMode ? (
-              <span className="hidden rounded-full border border-dashed border-[color:var(--bulls-line)] px-2.5 py-1 text-[11px] text-muted-foreground xl:inline">
-                demo
-              </span>
-            ) : null}
-            <SearchTrigger
-              trigger={(open) => (
-                <button type="button" onClick={open} aria-label="Buscar" className="bulls-icon-button">
-                  <Search className="size-[18px]" />
-                </button>
-              )}
-            />
-            <ThemeToggle />
-            <AccountMenu accounts={accounts} />
-          </div>
-        </div>
-        {/* A régua lê `?view=`, e useSearchParams exige limite de Suspense. */}
-        <Suspense fallback={<div className="h-[45px] border-[color:var(--bulls-line)] border-b" />}>
-          <Ribbon counts={counts} />
-        </Suspense>
-      </header>
-
-      <main className="mx-auto w-full min-w-0 max-w-[1320px] flex-1 px-4 pt-6 pb-28 md:px-8 lg:pb-12">
-        {children}
-      </main>
-
-      <nav
-        aria-label="Seções"
-        data-print-hide
-        className="fixed inset-x-3 bottom-3 z-40 rounded-3xl border border-[color:var(--bulls-line)] bg-[color:var(--bulls-bar)] p-1.5 shadow-2xl backdrop-blur-xl lg:hidden"
-      >
-        <ul className="grid grid-cols-4">
-          {NAV.slice(0, 4).map((item) => {
-            const active = item.match(pathname);
-            const Icon = item.icon;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'flex h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px]',
-                    active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground',
-                  )}
-                >
-                  <Icon className="size-5" />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <MobileNav data={data} accountName={accountName} />
+        <main className="min-w-0 flex-1 px-4 pt-5 pb-16 sm:px-6 md:px-8 md:pt-8 lg:px-10 print:p-0">
+          <div className="mx-auto w-full max-w-[1240px]">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

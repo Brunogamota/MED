@@ -6,6 +6,7 @@ import { NotFoundError } from '@/services/errors';
 import { parseCommunicationReceipt } from '@/domain/communication/receipt';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { ReceiptPrintsButton } from '@/components/ReceiptPrintsButton';
+import { BullsLoteHeader } from '@/components/skins/bulls/bulls-lote';
 import { resolveEndToEndId } from '@/domain/identifiers';
 import type { MedCase } from '@/domain/case';
 import type { Evidence } from '@/domain/types';
@@ -86,7 +87,8 @@ export default async function ComprovantesEmLotePage({
 }) {
   const { ids, de, ate } = await searchParams;
   const auth = await serverPageContext();
-  const { skin } = await getActiveAccount();
+  const { skin, name: accountName } = await getActiveAccount();
+  const bulls = skin === 'bulls';
 
   // Dois caminhos de entrada: a selecao da fila (`ids`) e o recorte por data,
   // que e como o lote costuma ser pensado — "os do dia 24".
@@ -118,7 +120,21 @@ export default async function ComprovantesEmLotePage({
   const semPeca = casos.filter((medCase) => pecasDoCaso(medCase).length === 0);
 
   return (
-    <div className="mx-auto max-w-[680px] py-4" data-lote-comprovantes>
+    <div
+      className={`mx-auto py-4 ${bulls ? 'max-w-[900px]' : 'max-w-[680px]'}`}
+      data-lote-comprovantes
+    >
+      {bulls ? (
+        <BullsLoteHeader
+          accountName={accountName}
+          pecas={pecas.length}
+          casos={casos.length}
+          semPeca={semPeca.map((medCase) => medCase.med.medId)}
+          semSelecao={alvos.length === 0}
+          de={de}
+          ate={ate}
+        />
+      ) : (
       <div className="mb-4 print:hidden">
         <div className="flex items-center justify-between">
           <Link href="/meds" className="text-xs text-muted-foreground hover:text-foreground">
@@ -152,8 +168,9 @@ export default async function ComprovantesEmLotePage({
           </div>
         ) : null}
       </div>
+      )}
 
-      {pecas.length === 0 ? (
+      {pecas.length === 0 && !bulls ? (
         <p className="text-muted-foreground text-sm">
           Nenhum comprovante nesta seleção. Selecione os casos na fila e use “Comprovantes”, ou
           registre os envios no passo 2.
@@ -178,6 +195,7 @@ export default async function ComprovantesEmLotePage({
                 skin={skin}
                 sourceReference={peca.evidence.sourceReference}
                 endToEndId={medCase ? resolveEndToEndId(medCase) : null}
+                trackingEvents={medCase?.tracking?.events}
               />
             </div>
           </div>
