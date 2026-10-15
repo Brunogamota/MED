@@ -51,10 +51,33 @@ export function splitArksFiles(texts: string[]): {
     // Pedidos antes: a aba de pedidos também tem etapa ("Status atual") e
     // data, mas é uma linha por MED — não é histórico.
     if (isPedidosFile(text)) pedidos.push(text);
-    else if (isEventLog(text)) eventos.push(text);
+    else if (isEventLog(text) && isOrderHistory(text)) eventos.push(text);
     else outros.push(text);
   }
   return { eventos, pedidos, outros };
+}
+
+/**
+ * Histórico de pedido de verdade: o mesmo MED em mais de uma linha, ou linhas
+ * que são etapas logísticas. A aba de "logs básicos" também tem MED, uma
+ * coluna de situação ("Pagamento confirmado") e data — mas é uma linha por
+ * MED com o pagamento, e lida como histórico virava "Nada novo para
+ * registrar" em todas as linhas. Essa aba segue para o leitor de log de envio.
+ */
+function isOrderHistory(text: string): boolean {
+  const rows = parseEventLog(text);
+  if (rows.length === 0) return false;
+  const vistos = new Set<string>();
+  for (const row of rows) {
+    const chave = row.medRef.trim().toLowerCase();
+    if (vistos.has(chave)) return true;
+    vistos.add(chave);
+  }
+  const logisticas = rows.filter((row) => {
+    const status = statusForEvent(row.evento);
+    return status !== null && status !== 'UNKNOWN';
+  }).length;
+  return logisticas / rows.length >= 0.6;
 }
 
 const ORDEM: ShipmentStatus[] = [
@@ -351,7 +374,7 @@ export async function importArksFiles(
             ? `Nada novo registrado: ${partes.join('; ')}.`
             : pedido && !tipo
               ? 'Pedido sem natureza (físico/digital) e o MED também não tem: nada registrado.'
-              : 'Nada novo para registrar neste MED.',
+              : 'A planilha só traz pagamento para este MED — nenhuma etapa de envio para registrar.',
       });
       continue;
     }
