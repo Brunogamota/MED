@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     // sem o rótulo.
     const accountLabel = await fetchProfileEmail(accessToken).catch(() => null);
 
-    await saveConnectorCredential(serverPageContext(), 'GMAIL', {
+    await saveConnectorCredential((await serverPageContext()), 'GMAIL', {
       secret: refreshToken,
       accountLabel,
     });

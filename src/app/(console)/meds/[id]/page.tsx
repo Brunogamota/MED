@@ -4,6 +4,7 @@ import { Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/layout/page-header';
 import { serverPageContext } from '@/infra/auth/context';
+import { getActiveAccount, senderNameFor } from '@/services/accountService';
 import {
   getCase,
   getDocumentDownloadPath,
@@ -165,7 +166,9 @@ export default async function MedDetailPage({
   const activeTab: TabKey =
     TABS.find((entry) => entry.key === tab)?.key ?? LEGACY_TAB_MAP[tab ?? ''] ?? 'resumo';
 
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
+  const sender = (await senderNameFor(auth.organizationId)) ?? undefined;
+  const { skin } = await getActiveAccount();
 
   let medCase;
   try {
@@ -575,6 +578,8 @@ export default async function MedDetailPage({
             reconstructions={evidences.filter(
               (evidence) => evidence.type === 'DELIVERY_COMMUNICATION',
             )}
+            sender={sender}
+            skin={skin}
           />
 
           <div id="documentos" className="scroll-mt-16 space-y-4">

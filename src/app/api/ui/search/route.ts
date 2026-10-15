@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: Request) {
   try {
-    const auth = serverPageContext();
+    const auth = await serverPageContext();
     const url = new URL(request.url);
     const query = url.searchParams.get('q')?.trim() ?? '';
     if (query.length < 2) return NextResponse.json({ data: [] });

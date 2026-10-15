@@ -34,7 +34,7 @@ export default async function GmailInboxPage({
   searchParams: Promise<{ q?: string; erro?: string }>;
 }) {
   const { q, erro } = await searchParams;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   const result = await readInbox(auth.organizationId, q);
 
   return (

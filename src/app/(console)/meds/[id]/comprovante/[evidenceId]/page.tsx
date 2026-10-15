@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { serverPageContext } from '@/infra/auth/context';
+import { getActiveAccount } from '@/services/accountService';
 import { getCase } from '@/services/medService';
 import { NotFoundError } from '@/services/errors';
 import { parseCommunicationReceipt } from '@/domain/communication/receipt';
@@ -20,7 +21,8 @@ export default async function ComprovantePage({
   params: Promise<{ id: string; evidenceId: string }>;
 }) {
   const { id, evidenceId } = await params;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
+  const { skin } = await getActiveAccount();
 
   let medCase;
   try {
@@ -51,6 +53,7 @@ export default async function ComprovantePage({
       </div>
       <ClientEmailView
         receipt={receipt}
+        skin={skin}
         sourceReference={evidence.sourceReference}
         endToEndId={resolveEndToEndId(medCase)}
       />

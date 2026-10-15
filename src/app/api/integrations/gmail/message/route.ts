@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Informe o id da mensagem em ?id=' }, { status: 400 });
   }
 
-  const result = await readRawMessage(serverPageContext().organizationId, id);
+  const result = await readRawMessage((await serverPageContext()).organizationId, id);
   if (!result.ok) {
     return NextResponse.json({ error: result.reason }, { status: result.status });
   }

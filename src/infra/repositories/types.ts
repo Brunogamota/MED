@@ -126,3 +126,22 @@ export interface LoginThrottleRepository {
   saveLoginAttempt(record: LoginAttemptRecord): Promise<void>;
   clearLoginAttempt(key: string): Promise<void>;
 }
+
+/**
+ * Conta: uma organizacao com nome e visual proprios.
+ *
+ * E a mesma organizacao que isola os dados de cada consulta — trocar de conta
+ * e trocar o `organizationId` de tudo. `skin` diz qual ambiente visual a conta
+ * usa; o catalogo de ambientes esta em `src/config/skins.ts`.
+ */
+export interface AccountRecord {
+  id: string;
+  name: string;
+  skin: string | null;
+  createdAt: string;
+}
+
+export interface AccountRepository {
+  listAccounts(): Promise<AccountRecord[]>;
+  saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord>;
+}

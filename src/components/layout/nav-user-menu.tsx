@@ -10,7 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import Link from 'next/link';
 import { signOutAction } from '@/app/login/actions';
+import { switchAccountAction } from '@/app/(console)/contas/actions';
 
 /**
  * Rodapé do painel: a organização em que o operador está.
@@ -18,12 +20,20 @@ import { signOutAction } from '@/app/login/actions';
  * Sem autenticação de usuário final ainda, o que identifica a sessão é a
  * organização — inventar um nome de pessoa aqui seria dado falso na tela.
  */
+export interface AccountOption {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
 export function NavUserMenu({
   organization,
   demoMode,
+  accounts,
 }: {
   organization: string;
   demoMode: boolean;
+  accounts: AccountOption[];
 }) {
   const avatar = (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-neutral-50">
@@ -37,7 +47,7 @@ export function NavUserMenu({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label={`Organização ${organization}`}
+            aria-label={`Conta ${organization}`}
             className="flex h-12 w-full items-center gap-2 rounded-lg px-2 text-neutral-300 transition-colors hover:bg-neutral-800"
           >
             {avatar}
@@ -60,8 +70,21 @@ export function NavUserMenu({
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem disabled>Conta</DropdownMenuItem>
-            <DropdownMenuItem disabled>Preferências</DropdownMenuItem>
+            <DropdownMenuLabel className="text-muted-foreground text-xs">Contas</DropdownMenuLabel>
+            {accounts.map((account) => (
+              <DropdownMenuItem key={account.id} asChild disabled={account.active}>
+                <form action={switchAccountAction}>
+                  <input type="hidden" name="conta" value={account.id} />
+                  <button type="submit" className="w-full text-left">
+                    {account.name}
+                    {account.active ? ' · atual' : ''}
+                  </button>
+                </form>
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuItem asChild>
+              <Link href="/contas">Gerenciar contas</Link>
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>

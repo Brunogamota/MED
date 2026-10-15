@@ -23,6 +23,8 @@ import type {
 } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type {
+  AccountRecord,
+  AccountRepository,
   IdempotencyStore,
   ListMedsFilter,
   MedListRow,
@@ -356,7 +358,8 @@ export class PrismaMedRepository
     MedRepository,
     IdempotencyStore,
     IntegrationCredentialRepository,
-    LoginThrottleRepository
+    LoginThrottleRepository,
+    AccountRepository
 {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -900,5 +903,29 @@ export class PrismaMedRepository
 
   async clearLoginAttempt(key: string): Promise<void> {
     await this.prisma.loginAttempt.deleteMany({ where: { key } });
+  }
+
+  async listAccounts(): Promise<AccountRecord[]> {
+    const rows = await this.prisma.organization.findMany({ orderBy: { createdAt: 'asc' } });
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      skin: row.skin ?? null,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  }
+
+  async saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord> {
+    const row = await this.prisma.organization.upsert({
+      where: { id: account.id },
+      create: { id: account.id, name: account.name, skin: account.skin },
+      update: { name: account.name, skin: account.skin },
+    });
+    return {
+      id: row.id,
+      name: row.name,
+      skin: row.skin ?? null,
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 }

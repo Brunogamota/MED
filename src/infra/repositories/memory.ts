@@ -13,6 +13,8 @@ import type {
 } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type {
+  AccountRecord,
+  AccountRepository,
   IdempotencyStore,
   ListMedsFilter,
   MedListRow,
@@ -37,7 +39,8 @@ export class InMemoryMedRepository
     MedRepository,
     IdempotencyStore,
     IntegrationCredentialRepository,
-    LoginThrottleRepository
+    LoginThrottleRepository,
+    AccountRepository
 {
   private readonly meds = new Map<string, Med>();
   private readonly transactions = new Map<string, Transaction>();
@@ -53,6 +56,7 @@ export class InMemoryMedRepository
   private readonly idempotency = new Map<string, string>();
   private readonly credentials = new Map<string, IntegrationCredentialRecord>();
   private readonly loginAttempts = new Map<string, LoginAttemptRecord>();
+  private readonly accounts = new Map<string, AccountRecord>();
 
   private scoped(organizationId: string, medId: string): string {
     return `${organizationId}:${medId}`;
@@ -346,5 +350,18 @@ export class InMemoryMedRepository
 
   async clearLoginAttempt(key: string): Promise<void> {
     this.loginAttempts.delete(key);
+  }
+
+  async listAccounts(): Promise<AccountRecord[]> {
+    return [...this.accounts.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord> {
+    const saved: AccountRecord = {
+      ...account,
+      createdAt: this.accounts.get(account.id)?.createdAt ?? new Date().toISOString(),
+    };
+    this.accounts.set(account.id, saved);
+    return saved;
   }
 }

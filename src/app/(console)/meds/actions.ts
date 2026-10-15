@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { MED_STATUSES, type MedStatus } from '@/domain/types';
 import { serverPageContext } from '@/infra/auth/context';
 import { importDeliveryLog } from '@/services/deliveryImportService';
+import { senderNameFor } from '@/services/accountService';
 import { importArksFiles, mergeReports, splitArksFiles } from '@/services/eventImportService';
 import {
   addDocument,
@@ -61,7 +62,7 @@ function requireMedId(form: FormData): string {
 }
 
 export async function createMedAction(form: FormData): Promise<void> {
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = createMedSchema.parse(
     compact({
@@ -101,7 +102,7 @@ export async function createMedAction(form: FormData): Promise<void> {
 
 export async function upsertTransactionAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = upsertTransactionSchema.parse(
     compact({
@@ -124,7 +125,7 @@ export async function upsertTransactionAction(form: FormData): Promise<void> {
 
 export async function upsertCustomerAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = upsertCustomerSchema.parse(
     compact({
@@ -146,7 +147,7 @@ export async function upsertCustomerAction(form: FormData): Promise<void> {
 
 export async function upsertOrderAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const itemName = text(form, 'itemName');
   const items = itemName
@@ -182,7 +183,7 @@ export async function upsertOrderAction(form: FormData): Promise<void> {
 
 export async function upsertTrackingAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = upsertTrackingSchema.parse(
     compact({
@@ -208,7 +209,7 @@ export async function upsertTrackingAction(form: FormData): Promise<void> {
 
 export async function addEvidenceAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = createEvidenceSchema.parse(
     compact({
@@ -230,7 +231,7 @@ export async function addEvidenceAction(form: FormData): Promise<void> {
 
 export async function addDocumentAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = createDocumentSchema.parse(
     compact({
@@ -251,7 +252,7 @@ export async function addDocumentAction(form: FormData): Promise<void> {
 
 export async function uploadDocumentAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const file = form.get('file');
   if (!(file instanceof File) || file.size === 0) return;
@@ -282,7 +283,7 @@ export async function uploadDocumentAction(form: FormData): Promise<void> {
  */
 export async function recordShipmentAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = recordShipmentSchema.parse(
     compact({
@@ -312,7 +313,7 @@ export async function recordShipmentAction(form: FormData): Promise<void> {
 /** Registro de entrega digital, servico ou assinatura. */
 export async function recordDigitalDeliveryAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = recordDigitalDeliverySchema.parse(
     compact({
@@ -336,7 +337,7 @@ export async function recordDigitalDeliveryAction(form: FormData): Promise<void>
 
 export async function generateDefenseAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   await generateDefenseForMed(auth, medId, { useLlm: form.get('useLlm') === 'on' });
   revalidatePath(`/meds/${medId}`);
 }
@@ -344,7 +345,7 @@ export async function generateDefenseAction(form: FormData): Promise<void> {
 export async function createSubmissionAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
   const provider = text(form, 'provider') ?? 'generic-json';
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   await createSubmission(auth, medId, { provider });
   revalidatePath(`/meds/${medId}`);
 }
@@ -366,7 +367,7 @@ function medIdsFrom(form: FormData): string[] {
 
 /** Regera a minuta dos casos selecionados. Falha individual não trava o lote. */
 export async function batchGenerateDefensesAction(form: FormData): Promise<void> {
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   for (const medId of medIdsFrom(form)) {
     try {
       await generateDefenseForMed(auth, medId, { useLlm: false });
@@ -385,7 +386,7 @@ export async function batchGenerateDefensesAction(form: FormData): Promise<void>
  * sumiu quando ele continua la.
  */
 export async function batchDeleteMedsAction(form: FormData): Promise<void> {
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   await deleteMeds(auth, medIdsFrom(form));
   revalidatePath('/meds');
   revalidatePath('/');
@@ -393,7 +394,7 @@ export async function batchDeleteMedsAction(form: FormData): Promise<void> {
 
 /** Prepara o payload de envio dos casos selecionados, um a um. */
 export async function batchPrepareSubmissionsAction(form: FormData): Promise<void> {
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   for (const medId of medIdsFrom(form)) {
     try {
       await createSubmission(auth, medId, { provider: 'generic-json' });
@@ -424,7 +425,7 @@ export async function batchSetMedOutcomeAction(form: FormData): Promise<void> {
   if (!raw) return;
   const outcome = raw === 'AUTOMATICO' ? null : MED_STATUSES.includes(raw as MedStatus) ? (raw as MedStatus) : undefined;
   if (outcome === undefined) return;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   for (const medId of medIdsFrom(form)) {
     try {
       await setMedOutcome(auth, medId, outcome);
@@ -698,7 +699,7 @@ export async function confirmImportAction(
   _previous: ImportPreviewState | null,
   form: FormData,
 ): Promise<ImportPreviewState> {
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   const csv = text(form, 'csv') ?? '';
   const defaultOpenedAt = text(form, 'defaultOpenedAt') ?? null;
   const batchReference = text(form, 'batchReference') ?? null;
@@ -740,13 +741,13 @@ export async function confirmImportAction(
 
 export async function addCommunicationAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   const input = createCommunicationSchema.parse(
     compact({
       template: text(form, 'template') ?? 'GENERIC',
       // Remetente não é campo do formulário: quem envia é sempre o gateway.
-      from: text(form, 'from') ?? EMAIL_SENDER_NAME,
+      from: text(form, 'from') ?? (await senderNameFor(auth.organizationId)) ?? EMAIL_SENDER_NAME,
       to: text(form, 'to'),
       toName: text(form, 'toName'),
       subject: text(form, 'subject'),
@@ -772,7 +773,7 @@ export async function setMedOutcomeAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
   const raw = text(form, 'outcome');
   const outcome = raw && MED_STATUSES.includes(raw as MedStatus) ? (raw as MedStatus) : null;
-  await setMedOutcome(serverPageContext(), medId, outcome);
+  await setMedOutcome((await serverPageContext()), medId, outcome);
   revalidatePath(`/meds/${medId}`);
   revalidatePath('/meds');
 }
@@ -782,7 +783,7 @@ export async function deleteCommunicationAction(form: FormData): Promise<void> {
   const medId = requireMedId(form);
   const evidenceId = String(form.get('evidenceId') ?? '').trim();
   if (!evidenceId) return;
-  await deleteCommunicationReconstruction(serverPageContext(), medId, evidenceId);
+  await deleteCommunicationReconstruction((await serverPageContext()), medId, evidenceId);
   revalidatePath(`/meds/${medId}`);
 }
 
@@ -816,7 +817,7 @@ export async function markSubmittedAction(
   const medIds = medIdsFrom(form);
   if (medIds.length === 0) return { marked: 0, error: 'Nenhum caso para marcar.' };
 
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   let marked = 0;
   for (const medId of medIds) {
     try {
@@ -855,7 +856,7 @@ export async function importDeliveryLogAction(
   const arquivos = splitArksFiles(read.csvs);
   const arks =
     arquivos.eventos.length + arquivos.pedidos.length > 0
-      ? await importArksFiles(serverPageContext(), arquivos, {
+      ? await importArksFiles((await serverPageContext()), arquivos, {
           generateReceipts: form.get('gerarComprovantes') === 'on',
           replacePreviousReceipts: form.get('substituirComprovantes') === 'on',
         })
@@ -866,7 +867,7 @@ export async function importDeliveryLogAction(
   }
 
   const modelo = form.get('modelo');
-  const comum = await importDeliveryLog(serverPageContext(), arquivos.outros, {
+  const comum = await importDeliveryLog((await serverPageContext()), arquivos.outros, {
     generateReceipts: form.get('gerarComprovantes') === 'on',
     replacePreviousReceipts: form.get('substituirComprovantes') === 'on',
     receiptTemplate:

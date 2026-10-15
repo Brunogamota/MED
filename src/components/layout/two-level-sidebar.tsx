@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ChevronDown } from '@carbon/icons-react';
-import { NavUserMenu } from '@/components/layout/nav-user-menu';
+import { NavUserMenu, type AccountOption } from '@/components/layout/nav-user-menu';
 import { SearchTrigger } from '@/components/layout/search-dialog';
 import { BrandMarkOnDark } from '@/components/layout/brand-mark';
 import { cn } from '@/lib/cn';
@@ -285,6 +285,7 @@ function SectionPanel({
   onToggleCollapse,
   organization,
   demoMode,
+  accounts,
 }: {
   section: RailSection;
   collapsed: boolean;
@@ -292,6 +293,7 @@ function SectionPanel({
   onToggleCollapse: () => void;
   organization: string;
   demoMode: boolean;
+  accounts: AccountOption[];
 }) {
   const pathname = usePathname();
   const view = useSearchParams().get('view');
@@ -371,7 +373,7 @@ function SectionPanel({
         ))}
       </div>
 
-      <NavUserMenu organization={organization} demoMode={demoMode} />
+      <NavUserMenu organization={organization} demoMode={demoMode} accounts={accounts} />
     </div>
   );
 }
@@ -383,10 +385,13 @@ export function TwoLevelSidebar({
   organization,
   demoMode,
   defaultCollapsed,
+  accounts,
 }: {
   counts: NavCounts;
   organization: string;
   demoMode: boolean;
+  /** Contas para trocar pelo rodapé. */
+  accounts: AccountOption[];
   /** Com login ligado, o rodapé ganha "Sair". */
   defaultCollapsed: boolean;
 }) {
@@ -417,6 +422,7 @@ export function TwoLevelSidebar({
         onToggleCollapse={() => setCollapsed((value) => !value)}
         organization={organization}
         demoMode={demoMode}
+        accounts={accounts}
       />
     </aside>
   );

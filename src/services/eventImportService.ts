@@ -19,7 +19,12 @@ import {
   upsertOrder,
   upsertTracking,
 } from '@/services/medService';
-import { draftCommunication, orderTrackingMessage } from '@/domain/communication/receipt';
+import {
+  EMAIL_SENDER_NAME,
+  draftCommunication,
+  orderTrackingMessage,
+} from '@/domain/communication/receipt';
+import { senderNameFor } from '@/services/accountService';
 import type { DeliveryImportLine, DeliveryImportReport } from '@/services/deliveryImportService';
 
 /**
@@ -115,6 +120,7 @@ export async function importArksFiles(
   options: { generateReceipts?: boolean; replacePreviousReceipts?: boolean } = {},
 ): Promise<DeliveryImportReport> {
   assertCan(auth.role, 'med:write');
+  const sender = (await senderNameFor(auth.organizationId)) ?? EMAIL_SENDER_NAME;
   const report = relatorioVazio();
 
   const eventos = files.eventos.flatMap(parseEventLog);
@@ -266,7 +272,7 @@ export async function importArksFiles(
           (evidence) =>
             evidence.type === 'DELIVERY_COMMUNICATION' && evidence.sourceReference === referencia,
         );
-        const draft = draftCommunication(atualizado, 'ORDER_TRACKING', { reuseSaved: false });
+        const draft = draftCommunication(atualizado, 'ORDER_TRACKING', { reuseSaved: false, sender });
         const destinatario = draft.to || pedido?.email || draft.toName || '';
         if (jaTem) {
           partes.push('comprovante já existia');

@@ -67,18 +67,23 @@ export function authenticate(headers: Headers): AuthContext {
  *
  * Quem protege estas telas e o login (`src/lib/session.ts`), nao a existencia
  * de uma chave de API — que serve para acesso de maquina, por outro caminho.
- * Por isso aqui nao ha falha: a organizacao vem de `ORGANIZATION_ID`, ou da
- * primeira chave configurada, ou da demo.
+ * Por isso aqui nao ha falha: a organizacao e a da conta escolhida no console
+ * (`services/accountService.ts`); sem escolha, a padrao — `ORGANIZATION_ID`, a
+ * primeira chave configurada, ou a demo.
  *
  * Antes disto, ligar um banco sem tambem definir `API_KEYS` derrubava todas as
  * telas do console com "Nenhuma API key configurada" — o modo demo era o unico
  * caminho que funcionava sem chave, e conectar o banco tirava exatamente esse
  * caminho.
  */
-export function serverPageContext(): AuthContext {
+export async function serverPageContext(): Promise<AuthContext> {
   const config = getConfig();
+  // A conta escolhida no console define a organização. Import tardio: o
+  // serviço de contas lê cookie, e este módulo também é usado fora de request.
+  const { getActiveAccount } = await import('@/services/accountService');
+  const account = await getActiveAccount();
   return {
-    organizationId: config.organizationId,
+    organizationId: account.id,
     role: config.apiKeys[0]?.role ?? 'OWNER',
     actor: config.demoMode ? 'demo' : 'ui',
   };

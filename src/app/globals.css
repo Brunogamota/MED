@@ -245,3 +245,197 @@ input[type='number']::-webkit-inner-spin-button {
 .animate-delay-1000 { animation-delay: 1000ms; }
 .animate-delay-1200 { animation-delay: 1200ms; }
 .animate-delay-1400 { animation-delay: 1400ms; }
+
+/* =========================================================================
+   Ambiente Bulls Cash (`<html data-skin="bulls">`)
+
+   Outro ambiente, não outro tema: tipografia, raio, superfícies e cor são
+   todos daqui. Paleta roxa da marca sobre azul-noite; no claro, lavanda.
+   O seletor por atributo no <html> ganha de `:root` e de `.dark`, então o
+   resto do console não precisa saber que existe ambiente.
+   ========================================================================= */
+
+html[data-skin='bulls'] {
+  --radius: 0.95rem;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-bulls-heading: var(--font-sora), var(--font-manrope), sans-serif;
+
+  --background: #faf7ff;
+  --foreground: #1b1030;
+  --card: #ffffff;
+  --card-foreground: #1b1030;
+  --popover: #ffffff;
+  --popover-foreground: #1b1030;
+  --primary: #9333ea;
+  --primary-foreground: #ffffff;
+  --secondary: #f1e9fe;
+  --secondary-foreground: #3b1670;
+  --muted: #f3eefc;
+  --muted-foreground: #6b5b86;
+  --accent: #efe6fd;
+  --accent-foreground: #3b1670;
+  --destructive: #dc2626;
+  --border: #e6dcf8;
+  --input: #e0d3f7;
+  --ring: #a855f7;
+  --chart-1: #a855f7;
+  --chart-2: #8b5cf6;
+  --chart-3: #c084fc;
+  --chart-4: #7c3aed;
+  --chart-5: #e9d5ff;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1b1030;
+  --sidebar-primary: #9333ea;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efe6fd;
+  --sidebar-accent-foreground: #3b1670;
+  --sidebar-border: #e6dcf8;
+  --sidebar-ring: #a855f7;
+
+  --bulls-line: #e6dcf8;
+  --bulls-chip: #ffffffb3;
+  --bulls-bar: #faf7ffd9;
+  --bulls-glow: #a855f72e;
+}
+
+html.dark[data-skin='bulls'] {
+  --background: #020617;
+  --foreground: #f8fafc;
+  --card: #0f172a;
+  --card-foreground: #f8fafc;
+  --popover: #0f172a;
+  --popover-foreground: #f8fafc;
+  --primary: #a855f7;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --border: #334155;
+  --input: #334155;
+  --ring: #a855f7;
+  --chart-1: #a855f7;
+  --chart-2: #8b5cf6;
+  --chart-3: #c084fc;
+  --chart-4: #10b981;
+  --chart-5: #f59e0b;
+  --sidebar: #0f172a;
+  --sidebar-foreground: #f8fafc;
+  --sidebar-primary: #a855f7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f8fafc;
+  --sidebar-border: #334155;
+  --sidebar-ring: #a855f7;
+
+  --bulls-line: #334155;
+  --bulls-chip: #0f172acc;
+  --bulls-bar: #020617d9;
+  --bulls-glow: #a855f740;
+}
+
+html[data-skin='bulls'] body {
+  letter-spacing: -0.005em;
+}
+
+html[data-skin='bulls'] :is(h1, h2, h3, .font-heading) {
+  font-family: var(--font-bulls-heading);
+  letter-spacing: -0.02em;
+}
+
+/* Chão com brilho roxo no topo — a assinatura do ambiente. */
+.bulls-floor {
+  background:
+    radial-gradient(1200px 520px at 15% -10%, var(--bulls-glow), transparent 60%),
+    radial-gradient(900px 420px at 100% 0%, var(--bulls-glow), transparent 55%),
+    var(--background);
+}
+
+.bulls-icon-button {
+  display: inline-flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--bulls-line);
+  background: var(--bulls-chip);
+  color: var(--muted-foreground);
+  transition: color 150ms, border-color 150ms;
+}
+.bulls-icon-button:hover {
+  color: var(--foreground);
+  border-color: var(--primary);
+}
+
+/* --- Peças do console no ambiente Bulls Cash --------------------------- */
+
+/* Cabeçalho de página: título grande em Sora com filete roxo à esquerda. */
+html[data-skin='bulls'] [data-page-header] > div:first-child {
+  position: relative;
+  padding-left: 1rem;
+}
+html[data-skin='bulls'] [data-page-header] > div:first-child::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, var(--chart-3), var(--primary));
+}
+html[data-skin='bulls'] [data-page-header] h1 {
+  font-size: 1.85rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* Cartões: vidro sobre o chão, raio largo, borda com brilho no topo. */
+html[data-skin='bulls'] [data-slot='card'] {
+  border-radius: 1.4rem;
+  border: 1px solid var(--bulls-line);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--primary) 7%, transparent), transparent 140px),
+    color-mix(in oklab, var(--card) 88%, transparent);
+  box-shadow: 0 20px 45px -30px color-mix(in oklab, var(--primary) 55%, transparent);
+  backdrop-filter: blur(10px);
+}
+html[data-skin='bulls'] [data-slot='card-title'] {
+  font-family: var(--font-bulls-heading);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Botões e campos: pílula. */
+html[data-skin='bulls'] [data-slot='button'] {
+  border-radius: 9999px;
+  font-weight: 600;
+}
+html[data-skin='bulls'] :is([data-slot='input'], [data-slot='textarea'], select) {
+  border-radius: 0.85rem;
+  background: color-mix(in oklab, var(--card) 70%, transparent);
+}
+
+/* Tabela: cabeçalho em versalete, linhas com respiro e realce roxo. */
+html[data-skin='bulls'] :is([data-slot='table-head'], thead th) {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+html[data-skin='bulls'] :is([data-slot='table-row'], tbody tr):hover {
+  background: color-mix(in oklab, var(--primary) 8%, transparent);
+}
+html[data-skin='bulls'] [data-slot='badge'] {
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+}

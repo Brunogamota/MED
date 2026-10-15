@@ -79,7 +79,7 @@ export default async function MedsPage({
   searchParams: Promise<{ view?: string; de?: string; ate?: string }>;
 }) {
   const { view, de, ate } = await searchParams;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   // O dia escolhido vira intervalo aqui, num lugar so: `de` abre no primeiro
   // instante do dia e `ate` fecha no ultimo, para que escolher o mesmo dia nos
