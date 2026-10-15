@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarRange, Printer, ReceiptText, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, CalendarRange, Printer, ReceiptText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReceiptPrintsButton } from '@/components/ReceiptPrintsButton';
 
@@ -15,7 +15,6 @@ export function BullsLoteHeader({
   accountName,
   pecas,
   casos,
-  semPeca,
   semSelecao,
   de,
   ate,
@@ -23,7 +22,6 @@ export function BullsLoteHeader({
   accountName: string;
   pecas: number;
   casos: number;
-  semPeca: string[];
   semSelecao: boolean;
   de?: string;
   ate?: string;
@@ -107,21 +105,6 @@ export function BullsLoteHeader({
           </p>
         )}
 
-        {semPeca.length > 0 ? (
-          <div className="mt-4 flex gap-3 rounded-[18px] border border-bulls-warning/30 bg-bulls-warning-soft px-4 py-3 text-[13px] text-bulls-warning-ink">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-            <div>
-              <p className="font-semibold">
-                {semPeca.length} caso{semPeca.length === 1 ? '' : 's'} sem comprovante, fora do lote:
-              </p>
-              <p className="mt-1 font-mono text-[12px] break-all">{semPeca.join(', ')}</p>
-              <p className="mt-1">
-                Ou não houve envio registrado, ou o envio não foi concluído. Sem registro não há peça — e afirmar entrega
-                que o log não mostra é o que derruba o lote inteiro na conferência.
-              </p>
-            </div>
-          </div>
-        ) : null}
 
         {!semSelecao && pecas === 0 ? (
           <p className="mt-4 text-[13px] text-bulls-ink-3">

@@ -28,6 +28,10 @@ export interface PedidoRow {
   distribuidor: string | null;
   idNoFornecedor: string | null;
   email: string | null;
+  /** Quando a etapa atual foi registrada ("Atualizado em"). Sem data, não é marco. */
+  atualizadoEm: string | null;
+  /** Link do pedido no painel da loja ("Console do Pedido"). */
+  url: string | null;
 }
 
 export interface EventoRow {
@@ -203,6 +207,8 @@ export function parsePedidos(text: string): PedidoRow[] {
     distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor', 'parceirodeorigem', 'parceiro']),
     idNoFornecedor: headerIndex(h, ['iddopedidonofornecedor', 'pedidoexterno', 'idexterno']),
     email: h.findIndex((header) => header.includes('email') || header === 'contato'),
+    atualizadoEm: headerIndex(h, ['atualizadoem', 'ultimaatualizacao', 'datadaetapa', 'dataetapaatual']),
+    url: h.findIndex((header) => header.startsWith('console') || ['urldopedido', 'linkdopedido', 'url'].includes(header)),
   };
   return parsed.rows
     .map((row, index) => {
@@ -217,6 +223,11 @@ export function parsePedidos(text: string): PedidoRow[] {
         distribuidor: cell(row, at.distribuidor),
         idNoFornecedor: cell(row, at.idNoFornecedor),
         email: cell(row, at.email),
+        atualizadoEm: (() => {
+          const bruto = cell(row, at.atualizadoEm);
+          return bruto ? parseLogTimestamp(bruto) : null;
+        })(),
+        url: cell(row, at.url),
       } satisfies PedidoRow;
     })
     .filter((row): row is PedidoRow => row !== null);
