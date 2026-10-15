@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { FileSpreadsheet, Upload, X } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
@@ -60,6 +60,25 @@ export function FileDropField({
   const [dragging, setDragging] = useState(false);
 
   const accept = extensions.join(',');
+
+  // Depois de cada envio o React limpa o formulário — e com ele o input de
+  // arquivo de verdade —, mas a lista na tela continuava mostrando o arquivo.
+  // O segundo clique mandava vazio e voltava "Escolha o arquivo". Quando o
+  // formulário é limpo, o arquivo que está na tela volta para o input.
+  useEffect(() => {
+    const form = inputRef.current?.form;
+    if (!form) return;
+    const reaplicar = () => {
+      setTimeout(() => {
+        if (!inputRef.current || files.length === 0) return;
+        const transfer = new DataTransfer();
+        for (const item of files) transfer.items.add(item);
+        inputRef.current.files = transfer.files;
+      }, 0);
+    };
+    form.addEventListener('reset', reaplicar);
+    return () => form.removeEventListener('reset', reaplicar);
+  }, [files]);
 
   /** Devolve o motivo da recusa, ou `null` quando o arquivo serve. */
   function reasonToReject(candidate: File): string | null {
