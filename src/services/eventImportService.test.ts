@@ -154,3 +154,32 @@ describe('logs básicos não são histórico', () => {
     expect(splitArksFiles([texto]).eventos).toHaveLength(1);
   });
 });
+
+describe('planilhas Bulls', () => {
+  const PEDIDOS_BULLS = [
+    'MED,Pedido Bulls,Data/Hora do Pagamento,Status Financeiro,Comprador,Documento,Valor,Instituição Pagadora,Reference,Classificação,Contato,Etapa Atual,Atualizado em,Parceiro de Origem,Pedido Externo,Origem,Etapa no Parceiro,Ref. Parceiro,Console do Pedido',
+    'MED-1,BLS-1,01/10/2026 10:00,Pago,Fulano,,"R$ 100,00",BANCO INTER S.A.,R1,Físico,f@exemplo.com,Encaminhado,02/10/2026,Parceiro X,EXT-1,Site,Recebido,REF-1,https://console.exemplo.com/BLS-1',
+  ].join('\n');
+  const LINHA_DO_TEMPO = [
+    'Pedido Bulls,MED,Etapa,Registrado em,Módulo,Código,Recurso,Parceiro,Pedido Externo,Ref. Parceiro,Detalhe',
+    'BLS-1,MED-1,Pagamento confirmado,01/10/2026 10:00,Pagamento,C1,https://console.exemplo.com/BLS-1/pagamento,Parceiro X,EXT-1,REF-1,ok',
+    'BLS-1,MED-1,Pedido recebido,01/10/2026 10:05,Pedidos,C2,https://console.exemplo.com/BLS-1,Parceiro X,EXT-1,REF-1,ok',
+    'BLS-1,MED-1,Encaminhado ao parceiro,01/10/2026 11:00,Distribuição,C3,https://console.exemplo.com/BLS-1/x,Parceiro X,EXT-1,REF-1,ok',
+  ].join('\n');
+
+  it('reconhece as duas abas pelos cabeçalhos da Bulls', () => {
+    const split = splitArksFiles([PEDIDOS_BULLS, LINHA_DO_TEMPO]);
+    expect(split.pedidos).toHaveLength(1);
+    expect(split.eventos).toHaveLength(1);
+    expect(split.outros).toHaveLength(0);
+  });
+
+  it('registra pedido e etapas no MED', async () => {
+    const report = await importArksFiles(auth, { eventos: [LINHA_DO_TEMPO], pedidos: [PEDIDOS_BULLS] });
+    expect(report.recorded).toBe(1);
+    const medCase = await getCase(auth, report.touchedMedIds[0] ?? '');
+    expect(medCase.order?.externalId).toBe('BLS-1');
+    expect(medCase.order?.productType).toBe('PHYSICAL');
+    expect(medCase.tracking?.events.length).toBeGreaterThanOrEqual(2);
+  });
+});

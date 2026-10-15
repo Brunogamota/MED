@@ -47,11 +47,19 @@ export interface EventoRow {
   refFornecedor: string | null;
 }
 
-const MED_HEADERS = ['idmed', 'medid', 'iddomed', 'endtoendid', 'endtoend', 'e2e', 'e2eid', 'idendtoend'];
+const MED_HEADERS = ['idmed', 'medid', 'iddomed', 'med', 'numerodomed', 'endtoendid', 'endtoend', 'e2e', 'e2eid', 'idendtoend'];
+/** Número do pedido na loja: "Pedido", "Pedido Bulls", "Nº do pedido"… — nunca o do parceiro. */
+const PEDIDO = (header: string) =>
+  ['pedido', 'iddopedido', 'numerodopedido', 'idpedido', 'order', 'orderid'].includes(header) ||
+  (header.startsWith('pedido') && !/extern|fornecedor|parceiro/.test(header));
+/** Tipo do produto: "Natureza", "Classificação", "Tipo do produto". */
+const NATUREZA_HEADERS = ['natureza', 'classificacao', 'tipodoproduto', 'tipoproduto'];
+/** Etapa atual do pedido, numa linha por MED. */
+const STATUS_ATUAL_HEADERS = ['statusatualdopedido', 'etapaatual', 'statusdopedido'];
 const EVENTO_HEADERS = ['evento', 'etapa', 'descricaodoevento', 'nomedoevento'];
 const DATA_EVENTO = (header: string) =>
   header.startsWith('datahoradoevento') ||
-  ['dataevento', 'datadoevento', 'datahoraevento', 'datahora', 'data'].includes(header);
+  ['dataevento', 'datadoevento', 'datahoraevento', 'datahora', 'data', 'registradoem', 'ocorridoem'].includes(header);
 
 function headerIndex(headers: string[], aliases: string[]): number {
   return headers.findIndex((header) => aliases.includes(header));
@@ -118,14 +126,22 @@ export function isEventLog(text: string): boolean {
 }
 
 /** A aba de Pedidos: ID do MED com os dados do pedido, sem coluna de evento. */
+/** Coluna do MED: pelo cabeçalho, ou pela coluna cheia de end-to-end. */
+function medColumn(parsed: { headers: string[]; rows: string[][] }): number {
+  const porNome = headerIndex(parsed.headers, MED_HEADERS);
+  if (porNome !== -1) return porNome;
+  return parsed.headers.findIndex((_, i) => share(parsed.rows, i, (v) => E2E.test(v)) >= 0.6);
+}
+
 export function isPedidosFile(text: string): boolean {
   const parsed = table(text);
   if (!parsed) return false;
   const { headers } = parsed;
   return (
-    headerIndex(headers, MED_HEADERS) !== -1 &&
+    medColumn(parsed) !== -1 &&
     headerIndex(headers, EVENTO_HEADERS) === -1 &&
-    (headers.includes('natureza') || headers.includes('statusatualdopedido'))
+    (headerIndex(headers, NATUREZA_HEADERS) !== -1 ||
+      headerIndex(headers, STATUS_ATUAL_HEADERS) !== -1)
   );
 }
 
@@ -141,14 +157,14 @@ export function parseEventLog(text: string): EventoRow[] {
   const h = parsed.headers;
   const at = {
     ...eventColumns(parsed),
-    pedido: headerIndex(h, ['pedido', 'iddopedido', 'numerodopedido', 'idpedido', 'order', 'orderid']),
-    canal: headerIndex(h, ['canal']),
+    pedido: h.findIndex(PEDIDO),
+    canal: headerIndex(h, ['canal', 'modulo']),
     codigo: headerIndex(h, ['codigodoevento', 'codigo']),
-    url: headerIndex(h, ['urloperacional', 'url']),
-    observacao: headerIndex(h, ['observacao', 'obs']),
-    distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor']),
-    idExterno: headerIndex(h, ['idexternodopedido', 'idexterno']),
-    refFornecedor: headerIndex(h, ['referenciadofornecedor']),
+    url: headerIndex(h, ['urloperacional', 'url', 'recurso', 'link']),
+    observacao: headerIndex(h, ['observacao', 'obs', 'detalhe', 'detalhes']),
+    distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor', 'parceiro', 'parceirodeorigem']),
+    idExterno: headerIndex(h, ['idexternodopedido', 'idexterno', 'pedidoexterno']),
+    refFornecedor: headerIndex(h, ['referenciadofornecedor', 'refparceiro', 'referenciadoparceiro']),
   };
   return parsed.rows
     .map((row, index) => {
@@ -180,13 +196,13 @@ export function parsePedidos(text: string): PedidoRow[] {
   if (!parsed) return [];
   const h = parsed.headers;
   const at = {
-    med: headerIndex(h, MED_HEADERS),
-    pedido: headerIndex(h, ['pedido', 'iddopedido', 'numerodopedido']),
-    natureza: headerIndex(h, ['natureza', 'tipodoproduto']),
-    status: headerIndex(h, ['statusatualdopedido']),
-    distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor']),
-    idNoFornecedor: headerIndex(h, ['iddopedidonofornecedor']),
-    email: h.findIndex((header) => header.includes('email')),
+    med: medColumn(parsed),
+    pedido: h.findIndex(PEDIDO),
+    natureza: headerIndex(h, NATUREZA_HEADERS),
+    status: headerIndex(h, STATUS_ATUAL_HEADERS),
+    distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor', 'parceirodeorigem', 'parceiro']),
+    idNoFornecedor: headerIndex(h, ['iddopedidonofornecedor', 'pedidoexterno', 'idexterno']),
+    email: h.findIndex((header) => header.includes('email') || header === 'contato'),
   };
   return parsed.rows
     .map((row, index) => {
@@ -236,7 +252,13 @@ export function statusForEvent(evento: string): ShipmentStatus | null {
   if (e.includes('postado') || e.includes('coletado') || e.includes('despachado') || e.includes('expedido')) {
     return 'POSTED';
   }
-  if (e.includes('transmitido') || e.includes('fornecedor') || e.includes('distribuidor')) {
+  if (
+    e.includes('transmitido') ||
+    e.includes('fornecedor') ||
+    e.includes('distribuidor') ||
+    e.includes('parceiro') ||
+    e.includes('encaminhad')
+  ) {
     return 'IN_PRODUCTION';
   }
   if (e.includes('recebido') || e.includes('preparacao') || e.includes('criado') || e.includes('registrado')) {
