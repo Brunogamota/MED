@@ -132,3 +132,25 @@ describe('planilha de eventos com cabeçalho livre', () => {
     expect(pecas.map((e) => e.sourceReference)).toEqual(['P-1']);
   });
 });
+
+describe('logs básicos não são histórico', () => {
+  it('uma linha por MED só com pagamento vai para o leitor de log de envio', () => {
+    const basico = [
+      'ID MED,Evento,Data/Hora do Evento,E-mail',
+      'E0036030520261012190600000000001,Pagamento confirmado,01/10/2026 10:00,a@exemplo.com',
+      'E0036030520261012190600000000002,Pagamento confirmado,01/10/2026 10:05,b@exemplo.com',
+    ].join('\n');
+    const split = splitArksFiles([basico]);
+    expect(split.eventos).toHaveLength(0);
+    expect(split.outros).toHaveLength(1);
+  });
+
+  it('uma linha por MED com etapa logística continua sendo histórico', () => {
+    const texto = [
+      'ID MED,Evento,Data/Hora do Evento',
+      'E0036030520261012190600000000001,Encaminhado à distribuidora,01/10/2026 10:00',
+      'E0036030520261012190600000000002,Pedido postado,01/10/2026 10:05',
+    ].join('\n');
+    expect(splitArksFiles([texto]).eventos).toHaveLength(1);
+  });
+});
