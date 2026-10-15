@@ -149,6 +149,17 @@ function fieldByPrefix(header: string): LogField | undefined {
   return HEADER_HINTS.find(([words]) => words.some((word) => header.includes(word)))?.[1];
 }
 
+/** Frase de etapa de pedido: "Pagamento confirmado", "Em preparação"… */
+export function isEventPhrase(value: string): boolean {
+  const v = value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  if (!v) return false;
+  return /^(pagamento|pedido|em preparacao|preparacao|encaminhad|enviad|entregue|postad|saiu para|em transito|transmitid|aguardando|despachad|coletad|devolvid|cancelad|separacao|em separacao|faturad|nota fiscal|objeto|tentativa|nao entregue|recebid|criad|registrad)/.test(v);
+}
+
 const E2E_PATTERN = /^E[0-9A-Za-z]{31}$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -166,6 +177,9 @@ function fieldByContent(values: string[]): LogField | 'date' | undefined {
   if (share((v) => parseLogTimestamp(v) !== null) >= 0.6) return 'date';
   if (share((v) => resolveProductTypeValue(v) !== null) >= 0.6) return 'productType';
   if (share((v) => /^<?[^\s@<>]+@[^\s@<>]+>?$/.test(v)) >= 0.6) return 'messageId';
+  // Etapa de pedido ("Pagamento confirmado", "Em preparação") tem cara de
+  // nome — duas palavras —, e virava "Olá, Pagamento" no comprovante.
+  if (share(isEventPhrase) >= 0.3) return undefined;
   if (share((v) => /^[A-Za-zÀ-ÿ'.]+(\s+[A-Za-zÀ-ÿ'.]+)+$/.test(v)) >= 0.6) return 'customerName';
   return undefined;
 }

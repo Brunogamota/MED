@@ -252,3 +252,16 @@ describe('destinatario sem placeholder', () => {
     expect(rows[0]?.customerEmail).toBeNull();
   });
 });
+
+describe('etapa de pedido não vira nome', () => {
+  it('coluna de eventos não é lida como nome do comprador', () => {
+    const texto = [
+      'id,etapa,quando,email',
+      'E0036030520261012190600000000001,Pagamento confirmado,01/10/2026 10:00,a@exemplo.com',
+      'E0036030520261012190600000000002,Pedido recebido,01/10/2026 10:05,b@exemplo.com',
+      'E0036030520261012190600000000003,Em preparação,01/10/2026 11:00,c@exemplo.com',
+    ].join('\n');
+    const parsed = parseDeliveryLog(texto);
+    expect(parsed.rows.every((row) => row.customerName === null)).toBe(true);
+  });
+});

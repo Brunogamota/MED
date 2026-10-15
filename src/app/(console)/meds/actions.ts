@@ -857,6 +857,7 @@ export async function importDeliveryLogAction(
     arquivos.eventos.length + arquivos.pedidos.length > 0
       ? await importArksFiles(serverPageContext(), arquivos, {
           generateReceipts: form.get('gerarComprovantes') === 'on',
+          replacePreviousReceipts: form.get('substituirComprovantes') === 'on',
         })
       : null;
   if (arks && arquivos.outros.length === 0) {
