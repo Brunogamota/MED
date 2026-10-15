@@ -144,7 +144,18 @@ export function DeliveryImportClient({ texts }: { texts?: string[] } = {}) {
       {report ? (
         <>
           <MetricStrip>
-            <MetricCell label="Linhas no arquivo" value={report.total} />
+            {report.arks ? (
+              <>
+                <MetricCell label="MEDs na planilha" value={report.total} />
+                <MetricCell label="Linhas de evento" value={report.arks.linhasDeEvento} />
+                <MetricCell label="MEDs com evento" value={report.arks.medsComEvento} />
+                {report.arks.pedidos > 0 ? (
+                  <MetricCell label="Pedidos" value={report.arks.pedidos} />
+                ) : null}
+              </>
+            ) : (
+              <MetricCell label="Linhas no arquivo" value={report.total} />
+            )}
             <MetricCell
               label="Entregas registradas"
               value={report.recorded}

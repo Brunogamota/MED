@@ -2,6 +2,8 @@ import { PageHeader } from '@/components/layout/page-header';
 import { DeliveryImportClient } from './DeliveryImportClient';
 
 export const dynamic = 'force-dynamic';
+// Planilha grande de eventos: um MED por vez, com acompanhamento e comprovante.
+export const maxDuration = 300;
 
 /**
  * Importacao do log de envio do provedor.

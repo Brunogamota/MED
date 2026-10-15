@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { MED_STATUSES, type MedStatus } from '@/domain/types';
 import { serverPageContext } from '@/infra/auth/context';
 import { importDeliveryLog } from '@/services/deliveryImportService';
+import { importArksFiles, mergeReports, splitArksFiles } from '@/services/eventImportService';
 import {
   addDocument,
   addEvidence,
@@ -849,8 +850,22 @@ export async function importDeliveryLogAction(
     return { report: null, error: 'Escolha o arquivo do log de envio.' };
   }
 
+  // Planilhas de pedidos/eventos têm leitura própria: contam MED distinto e
+  // viram marcos do acompanhamento do pedido. O resto segue como log de envio.
+  const arquivos = splitArksFiles(read.csvs);
+  const arks =
+    arquivos.eventos.length + arquivos.pedidos.length > 0
+      ? await importArksFiles(serverPageContext(), arquivos, {
+          generateReceipts: form.get('gerarComprovantes') === 'on',
+        })
+      : null;
+  if (arks && arquivos.outros.length === 0) {
+    revalidatePath('/meds');
+    return { report: arks, error: arks.fatalError };
+  }
+
   const modelo = form.get('modelo');
-  const report = await importDeliveryLog(serverPageContext(), read.csvs, {
+  const comum = await importDeliveryLog(serverPageContext(), arquivos.outros, {
     generateReceipts: form.get('gerarComprovantes') === 'on',
     replacePreviousReceipts: form.get('substituirComprovantes') === 'on',
     receiptTemplate:
@@ -860,6 +875,7 @@ export async function importDeliveryLogAction(
           ? (modelo as CommunicationTemplate)
           : 'AUTO',
   });
+  const report = arks ? mergeReports(arks, comum) : comum;
   revalidatePath('/meds');
   return { report, error: report.fatalError };
 }

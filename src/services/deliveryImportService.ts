@@ -182,6 +182,11 @@ export interface DeliveryImportReport {
    */
   medsWithoutDelivery: { id: string; medId: string }[];
   fatalError: string | null;
+  /**
+   * Planilhas de pedidos/eventos. A aba de eventos repete o MED em uma linha
+   * por marco: linhas e MEDs são números diferentes, e os dois aparecem.
+   */
+  arks?: { linhasDeEvento: number; medsComEvento: number; pedidos: number };
 }
 
 /** Host do MTA, a partir do message-id. E o provedor que assinou o envio. */
