@@ -1,5 +1,7 @@
 import { detectDelimiter, normalizeHeader, parseDelimited, resolveProductTypeValue } from '@/domain/import/csv';
-import { parseLogTimestamp } from '@/domain/import/deliveryLog';
+import { isEventPhrase, parseLogTimestamp } from '@/domain/import/deliveryLog';
+
+export { isEventPhrase };
 import type { ProductType, ShipmentStatus } from '@/domain/types';
 
 /**
@@ -64,16 +66,55 @@ function table(text: string): { headers: string[]; rows: string[][] } | null {
   return { headers: first.map(normalizeHeader), rows: rest };
 }
 
-/** A aba de Eventos: tem o ID do MED, o nome do evento e a data do evento. */
+const E2E = /^E[0-9A-Za-z]{31}$/;
+
+function share(rows: string[][], index: number, test: (value: string) => boolean): number {
+  const filled = rows
+    .map((row) => row[index]?.trim() ?? '')
+    .filter((value) => value.length > 0)
+    .slice(0, 50);
+  if (filled.length === 0) return 0;
+  return filled.filter(test).length / filled.length;
+}
+
+/**
+ * Onde estão o MED, o evento e a data. Primeiro pelo cabeçalho; o que o
+ * cabeçalho não disser, o conteúdo diz — a planilha não precisa seguir nome
+ * de coluna nenhum.
+ */
+function eventColumns(parsed: { headers: string[]; rows: string[][] }): {
+  med: number;
+  evento: number;
+  data: number;
+} {
+  const { headers, rows } = parsed;
+  const colunas = headers.map((_, index) => index);
+  let med = headerIndex(headers, MED_HEADERS);
+  if (med === -1) med = colunas.find((i) => share(rows, i, (v) => E2E.test(v)) >= 0.6) ?? -1;
+  let evento = headerIndex(headers, EVENTO_HEADERS);
+  if (evento === -1) {
+    evento = colunas.find((i) => i !== med && share(rows, i, isEventPhrase) >= 0.6) ?? -1;
+  }
+  let data = headers.findIndex(DATA_EVENTO);
+  if (data === -1 || share(rows, data, (v) => parseLogTimestamp(v) !== null) < 0.6) {
+    data =
+      colunas.find(
+        (i) => i !== med && i !== evento && share(rows, i, (v) => parseLogTimestamp(v) !== null) >= 0.6,
+      ) ?? -1;
+  }
+  return { med, evento, data };
+}
+
+/**
+ * A aba de Eventos: o MED, o nome do evento e a data do evento. E o MED se
+ * repete — é histórico, uma linha por etapa.
+ */
 export function isEventLog(text: string): boolean {
   const parsed = table(text);
   if (!parsed) return false;
-  const { headers } = parsed;
-  return (
-    headerIndex(headers, MED_HEADERS) !== -1 &&
-    headerIndex(headers, EVENTO_HEADERS) !== -1 &&
-    headers.some(DATA_EVENTO)
-  );
+  const { med, evento, data } = eventColumns(parsed);
+  if (med === -1 || evento === -1 || data === -1) return false;
+  return share(parsed.rows, evento, isEventPhrase) >= 0.5 || headerIndex(parsed.headers, EVENTO_HEADERS) !== -1;
 }
 
 /** A aba de Pedidos: ID do MED com os dados do pedido, sem coluna de evento. */
@@ -99,10 +140,8 @@ export function parseEventLog(text: string): EventoRow[] {
   if (!parsed) return [];
   const h = parsed.headers;
   const at = {
-    med: headerIndex(h, MED_HEADERS),
-    pedido: headerIndex(h, ['pedido', 'iddopedido', 'numerodopedido']),
-    evento: headerIndex(h, EVENTO_HEADERS),
-    data: h.findIndex(DATA_EVENTO),
+    ...eventColumns(parsed),
+    pedido: headerIndex(h, ['pedido', 'iddopedido', 'numerodopedido', 'idpedido', 'order', 'orderid']),
     canal: headerIndex(h, ['canal']),
     codigo: headerIndex(h, ['codigodoevento', 'codigo']),
     url: headerIndex(h, ['urloperacional', 'url']),

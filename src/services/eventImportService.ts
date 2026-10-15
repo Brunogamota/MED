@@ -13,6 +13,7 @@ import {
 } from '@/domain/import/eventLog';
 import {
   addCommunicationReconstruction,
+  deleteCommunicationReconstruction,
   getCase,
   listMeds,
   upsertOrder,
@@ -42,8 +43,10 @@ export function splitArksFiles(texts: string[]): {
   const pedidos: string[] = [];
   const outros: string[] = [];
   for (const text of texts) {
-    if (isEventLog(text)) eventos.push(text);
-    else if (isPedidosFile(text)) pedidos.push(text);
+    // Pedidos antes: a aba de pedidos também tem etapa ("Status atual") e
+    // data, mas é uma linha por MED — não é histórico.
+    if (isPedidosFile(text)) pedidos.push(text);
+    else if (isEventLog(text)) eventos.push(text);
     else outros.push(text);
   }
   return { eventos, pedidos, outros };
@@ -109,7 +112,7 @@ function relatorioVazio(): DeliveryImportReport {
 export async function importArksFiles(
   auth: AuthContext,
   files: { eventos: string[]; pedidos: string[] },
-  options: { generateReceipts?: boolean } = {},
+  options: { generateReceipts?: boolean; replacePreviousReceipts?: boolean } = {},
 ): Promise<DeliveryImportReport> {
   assertCan(auth.role, 'med:write');
   const report = relatorioVazio();
@@ -268,6 +271,24 @@ export async function importArksFiles(
         if (jaTem) {
           partes.push('comprovante já existia');
           jaRegistrado = true;
+        }
+        // Peças antigas deste caso que não são a do pedido — ex.: a planilha de
+        // eventos lida antes como log de e-mail, com "Olá, Pagamento".
+        if (options.replacePreviousReceipts) {
+          let apagadas = 0;
+          for (const evidence of atualizado.evidences) {
+            if (evidence.type !== 'DELIVERY_COMMUNICATION') continue;
+            if (evidence.sourceReference === referencia) continue;
+            if (await deleteCommunicationReconstruction(auth, med.id, evidence.id)) apagadas += 1;
+          }
+          if (apagadas > 0) {
+            report.replacedReceipts += apagadas;
+            gravou = true;
+            partes.push(`${apagadas} ${apagadas === 1 ? 'comprovante antigo apagado' : 'comprovantes antigos apagados'}`);
+          }
+        }
+        if (jaTem) {
+          // nada a gerar
         } else if (destinatario) {
           const link =
             linhasEvento.find((row) => row.url && row.pedido && row.url.endsWith(row.pedido))?.url ??

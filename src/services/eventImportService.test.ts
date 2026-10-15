@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { __setRepositoryForTests } from '@/infra/container';
 import { InMemoryMedRepository } from '@/infra/repositories/memory';
 import type { AuthContext } from '@/infra/auth/context';
-import { createMed, getCase } from '@/services/medService';
+import { addCommunicationReconstruction, createMed, getCase } from '@/services/medService';
+import { isEventPhrase } from '@/domain/import/eventLog';
 import { importArksFiles, splitArksFiles } from '@/services/eventImportService';
 
 const auth: AuthContext = { organizationId: 'org_a', role: 'OWNER', actor: 'teste' };
@@ -85,5 +86,49 @@ describe('planilhas Arks', () => {
     const report = await importArksFiles(auth, { eventos: [semData], pedidos: [] });
     expect(report.recorded).toBe(0);
     expect(report.lines[0]?.kind).toBe('INVALID');
+  });
+});
+
+describe('planilha de eventos com cabeçalho livre', () => {
+  // Cabeçalhos que não batem com nenhum nome conhecido: o conteúdo decide.
+  const LIVRE = [
+    'Ordem,Transação,Etapa do fluxo,Quando,Link',
+    'IRP-1,MED-1,Pagamento confirmado,01/10/2026 10:00,https://console.exemplo.com/orders/IRP-1/payment',
+    'IRP-1,MED-1,Pedido recebido,01/10/2026 10:05,https://console.exemplo.com/orders/IRP-1',
+    'IRP-1,MED-1,Pedido transmitido ao fornecedor internacional,02/10/2026 09:30,https://console.exemplo.com/orders/IRP-1/x',
+  ].join('\n');
+
+  it('reconhece pelo conteúdo e nunca usa a etapa como nome', () => {
+    expect(isEventPhrase('Pagamento confirmado')).toBe(true);
+    expect(isEventPhrase('Em preparação')).toBe(true);
+    expect(isEventPhrase('Maria da Silva')).toBe(false);
+  });
+
+  it('E2E na coluna sem nome conhecido também é reconhecido', () => {
+    const e2e = 'E0036030520261012190600000000001';
+    const texto = LIVRE.replaceAll('MED-1', e2e);
+    expect(splitArksFiles([texto]).eventos).toHaveLength(1);
+  });
+
+  it('substitui os comprovantes antigos pelo do pedido', async () => {
+    const eventos = [EVENTOS_CABECALHO, ...eventosDe('MED-1', 'P-1')].join('\n');
+    const antes = await importArksFiles(auth, { eventos: [eventos], pedidos: [] });
+    const id = antes.touchedMedIds[0] ?? '';
+    await addCommunicationReconstruction(auth, id, {
+      template: 'ORDER_TRACKING',
+      from: 'Loja',
+      to: 'Pagamento confirmado',
+      subject: 'Obrigado pela sua compra',
+      body: 'Olá, Pagamento',
+      source: 'EMAIL',
+      sourceReference: 'linha-antiga',
+    });
+    const depois = await importArksFiles(auth, { eventos: [eventos], pedidos: [] }, {
+      replacePreviousReceipts: true,
+    });
+    expect(depois.replacedReceipts).toBe(1);
+    const medCase = await getCase(auth, id);
+    const pecas = medCase.evidences.filter((e) => e.type === 'DELIVERY_COMMUNICATION');
+    expect(pecas.map((e) => e.sourceReference)).toEqual(['P-1']);
   });
 });
