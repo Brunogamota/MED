@@ -12,6 +12,6 @@ import { deleteConnectorCredential } from '@/services/credentialService';
  * este botao cortou o acesso na origem.
  */
 export async function disconnectGmailAction(): Promise<void> {
-  await deleteConnectorCredential(serverPageContext(), 'GMAIL');
+  await deleteConnectorCredential((await serverPageContext()), 'GMAIL');
   revalidatePath('/integracoes');
 }

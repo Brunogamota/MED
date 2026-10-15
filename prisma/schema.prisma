@@ -121,6 +121,8 @@ enum SubmissionStatus {
 model Organization {
   id        String   @id
   name      String
+  /// Ambiente visual da conta (src/config/skins.ts). Nulo = o padrão.
+  skin      String?
   createdAt DateTime @default(now())
 
   meds Med[]

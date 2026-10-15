@@ -1,4 +1,5 @@
 import type {
+  AccountRepository,
   IdempotencyStore,
   IntegrationCredentialRepository,
   LoginThrottleRepository,
@@ -19,7 +20,8 @@ import { getConfig } from '@/lib/env';
 export type Repository = MedRepository &
   IdempotencyStore &
   IntegrationCredentialRepository &
-  LoginThrottleRepository;
+  LoginThrottleRepository &
+  AccountRepository;
 
 const globalStore = globalThis as unknown as {
   __medRepository?: Repository;

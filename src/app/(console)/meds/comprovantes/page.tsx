@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { serverPageContext } from '@/infra/auth/context';
+import { getActiveAccount } from '@/services/accountService';
 import { getCase, listMeds } from '@/services/medService';
 import { NotFoundError } from '@/services/errors';
 import { parseCommunicationReceipt } from '@/domain/communication/receipt';
@@ -84,7 +85,8 @@ export default async function ComprovantesEmLotePage({
   searchParams: Promise<{ ids?: string; de?: string; ate?: string }>;
 }) {
   const { ids, de, ate } = await searchParams;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
+  const { skin } = await getActiveAccount();
 
   // Dois caminhos de entrada: a selecao da fila (`ids`) e o recorte por data,
   // que e como o lote costuma ser pensado — "os do dia 24".
@@ -173,6 +175,7 @@ export default async function ComprovantesEmLotePage({
             <div data-print-name={peca.medId}>
               <ClientEmailView
                 receipt={receipt}
+                skin={skin}
                 sourceReference={peca.evidence.sourceReference}
                 endToEndId={medCase ? resolveEndToEndId(medCase) : null}
               />

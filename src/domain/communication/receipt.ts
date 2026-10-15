@@ -294,7 +294,7 @@ function lastSavedReceipt(
 export function draftCommunication(
   medCase: MedCase,
   template: CommunicationTemplate,
-  options: { reuseSaved?: boolean } = {},
+  options: { reuseSaved?: boolean; sender?: string } = {},
 ): CommunicationReceipt {
   // Retomar o que já foi escrito vem antes de propor um texto novo: o texto
   // novo é um palpite do sistema, e o salvo é o que de fato foi enviado. A
@@ -312,7 +312,7 @@ export function draftCommunication(
   const productName = order?.items[0]?.name ?? '';
   const sentAt = digitalDelivery?.sentAt ?? order?.placedAt ?? med.transactionAt ?? null;
 
-  const base = { from: EMAIL_SENDER_NAME, to, toName, sentAt };
+  const base = { from: options.sender ?? EMAIL_SENDER_NAME, to, toName, sentAt };
   // Saudacao com o primeiro nome quando o caso tem o nome. E como a mensagem
   // transacional de verdade abre; "Ola," sozinho so aparece quando nao ha nome.
   const greeting =

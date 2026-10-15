@@ -5,6 +5,8 @@ import {
   type CommunicationReceipt,
   type CommunicationTemplate,
 } from '@/domain/communication/receipt';
+import type { SkinId } from '@/config/skins';
+import { BullsReceipt } from '@/components/skins/bulls/bulls-receipt';
 
 /**
  * Painel de envios: reconstrói a comunicação como o painel administrativo do
@@ -122,8 +124,11 @@ export function ClientEmailView({
   receipt,
   sourceReference,
   endToEndId,
+  skin = 'jade',
 }: {
   receipt: CommunicationReceipt;
+  /** Ambiente da conta: cada um tem a própria peça. */
+  skin?: SkinId;
   /** Id da mensagem no painel do gateway, quando registrado na evidência. */
   sourceReference?: string | null;
   /**
@@ -136,6 +141,10 @@ export function ClientEmailView({
   endToEndId?: string | null;
 }) {
   const view = buildClientEmailView(receipt);
+
+  if (skin === 'bulls') {
+    return <BullsReceipt view={view} sourceReference={sourceReference} endToEndId={endToEndId} />;
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#d4d4d8] bg-white shadow-sm">

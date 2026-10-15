@@ -15,7 +15,7 @@ export async function createMedFromMessageAction(formData: FormData): Promise<vo
   const messageId = String(formData.get('messageId') ?? '').trim();
   if (!messageId) redirect('/integracoes/gmail?erro=Mensagem+não+informada');
 
-  const result = await createMedFromMessage(serverPageContext(), messageId);
+  const result = await createMedFromMessage((await serverPageContext()), messageId);
   if (!result.ok) {
     const detail = result.blocking?.length ? ` Faltou: ${result.blocking.join(', ')}.` : '';
     redirect(`/integracoes/gmail?erro=${encodeURIComponent(result.reason + detail)}`);

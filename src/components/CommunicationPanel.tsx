@@ -18,6 +18,7 @@ import { Panel } from '@/components/ui';
 import { formatDateTimeSmart } from '@/lib/format';
 import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
+import type { SkinId } from '@/config/skins';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
 import {
   addCommunicationAction,
@@ -42,12 +43,17 @@ export function CommunicationPanel({
   medCase,
   template,
   reconstructions,
+  sender,
+  skin,
 }: {
   medCase: MedCase;
   template: CommunicationTemplate;
   reconstructions: Evidence[];
+  /** Quem envia, pela conta. Sem valor, o remetente padrão. */
+  sender?: string;
+  skin?: SkinId;
 }) {
-  const draft = draftCommunication(medCase, template);
+  const draft = draftCommunication(medCase, template, { sender });
   const latest = reconstructions[reconstructions.length - 1];
   const referenceField = REFERENCE_FIELD[template];
   const medId = medCase.med.id;
@@ -245,6 +251,7 @@ export function CommunicationPanel({
                   </div>
                   <ClientEmailView
                     receipt={receipt}
+                    skin={skin}
                     sourceReference={evidence.sourceReference}
                     endToEndId={resolveEndToEndId(medCase)}
                   />

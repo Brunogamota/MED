@@ -48,8 +48,8 @@ function KindIcon({ kind }: { kind: AccessEntry['kind'] }) {
   );
 }
 
-export default function EquipePage() {
-  const auth = serverPageContext();
+export default async function EquipePage() {
+  const auth = await serverPageContext();
   const access = buildAccessList(getConfig(), auth.organizationId);
 
   return (

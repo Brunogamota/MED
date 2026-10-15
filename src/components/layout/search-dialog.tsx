@@ -50,7 +50,15 @@ const NAV_TARGETS = RAIL_SECTIONS.flatMap((section) =>
   ),
 );
 
-export function SearchTrigger() {
+/**
+ * `trigger` troca o botão de abrir — cada ambiente tem o seu. O diálogo e o
+ * atalho ⌘K são os mesmos.
+ */
+export function SearchTrigger({
+  trigger,
+}: {
+  trigger?: (open: () => void) => React.ReactNode;
+} = {}) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
@@ -102,6 +110,7 @@ export function SearchTrigger() {
 
   return (
     <>
+      {trigger ? trigger(() => setOpen(true)) : (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -114,6 +123,7 @@ export function SearchTrigger() {
           <span className="text-xs">⌘</span>K
         </kbd>
       </button>
+      )}
 
       <CommandDialog
         open={open}

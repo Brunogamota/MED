@@ -17,6 +17,7 @@
 
 import type { AuthContext } from '@/infra/auth/context';
 import { getRepository } from '@/infra/container';
+import { senderNameFor } from '@/services/accountService';
 import { assertCan } from '@/infra/auth/rbac';
 import {
   addCommunicationReconstruction,
@@ -108,6 +109,9 @@ export interface DeliveryImportOptions {
    * gerou comprovante: caso sem peca nova nao perde a que tem.
    */
   replacePreviousReceipts?: boolean;
+
+  /** Quem envia, no comprovante. Sem valor, o da conta da organização. */
+  sender?: string;
 }
 
 export interface DeliveryImportReport {
@@ -264,7 +268,10 @@ function chooseReceipt(
     const link = row.productUrl ?? medCase.digitalDelivery?.platform ?? null;
     return { template: templateForKind(kind), ...accessDeliveryMessage(name), reference: link, kind, kindKnown };
   }
-  const draft = draftCommunication(medCase, chosen as CommunicationTemplate, { reuseSaved: false });
+  const draft = draftCommunication(medCase, chosen as CommunicationTemplate, {
+    reuseSaved: false,
+    sender: options.sender,
+  });
   return { template: draft.template, subject: draft.subject, body: draft.body, reference: draft.reference ?? null, kind: null, kindKnown: true };
 }
 
@@ -332,6 +339,10 @@ export async function importDeliveryLog(
   options: DeliveryImportOptions = {},
 ): Promise<DeliveryImportReport> {
   assertCan(auth.role, 'med:write');
+  options = {
+    ...options,
+    sender: options.sender ?? (await senderNameFor(auth.organizationId)) ?? EMAIL_SENDER_NAME,
+  };
 
   // Varios arquivos entram numa importacao so, e nao em duas seguidas. O
   // export costuma vir partido — cobrancas num arquivo, entregas no outro —, e
@@ -559,7 +570,10 @@ export async function importDeliveryLog(
       // e dela que saem destinatario, data e link. Sem recarregar, o
       // comprovante sairia com o caso de antes da importacao.
       const medCase = await getCase(auth, med.id);
-      const draft = draftCommunication(medCase, 'ACCESS_DELIVERY', { reuseSaved: false });
+      const draft = draftCommunication(medCase, 'ACCESS_DELIVERY', {
+        reuseSaved: false,
+        sender: options.sender,
+      });
       const choice = chooseReceipt(row, medCase, options);
       const gerada = await addCommunicationReconstruction(auth, med.id, {
         template: choice.template,
@@ -745,7 +759,7 @@ export async function importDeliveryLog(
         const linkedChoice = chooseReceipt(row, await getCase(auth, med.id), options);
         const gerada = await addCommunicationReconstruction(auth, med.id, {
           template: linkedChoice.template,
-          from: EMAIL_SENDER_NAME,
+          from: options.sender ?? EMAIL_SENDER_NAME,
           to: row.customerEmail ?? '',
           toName:
             row.customerName ??

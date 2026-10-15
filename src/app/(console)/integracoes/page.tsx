@@ -25,7 +25,7 @@ export default async function IntegracoesPage({
   searchParams: Promise<{ gmail?: string; motivo?: string }>;
 }) {
   const { gmail: gmailResult, motivo } = await searchParams;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
   const stats = await computeAutoFillStats(auth);
   const config = getConfig();
   const gmail = await connectorStatus(auth.organizationId, 'GMAIL');

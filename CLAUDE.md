@@ -68,6 +68,8 @@ Detalhes em `docs/ARCHITECTURE.md`. Decisoes tecnicas e seus motivos em
 | `src/services/loginThrottle.ts` | Limite de tentativas de login, contado no banco. |
 | `src/lib/secretBox.ts` | Cifra AES-256-GCM das credenciais guardadas no banco. |
 | `src/services/credentialService.ts` | Credencial de conector por organizacao: unica camada que ve o valor claro. |
+| `src/services/accountService.ts` | Contas: cada conta e uma organizacao (dados isolados) com ambiente visual proprio; conta ativa por cookie. |
+| `src/config/skins.ts` | Catalogo de ambientes. Ambiente novo e codigo novo, em `src/components/skins/<id>/`. |
 | `src/lib/team.ts` | Acessos configurados: login do console e chaves de API, com papel e permissões. |
 | `src/app/meds/` | UI operacional. |
 | `src/components/ui/` | Primitivas do sistema visual (shadcn/ui). Não editar por tela. |

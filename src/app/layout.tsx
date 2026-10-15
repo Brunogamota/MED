@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { IBM_Plex_Mono, Inter, JetBrains_Mono, Manrope, Sora } from 'next/font/google';
 import { APP_CONFIG } from '@/config/app';
 import { MotionProvider } from '@/components/layout/motion-provider';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { getActiveAccount } from '@/services/accountService';
+import type { SkinId } from '@/config/skins';
 import './globals.css';
 
 /**
@@ -28,10 +30,33 @@ const mono = JetBrains_Mono({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: APP_CONFIG.name,
-  description: APP_CONFIG.description,
-};
+/* Ambiente Bulls Cash: outra família de títulos, de corpo e de número. */
+const sora = Sora({ subsets: ['latin'], variable: '--font-sora', display: 'swap' });
+const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope', display: 'swap' });
+const plexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  variable: '--font-plex-mono',
+  display: 'swap',
+});
+
+/** Ambiente da conta em uso. Falha de leitura cai no padrão, não derruba a página. */
+async function activeSkin(): Promise<{ skin: SkinId; name: string | null }> {
+  try {
+    const account = await getActiveAccount();
+    return { skin: account.skin, name: account.isDefault ? null : account.name };
+  } catch {
+    return { skin: 'jade', name: null };
+  }
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { name } = await activeSkin();
+  return {
+    title: name ? `${name} · Defesa de MED` : APP_CONFIG.name,
+    description: APP_CONFIG.description,
+  };
+}
 
 /**
  * Layout raiz: só o documento e os provedores.
@@ -40,9 +65,15 @@ export const metadata: Metadata = {
  * porque o login precisa da mesma base de tema sem herdar a navegação — quem
  * ainda não entrou não deve ver o menu do que existe lá dentro.
  */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { skin } = await activeSkin();
   return (
-    <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      data-skin={skin}
+      className={`${sans.variable} ${mono.variable} ${sora.variable} ${manrope.variable} ${plexMono.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         <ThemeProvider>
           <MotionProvider>

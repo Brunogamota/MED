@@ -28,7 +28,7 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div data-page-header className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
         {parent ? (
           <Breadcrumb className="mb-1">

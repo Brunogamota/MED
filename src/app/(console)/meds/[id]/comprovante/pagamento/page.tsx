@@ -19,7 +19,7 @@ export default async function ComprovantePagamentoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const auth = serverPageContext();
+  const auth = await serverPageContext();
 
   let medCase;
   try {
