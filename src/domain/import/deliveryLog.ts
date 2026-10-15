@@ -146,6 +146,9 @@ const HEADER_HINTS: [string[], LogField][] = [
 ];
 
 function fieldByPrefix(header: string): LogField | undefined {
+  // "Instituição pagadora" e "Banco do pagador" falam da instituição, não da
+  // pessoa: lidas como nome, viravam "Nenhum MED com o nome BANCO INTER S.A.".
+  if (/instituic|banco|psp/.test(header)) return undefined;
   return HEADER_HINTS.find(([words]) => words.some((word) => header.includes(word)))?.[1];
 }
 
