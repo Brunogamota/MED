@@ -106,7 +106,7 @@ function sections(counts: BullsCounts): { label: string; items: NavEntry[] }[] {
       items: [
         { id: 'importar-meds', label: 'Importar MEDs', href: '/meds/import', icon: <FileUp {...iconProps} /> },
         { id: 'importar-envios', label: 'Importar envios', href: '/meds/entregas', icon: <Truck {...iconProps} /> },
-        { id: 'comprovantes', label: 'Comprovantes', href: '/meds/comprovantes', icon: <ReceiptText {...iconProps} /> },
+        { id: 'comprovantes', label: 'Comprovantes', href: '/meds/comprovantes/gerados', icon: <ReceiptText {...iconProps} /> },
       ],
     },
     {

@@ -13,6 +13,8 @@ import type {
 } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type {
+  GeneratedReceiptRow,
+  ReceiptListRepository,
   ImportBatch,
   ImportBatchRepository,
   AccountRecord,
@@ -43,7 +45,8 @@ export class InMemoryMedRepository
     IntegrationCredentialRepository,
     LoginThrottleRepository,
     AccountRepository,
-    ImportBatchRepository
+    ImportBatchRepository,
+    ReceiptListRepository
 {
   private readonly meds = new Map<string, Med>();
   private readonly transactions = new Map<string, Transaction>();
@@ -385,5 +388,21 @@ export class InMemoryMedRepository
       if (update.productType) patch.productType = update.productType;
       await this.updateMed(organizationId, update.medId, patch);
     }
+  }
+
+  async listGeneratedReceipts(
+    organizationId: string,
+    page: { limit: number; offset: number },
+  ): Promise<{ total: number; rows: GeneratedReceiptRow[] }> {
+    const all: GeneratedReceiptRow[] = [];
+    for (const med of this.meds.values()) {
+      if (med.organizationId !== organizationId) continue;
+      for (const evidence of await this.listEvidence(organizationId, med.id)) {
+        if (evidence.type !== 'DELIVERY_COMMUNICATION') continue;
+        all.push({ evidence, med: { id: med.id, medId: med.medId, payerName: med.payer.name ?? null } });
+      }
+    }
+    all.sort((a, b) => b.evidence.createdAt.localeCompare(a.evidence.createdAt));
+    return { total: all.length, rows: all.slice(page.offset, page.offset + page.limit) };
   }
 }

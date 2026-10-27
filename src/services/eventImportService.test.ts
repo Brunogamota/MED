@@ -193,3 +193,16 @@ describe('planilhas Bulls', () => {
     expect(medCase.tracking?.events[0]?.sourceReference).toBe('planilha de pedidos, linha 2');
   });
 });
+
+describe('lista de comprovantes gerados', () => {
+  it('lista os comprovantes, mais novos primeiro, em páginas', async () => {
+    const eventos = [EVENTOS_CABECALHO, ...eventosDe('MED-1', 'P-1'), ...eventosDe('MED-2', 'P-2')].join('\n');
+    await importArksFiles(auth, { eventos: [eventos], pedidos: [] });
+    const { listGeneratedReceipts } = await import('@/services/medService');
+    const tudo = await listGeneratedReceipts(auth, { limit: 50, offset: 0 });
+    expect(tudo.total).toBe(2);
+    expect(tudo.rows.map((row) => row.med.medId).sort()).toEqual(['MED-1', 'MED-2']);
+    const segunda = await listGeneratedReceipts(auth, { limit: 1, offset: 1 });
+    expect(segunda.rows).toHaveLength(1);
+  });
+});
