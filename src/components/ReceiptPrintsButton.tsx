@@ -44,19 +44,20 @@ export function ReceiptPrintsButton() {
         nomes.set(card, `${vez > 1 ? `${base}_${vez}` : base}.png`);
       }
 
-      // Quatro por vez: o navegador desenha em paralelo sem travar a aba.
+      // Seis por vez, em 1,5x: legível na impressão e bem mais rápido que 2x
+      // num lote de centenas.
       const zip = new JSZip();
       let feitos = 0;
       const fila = [...cards];
       const trabalhador = async () => {
         for (let card = fila.shift(); card; card = fila.shift()) {
-          const blob = await toBlob(card, { pixelRatio: 2, fontEmbedCSS });
+          const blob = await toBlob(card, { pixelRatio: 1.5, fontEmbedCSS, skipAutoScale: true });
           if (blob) zip.file(nomes.get(card)!, blob);
           feitos += 1;
           setStatus(`Gerando ${feitos} de ${cards.length}…`);
         }
       };
-      await Promise.all(Array.from({ length: Math.min(4, cards.length) }, trabalhador));
+      await Promise.all(Array.from({ length: Math.min(6, cards.length) }, trabalhador));
 
       // PNG já vem comprimido: comprimir de novo no zip só gasta tempo.
       const arquivo = await zip.generateAsync({ type: 'blob', compression: 'STORE' });

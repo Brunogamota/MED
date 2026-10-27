@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { serverPageContext } from '@/infra/auth/context';
 import { getActiveAccount } from '@/services/accountService';
-import { getCase, listMeds } from '@/services/medService';
-import { NotFoundError } from '@/services/errors';
+import { getCases, listMeds } from '@/services/medService';
 import { parseCommunicationReceipt } from '@/domain/communication/receipt';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import { ReceiptPrintsButton } from '@/components/ReceiptPrintsButton';
@@ -105,24 +104,13 @@ export default async function ComprovantesEmLotePage({
     alvos = [];
   }
 
-  // Oito leituras por vez: um lote de centenas de casos, um por um, passava
-  // do tempo da página.
-  const lidos: (MedCase | null)[] = new Array(alvos.length).fill(null);
-  let proximo = 0;
-  const ler = async () => {
-    while (proximo < alvos.length) {
-      const indice = proximo++;
-      try {
-        lidos[indice] = await getCase(auth, alvos[indice]!);
-      } catch (error) {
-        // Caso fora da organizacao ou apagado no meio do caminho: sai da lista
-        // em vez de derrubar a pagina inteira do lote.
-        if (!(error instanceof NotFoundError)) throw error;
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(8, alvos.length) }, ler));
-  const casos = lidos.filter((medCase): medCase is MedCase => medCase !== null);
+  // Todos os casos numa leitura só (em blocos). Um `getCase` por caso eram
+  // centenas de idas ao banco e a página demorava minutos num lote grande.
+  // Caso fora da organização ou apagado simplesmente não volta.
+  const porId = new Map((await getCases(auth, alvos)).map((medCase) => [medCase.med.id, medCase]));
+  const casos = alvos
+    .map((id) => porId.get(id))
+    .filter((medCase): medCase is MedCase => medCase !== undefined);
 
   const pecas = casos.flatMap(pecasDoCaso);
 
