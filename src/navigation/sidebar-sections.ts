@@ -16,6 +16,7 @@ import {
   Send,
   ListChecked,
   WarningAlt,
+  Receipt,
   type CarbonIconType,
 } from '@carbon/icons-react';
 
@@ -74,6 +75,7 @@ const QUICK_ACTIONS: PanelGroup = {
     // sem saber por onde comecar segue a lista de cima para baixo.
     { id: 'importar', label: '1. Importar MEDs', icon: Upload, href: '/meds/import' },
     { id: 'entregas', label: '2. Importar envios', icon: Email, href: '/meds/entregas' },
+    { id: 'comprovantes', label: '3. Comprovantes gerados', icon: Receipt, href: '/meds/comprovantes/gerados' },
   ],
 };
 

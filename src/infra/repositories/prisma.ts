@@ -24,6 +24,8 @@ import type {
 } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type {
+  GeneratedReceiptRow,
+  ReceiptListRepository,
   ImportBatch,
   ImportBatchRepository,
   AccountRecord,
@@ -363,7 +365,8 @@ export class PrismaMedRepository
     IntegrationCredentialRepository,
     LoginThrottleRepository,
     AccountRepository,
-    ImportBatchRepository
+    ImportBatchRepository,
+    ReceiptListRepository
 {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -1091,5 +1094,36 @@ export class PrismaMedRepository
       },
       { timeout: 120_000, maxWait: 20_000 },
     );
+  }
+
+  async listGeneratedReceipts(
+    organizationId: string,
+    page: { limit: number; offset: number },
+  ): Promise<{ total: number; rows: GeneratedReceiptRow[] }> {
+    const where = { organizationId, type: 'DELIVERY_COMMUNICATION' };
+    const [total, rows] = await Promise.all([
+      this.prisma.evidence.count({ where }),
+      this.prisma.evidence.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: page.limit,
+        skip: page.offset,
+        include: { med: { select: { id: true, medId: true, payer: true } } },
+      }),
+    ]);
+    return {
+      total,
+      rows: rows.map((row) => {
+        const payer = row.med.payer as { name?: unknown } | null;
+        return {
+          evidence: mapEvidence(row),
+          med: {
+            id: row.med.id,
+            medId: row.med.medId,
+            payerName: typeof payer?.name === 'string' ? payer.name : null,
+          },
+        };
+      }),
+    };
   }
 }

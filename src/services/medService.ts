@@ -15,7 +15,7 @@ import type { MedCase } from '@/domain/case';
 import type { AuthContext } from '@/infra/auth/context';
 import { assertCan } from '@/infra/auth/rbac';
 import { getRepository, type Repository } from '@/infra/container';
-import type { ListMedsFilter, MedListRow } from '@/infra/repositories/types';
+import type { GeneratedReceiptRow, ListMedsFilter, MedListRow } from '@/infra/repositories/types';
 import { recordAudit } from '@/services/audit';
 import { ConflictError, NotFoundError, ValidationError } from '@/services/errors';
 import { createHash } from 'node:crypto';
@@ -759,6 +759,22 @@ export async function deleteCommunicationReconstruction(
     await refreshStatus(repository, auth, medId);
   }
   return removed;
+}
+
+/**
+ * Comprovantes já gerados na organização, mais novos primeiro, em páginas.
+ *
+ * Leve de propósito: só a evidência e o número/nome do caso. Abrir o lote de
+ * centenas de peças de uma vez era o que travava; aqui se escolhe a página e
+ * só ela é montada para baixar.
+ */
+export async function listGeneratedReceipts(
+  auth: AuthContext,
+  page: { limit: number; offset: number },
+): Promise<{ total: number; rows: GeneratedReceiptRow[] }> {
+  assertCan(auth.role, 'med:read');
+  const repository = await getRepository();
+  return repository.listGeneratedReceipts(auth.organizationId, page);
 }
 
 export async function listCommunications(auth: AuthContext, medId: string): Promise<Evidence[]> {

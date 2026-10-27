@@ -2,6 +2,7 @@ import type {
   AccountRepository,
   IdempotencyStore,
   ImportBatchRepository,
+  ReceiptListRepository,
   IntegrationCredentialRepository,
   LoginThrottleRepository,
   MedRepository,
@@ -23,7 +24,8 @@ export type Repository = MedRepository &
   IntegrationCredentialRepository &
   LoginThrottleRepository &
   AccountRepository &
-  ImportBatchRepository;
+  ImportBatchRepository &
+  ReceiptListRepository;
 
 const globalStore = globalThis as unknown as {
   __medRepository?: Repository;

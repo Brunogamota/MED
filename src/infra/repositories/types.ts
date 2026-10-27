@@ -171,3 +171,17 @@ export interface ImportBatch {
 export interface ImportBatchRepository {
   applyImportBatch(organizationId: string, batch: ImportBatch): Promise<void>;
 }
+
+/** Um comprovante gerado, com o mínimo do caso para listar. */
+export interface GeneratedReceiptRow {
+  evidence: Evidence;
+  med: { id: string; medId: string; payerName: string | null };
+}
+
+export interface ReceiptListRepository {
+  /** Comprovantes (reconstruções de comunicação) da organização, mais novos primeiro. */
+  listGeneratedReceipts(
+    organizationId: string,
+    page: { limit: number; offset: number },
+  ): Promise<{ total: number; rows: GeneratedReceiptRow[] }>;
+}

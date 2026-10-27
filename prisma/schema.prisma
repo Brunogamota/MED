@@ -298,6 +298,7 @@ model Evidence {
 
   @@index([organizationId, medId])
   @@index([medId, type])
+  @@index([organizationId, type, createdAt])
 }
 
 model Document {
