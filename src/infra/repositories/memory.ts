@@ -13,6 +13,8 @@ import type {
 } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type {
+  ImportBatch,
+  ImportBatchRepository,
   AccountRecord,
   AccountRepository,
   IdempotencyStore,
@@ -40,7 +42,8 @@ export class InMemoryMedRepository
     IdempotencyStore,
     IntegrationCredentialRepository,
     LoginThrottleRepository,
-    AccountRepository
+    AccountRepository,
+    ImportBatchRepository
 {
   private readonly meds = new Map<string, Med>();
   private readonly transactions = new Map<string, Transaction>();
@@ -368,5 +371,19 @@ export class InMemoryMedRepository
     };
     this.accounts.set(account.id, saved);
     return saved;
+  }
+
+  async applyImportBatch(organizationId: string, batch: ImportBatch): Promise<void> {
+    for (const order of batch.orders) await this.upsertOrder(order);
+    for (const tracking of batch.trackings) await this.upsertTracking(tracking);
+    for (const id of batch.removeEvidenceIds) await this.deleteEvidence(organizationId, id);
+    for (const evidence of batch.evidences) await this.addEvidence(evidence);
+    for (const entry of batch.audits) await this.appendAudit(entry);
+    for (const update of batch.medUpdates) {
+      const patch: Partial<Med> = {};
+      if (update.status) patch.status = update.status;
+      if (update.productType) patch.productType = update.productType;
+      await this.updateMed(organizationId, update.medId, patch);
+    }
   }
 }

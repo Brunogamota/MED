@@ -8,6 +8,7 @@ import type {
   Med,
   MedStatus,
   Order,
+  ProductType,
   StoredDocument,
   Tracking,
   Transaction,
@@ -146,4 +147,27 @@ export interface AccountRecord {
 export interface AccountRepository {
   listAccounts(): Promise<AccountRecord[]>;
   saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord>;
+}
+
+/**
+ * Escritas de uma importação em lote, gravadas de uma vez.
+ *
+ * Gravar MED a MED eram ~8 idas ao banco por caso — centenas de casos
+ * levavam minutos. O lote junta tudo e o adapter grava em poucas consultas.
+ * Cada item continua com sua origem e sua trilha de auditoria.
+ */
+export interface ImportBatch {
+  /** Pedidos novos (o caso não tinha pedido). */
+  orders: Order[];
+  /** Acompanhamento completo de cada caso tocado — substitui o anterior. */
+  trackings: Tracking[];
+  evidences: Evidence[];
+  /** Só reconstruções de comunicação — evidência de origem externa não sai. */
+  removeEvidenceIds: string[];
+  audits: AuditLogEntry[];
+  medUpdates: { medId: string; status?: MedStatus; productType?: ProductType }[];
+}
+
+export interface ImportBatchRepository {
+  applyImportBatch(organizationId: string, batch: ImportBatch): Promise<void>;
 }
