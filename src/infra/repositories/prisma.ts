@@ -449,7 +449,15 @@ export class PrismaMedRepository
       // Sem limite pedido, vem tudo: a fila tem de mostrar todos os casos.
       take: filter.limit,
       include: {
-        defenses: { orderBy: { version: 'desc' }, take: 1 },
+        // Só as colunas da lista: sem o `select`, o Prisma trazia a defesa
+        // inteira (pacote e narrativa em JSON) de todas as versões de todos os
+        // casos e cortava em memória — com milhares de casos, isso era o que
+        // deixava cada tela e cada importação lenta.
+        defenses: {
+          orderBy: { version: 'desc' },
+          take: 1,
+          select: { id: true, version: true, scoreTotal: true, scoreMax: true, generatedAt: true },
+        },
         _count: { select: { evidences: true } },
       },
     });

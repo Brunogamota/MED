@@ -1,3 +1,4 @@
+import { firstNameForGreeting, personEmail, personName } from '@/domain/person';
 import type { EvidenceSource, IsoDateTime, JsonValue } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import { formatDateTimeSmart } from '@/lib/format';
@@ -304,19 +305,21 @@ export function draftCommunication(
 
   const { customer, order, digitalDelivery, tracking, med } = medCase;
   const to =
+    personEmail(digitalDelivery?.sentTo) ??
+    personEmail(customer?.identification.email) ??
+    personEmail(med.payer.email) ??
     digitalDelivery?.sentTo ??
-    customer?.identification.email ??
-    med.payer.email ??
     '';
-  const toName = customer?.identification.name ?? med.payer.name ?? null;
+  // Só nome de pessoa: "Transação", "Usuário" ou o banco do pagador não entram.
+  const toName = personName(customer?.identification.name) ?? personName(med.payer.name) ?? null;
   const productName = order?.items[0]?.name ?? '';
   const sentAt = digitalDelivery?.sentAt ?? order?.placedAt ?? med.transactionAt ?? null;
 
   const base = { from: options.sender ?? EMAIL_SENDER_NAME, to, toName, sentAt };
   // Saudacao com o primeiro nome quando o caso tem o nome. E como a mensagem
   // transacional de verdade abre; "Ola," sozinho so aparece quando nao ha nome.
-  const greeting =
-    toName && !isPlaceholderValue(toName) ? `Olá, ${toName.trim().split(/\s+/)[0]}` : 'Olá';
+  const primeiro = firstNameForGreeting(toName);
+  const greeting = primeiro ? `Olá, ${primeiro}` : 'Olá';
 
   switch (template) {
     case 'PURCHASE_CONFIRMATION':
@@ -374,7 +377,7 @@ export function draftCommunication(
 }
 
 function firstNameGreeting(name: string | null | undefined): string {
-  const first = name?.trim().split(/\s+/)[0];
+  const first = firstNameForGreeting(name);
   return first ? `Olá, ${first}` : 'Olá';
 }
 

@@ -1,3 +1,4 @@
+import { personName } from '@/domain/person';
 import {
   detectDelimiter,
   normalizeHeader,
@@ -254,9 +255,11 @@ function destinatario(
   const name = rawName.trim();
   const email = rawEmail.trim();
   const emailValido = EMAIL_PATTERN.test(email) && !email.endsWith('.invalid');
-  const nomeValido = !isPlaceholderValue(name) && !EMAIL_PATTERN.test(name);
+  // Só nome de pessoa: "Transação", "Usuário", o banco do pagador e etapa de
+  // pedido não viram "Olá, Transação" no comprovante.
+  const nomeValido = !isPlaceholderValue(name) && personName(name) !== null;
   const emailEhNome =
-    !emailValido && !isPlaceholderValue(email) && /^[A-Za-zÀ-ÿ'.]+(\s+[A-Za-zÀ-ÿ'.]+)+$/.test(email);
+    !emailValido && !isPlaceholderValue(email) && personName(email) !== null && /\s/.test(email.trim());
   return {
     customerName: nomeValido ? name : emailEhNome ? email : null,
     customerEmail: emailValido ? email : EMAIL_PATTERN.test(name) ? name : null,
