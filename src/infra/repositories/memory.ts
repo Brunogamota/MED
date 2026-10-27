@@ -296,6 +296,11 @@ export class InMemoryMedRepository
     };
   }
 
+  async loadCases(organizationId: string, medIds: string[]): Promise<MedCase[]> {
+    const cases = await Promise.all(medIds.map((id) => this.loadCase(organizationId, id)));
+    return cases.filter((medCase): medCase is MedCase => medCase !== null);
+  }
+
   async get(organizationId: string, scope: string, key: string): Promise<string | null> {
     return this.idempotency.get(`${organizationId}:${scope}:${key}`) ?? null;
   }

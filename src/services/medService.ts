@@ -103,8 +103,9 @@ async function refreshStatus(
   repository: Repository,
   auth: AuthContext,
   medId: string,
+  known?: MedCase,
 ): Promise<void> {
-  const medCase = await loadCaseOrThrow(repository, auth, medId);
+  const medCase = known ?? (await loadCaseOrThrow(repository, auth, medId));
   const latestDefense = await repository.getLatestDefense(auth.organizationId, medId);
   const next = deriveStatus(medCase, latestDefense !== null);
   if (next === medCase.med.status) return;
@@ -278,6 +279,35 @@ export async function getCase(auth: AuthContext, medId: string): Promise<MedCase
   return loadCaseOrThrow(repository, auth, medId);
 }
 
+/**
+ * Vários casos numa leitura só, em blocos. Para lote: centenas de `getCase`
+ * eram centenas de idas ao banco, cada uma com uma consulta por relação.
+ */
+export async function getCases(auth: AuthContext, medIds: string[]): Promise<MedCase[]> {
+  assertCan(auth.role, 'med:read');
+  const repository = await getRepository();
+  const out: MedCase[] = [];
+  for (let start = 0; start < medIds.length; start += 200) {
+    out.push(...(await repository.loadCases(auth.organizationId, medIds.slice(start, start + 200))));
+  }
+  return out;
+}
+
+/**
+ * Opções de lote para as escritas do caso: quem já leu o caso passa ele
+ * (`medCase`) e pode adiar o recálculo do status (`refresh: false`) para
+ * fazer uma vez só no fim, com `refreshMedStatus`.
+ */
+export interface BatchWriteOptions {
+  medCase?: MedCase;
+  refresh?: boolean;
+}
+
+export async function refreshMedStatus(auth: AuthContext, medCase: MedCase): Promise<void> {
+  const repository = await getRepository();
+  await refreshStatus(repository, auth, medCase.med.id, medCase);
+}
+
 export async function updateMed(
   auth: AuthContext,
   medId: string,
@@ -447,10 +477,11 @@ export async function upsertOrder(
   auth: AuthContext,
   medId: string,
   input: UpsertOrderInput,
+  batch: BatchWriteOptions = {},
 ): Promise<Order> {
   assertCan(auth.role, 'med:write');
   const repository = await getRepository();
-  const medCase = await loadCaseOrThrow(repository, auth, medId);
+  const medCase = batch.medCase ?? (await loadCaseOrThrow(repository, auth, medId));
 
   const order: Order = {
     id: medCase.order?.id ?? newId('ord'),
@@ -486,7 +517,7 @@ export async function upsertOrder(
   if (!medCase.med.productType) {
     await repository.updateMed(auth.organizationId, medId, { productType: input.productType });
   }
-  await refreshStatus(repository, auth, medId);
+  if (batch.refresh !== false) await refreshStatus(repository, auth, medId);
   return saved;
 }
 
@@ -494,10 +525,11 @@ export async function upsertTracking(
   auth: AuthContext,
   medId: string,
   input: UpsertTrackingInput,
+  batch: BatchWriteOptions = {},
 ): Promise<Tracking> {
   assertCan(auth.role, 'med:write');
   const repository = await getRepository();
-  const medCase = await loadCaseOrThrow(repository, auth, medId);
+  const medCase = batch.medCase ?? (await loadCaseOrThrow(repository, auth, medId));
 
   const tracking: Tracking = {
     id: medCase.tracking?.id ?? newId('trk'),
@@ -533,7 +565,7 @@ export async function upsertTracking(
     previousValue: toJson(medCase.tracking),
     newValue: toJson(saved),
   });
-  await refreshStatus(repository, auth, medId);
+  if (batch.refresh !== false) await refreshStatus(repository, auth, medId);
   return saved;
 }
 
@@ -633,10 +665,11 @@ export async function addCommunicationReconstruction(
   auth: AuthContext,
   medId: string,
   input: CreateCommunicationInput,
+  batch: BatchWriteOptions = {},
 ): Promise<Evidence> {
   assertCan(auth.role, 'evidence:write');
   const repository = await getRepository();
-  await loadCaseOrThrow(repository, auth, medId);
+  if (!batch.medCase) await loadCaseOrThrow(repository, auth, medId);
 
   const now = new Date().toISOString();
   const receipt = {
@@ -678,7 +711,7 @@ export async function addCommunicationReconstruction(
     source: saved.source,
     newValue: toJson({ type: saved.type, reconstruction: true, to: input.to, subject: input.subject }),
   });
-  await refreshStatus(repository, auth, medId);
+  if (batch.refresh !== false) await refreshStatus(repository, auth, medId);
   return saved;
 }
 

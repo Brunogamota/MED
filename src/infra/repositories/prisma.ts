@@ -797,6 +797,32 @@ export class PrismaMedRepository
     };
   }
 
+  async loadCases(organizationId: string, medIds: string[]): Promise<MedCase[]> {
+    if (medIds.length === 0) return [];
+    const rows = await this.prisma.med.findMany({
+      where: { organizationId, id: { in: medIds } },
+      include: {
+        transaction: true,
+        customer: true,
+        order: true,
+        tracking: true,
+        digitalDelivery: true,
+        evidences: { orderBy: { createdAt: 'asc' } },
+        documents: { orderBy: { uploadedAt: 'asc' } },
+      },
+    });
+    return rows.map((row) => ({
+      med: mapMed(row),
+      transaction: row.transaction ? mapTransaction(row.transaction) : null,
+      customer: row.customer ? mapCustomer(row.customer) : null,
+      order: row.order ? mapOrder(row.order) : null,
+      tracking: row.tracking ? mapTracking(row.tracking) : null,
+      digitalDelivery: row.digitalDelivery ? mapDigitalDelivery(row.digitalDelivery) : null,
+      evidences: row.evidences.map(mapEvidence),
+      documents: row.documents.map(mapDocument),
+    }));
+  }
+
   async get(organizationId: string, scope: string, key: string): Promise<string | null> {
     const row = await this.prisma.idempotencyRecord.findUnique({
       where: { organizationId_scope_key: { organizationId, scope, key } },

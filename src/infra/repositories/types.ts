@@ -77,6 +77,8 @@ export interface MedRepository {
   listAudit(organizationId: string, medId: string): Promise<AuditLogEntry[]>;
 
   loadCase(organizationId: string, medId: string): Promise<MedCase | null>;
+  /** Vários casos de uma vez — para lote, sem uma ida ao banco por caso. */
+  loadCases(organizationId: string, medIds: string[]): Promise<MedCase[]>;
 }
 
 /**
