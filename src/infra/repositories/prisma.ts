@@ -13,6 +13,7 @@ import type {
   JsonValue,
   Med,
   MedStatus,
+  ProductType,
   Order,
   OrderItem,
   PartyIdentification,
@@ -23,6 +24,8 @@ import type {
 } from '@/domain/types';
 import type { MedCase } from '@/domain/case';
 import type {
+  ImportBatch,
+  ImportBatchRepository,
   AccountRecord,
   AccountRepository,
   IdempotencyStore,
@@ -359,7 +362,8 @@ export class PrismaMedRepository
     IdempotencyStore,
     IntegrationCredentialRepository,
     LoginThrottleRepository,
-    AccountRepository
+    AccountRepository,
+    ImportBatchRepository
 {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -953,5 +957,139 @@ export class PrismaMedRepository
       skin: row.skin ?? null,
       createdAt: row.createdAt.toISOString(),
     };
+  }
+
+  /**
+   * O lote inteiro em poucas consultas: `createMany` em blocos de 500 e um
+   * `updateMany` por combinação de status/tipo. O acompanhamento é trocado
+   * (apaga e recria com o mesmo id e a mesma data de criação), que é o que o
+   * `upsert` fazia linha a linha.
+   */
+  async applyImportBatch(organizationId: string, batch: ImportBatch): Promise<void> {
+    const blocos = <T,>(items: T[]): T[][] => {
+      const out: T[][] = [];
+      for (let start = 0; start < items.length; start += 500) out.push(items.slice(start, start + 500));
+      return out;
+    };
+    await this.prisma.$transaction(
+      async (tx) => {
+        for (const bloco of blocos(batch.orders)) {
+          await tx.order.createMany({
+            skipDuplicates: true,
+            data: bloco.map((order) => ({
+              id: order.id,
+              organizationId: order.organizationId,
+              medId: order.medId,
+              externalId: order.externalId,
+              productType: order.productType,
+              items: jsonInput(order.items),
+              totalAmountCents:
+                order.totalAmount === null || order.totalAmount === undefined
+                  ? null
+                  : toCents(order.totalAmount),
+              placedAt: date(order.placedAt),
+              checkoutIp: order.checkoutIp,
+              deviceFingerprint: order.deviceFingerprint,
+              userAgent: order.userAgent,
+              shippingAddress: jsonInput(order.shippingAddress),
+              provider: order.provider,
+              providerReference: order.providerReference,
+              createdAt: date(order.createdAt) ?? new Date(),
+            })),
+          });
+        }
+
+        for (const bloco of blocos(batch.trackings)) {
+          await tx.tracking.deleteMany({
+            where: { organizationId, medId: { in: bloco.map((tracking) => tracking.medId) } },
+          });
+          await tx.tracking.createMany({
+            data: bloco.map((tracking) => ({
+              id: tracking.id,
+              organizationId: tracking.organizationId,
+              medId: tracking.medId,
+              carrier: tracking.carrier,
+              trackingCode: tracking.trackingCode,
+              status: tracking.status,
+              postedAt: date(tracking.postedAt),
+              deliveredAt: date(tracking.deliveredAt),
+              receiverName: tracking.receiverName,
+              events: jsonInput(tracking.events),
+              source: tracking.source,
+              sourceProvider: tracking.sourceProvider,
+              sourceReference: tracking.sourceReference,
+              createdAt: date(tracking.createdAt) ?? new Date(),
+            })),
+          });
+        }
+
+        for (const bloco of blocos(batch.removeEvidenceIds)) {
+          await tx.evidence.deleteMany({
+            where: { organizationId, id: { in: bloco }, type: 'DELIVERY_COMMUNICATION' },
+          });
+        }
+
+        for (const bloco of blocos(batch.evidences)) {
+          await tx.evidence.createMany({
+            data: bloco.map((evidence) => ({
+              id: evidence.id,
+              organizationId: evidence.organizationId,
+              medId: evidence.medId,
+              type: evidence.type,
+              value: jsonInput(evidence.value),
+              displayValue: evidence.displayValue,
+              source: evidence.source,
+              sourceProvider: evidence.sourceProvider,
+              sourceReference: evidence.sourceReference,
+              receivedAt: date(evidence.receivedAt) ?? new Date(),
+              verifiedAt: date(evidence.verifiedAt),
+              verificationStatus: evidence.verificationStatus,
+              documentId: evidence.documentId,
+              metadata: jsonInput(evidence.metadata),
+              createdBy: evidence.createdBy,
+            })),
+          });
+        }
+
+        for (const bloco of blocos(batch.audits)) {
+          await tx.auditLog.createMany({
+            data: bloco.map((entry) => ({
+              id: entry.id,
+              organizationId: entry.organizationId,
+              medId: entry.medId,
+              action: entry.action,
+              entityType: entry.entityType,
+              entityId: entry.entityId,
+              actor: entry.actor,
+              actorRole: entry.actorRole,
+              source: entry.source,
+              previousValue: jsonInput(entry.previousValue),
+              newValue: jsonInput(entry.newValue),
+              occurredAt: date(entry.occurredAt) ?? new Date(),
+            })),
+          });
+        }
+
+        const grupos = new Map<string, { status?: MedStatus; productType?: ProductType; ids: string[] }>();
+        for (const update of batch.medUpdates) {
+          const chave = `${update.status ?? ''}|${update.productType ?? ''}`;
+          const grupo = grupos.get(chave) ?? { status: update.status, productType: update.productType, ids: [] };
+          grupo.ids.push(update.medId);
+          grupos.set(chave, grupo);
+        }
+        for (const grupo of grupos.values()) {
+          for (const bloco of blocos(grupo.ids)) {
+            await tx.med.updateMany({
+              where: { organizationId, id: { in: bloco } },
+              data: {
+                ...(grupo.status ? { status: grupo.status } : {}),
+                ...(grupo.productType ? { productType: grupo.productType } : {}),
+              },
+            });
+          }
+        }
+      },
+      { timeout: 120_000, maxWait: 20_000 },
+    );
   }
 }

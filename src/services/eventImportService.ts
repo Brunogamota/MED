@@ -11,16 +11,8 @@ import {
   type EventoRow,
   type PedidoRow,
 } from '@/domain/import/eventLog';
-import {
-  addCommunicationReconstruction,
-  deleteCommunicationReconstruction,
-  getCase,
-  getCases,
-  refreshMedStatus,
-  listMeds,
-  upsertOrder,
-  upsertTracking,
-} from '@/services/medService';
+import { getCase, getCases, listMeds } from '@/services/medService';
+import { ImportBatchWriter } from '@/services/importBatchWriter';
 import {
   EMAIL_SENDER_NAME,
   draftCommunication,
@@ -204,13 +196,14 @@ export async function importArksFiles(
   report.total = todas.size;
   const tocados = new Set<string>();
 
-  // Um MED por vez levava minutos num lote de centenas e estourava o tempo da
-  // função. Os MEDs são independentes: oito em paralelo.
   // Os casos da planilha numa leitura só, em vez de um `getCase` por MED.
   const idsDaPlanilha = [...todas]
     .map((chave) => porMedId.get(chave)?.id)
     .filter((id): id is string => id !== undefined);
   const casosPorId = new Map((await getCases(auth, idsDaPlanilha)).map((c) => [c.med.id, c]));
+  const comDefesa = new Set(rows.filter((row) => row.latestDefense !== null).map((row) => row.med.id));
+  // Tudo é montado em memória e gravado de uma vez no fim (ImportBatchWriter).
+  const writer = new ImportBatchWriter(auth);
 
   const fila = [...todas];
   const processar = async (chave: string): Promise<void> => {
@@ -244,26 +237,16 @@ export async function importArksFiles(
     // o que veio de fonte mais forte.
     const tipo = pedido?.natureza ?? medCase.order?.productType ?? medCase.med.productType ?? null;
     if (pedido && !medCase.order && tipo) {
-      const order = await upsertOrder(
-        auth,
-        med.id,
-        {
-          externalId: pedido.pedido ?? undefined,
-          productType: tipo,
-          items: [],
-          provider: pedido.distribuidor ?? undefined,
-          providerReference: pedido.idNoFornecedor ?? undefined,
-        },
-        { medCase, refresh: false },
-      );
+      medCase = writer.order(medCase, {
+        externalId: pedido.pedido ?? undefined,
+        productType: tipo,
+        items: [],
+        provider: pedido.distribuidor ?? undefined,
+        providerReference: pedido.idNoFornecedor ?? undefined,
+      });
       gravou = true;
       escreveu = true;
       partes.push(`pedido ${pedido.pedido ?? ''}`.trim() + ' registrado');
-      medCase = {
-        ...medCase,
-        order,
-        med: { ...medCase.med, productType: medCase.med.productType ?? tipo },
-      };
     }
 
     if (linhasEvento.length > 0) {
@@ -299,7 +282,7 @@ export async function importArksFiles(
         const distribuidor =
           linhasEvento.find((row) => row.distribuidor)?.distribuidor ?? pedido?.distribuidor ?? null;
 
-        const tracking = await upsertTracking(auth, med.id, {
+        medCase = writer.tracking(medCase, {
           carrier: medCase.tracking?.carrier ?? undefined,
           trackingCode: medCase.tracking?.trackingCode ?? undefined,
           status,
@@ -317,8 +300,7 @@ export async function importArksFiles(
           source: medCase.tracking?.source ?? 'MERCHANT',
           sourceProvider: medCase.tracking?.sourceProvider ?? distribuidor ?? undefined,
           sourceReference: medCase.tracking?.sourceReference ?? undefined,
-        }, { medCase, refresh: false });
-        medCase = { ...medCase, tracking };
+        });
         gravou = true;
         escreveu = true;
         partes.push(
@@ -356,17 +338,11 @@ export async function importArksFiles(
           for (const evidence of atualizado.evidences) {
             if (evidence.type !== 'DELIVERY_COMMUNICATION') continue;
             if (evidence.sourceReference === referencia) continue;
-            if (await deleteCommunicationReconstruction(auth, med.id, evidence.id)) apagadas += 1;
+            medCase = writer.removeReconstruction(medCase, evidence.id);
+            apagadas += 1;
           }
           if (apagadas > 0) {
             escreveu = true;
-            medCase = {
-              ...medCase,
-              evidences: medCase.evidences.filter(
-                (evidence) =>
-                  evidence.type !== 'DELIVERY_COMMUNICATION' || evidence.sourceReference === referencia,
-              ),
-            };
             report.replacedReceipts += apagadas;
             gravou = true;
             partes.push(`${apagadas} ${apagadas === 1 ? 'comprovante antigo apagado' : 'comprovantes antigos apagados'}`);
@@ -384,7 +360,7 @@ export async function importArksFiles(
             .map((evento) => evento.occurredAt)
             .sort()[0];
           const mensagem = orderTrackingMessage(draft.toName, link);
-          const peca = await addCommunicationReconstruction(auth, med.id, {
+          medCase = writer.reconstruction(medCase, {
             template: 'ORDER_TRACKING',
             from: draft.from,
             to: destinatario,
@@ -395,8 +371,7 @@ export async function importArksFiles(
             reference: link ?? undefined,
             source: 'MERCHANT',
             sourceReference: referencia,
-          }, { medCase, refresh: false });
-          medCase = { ...medCase, evidences: [...medCase.evidences, peca] };
+          });
           escreveu = true;
           report.receipts += 1;
           report.receiptsPhysical += 1;
@@ -409,7 +384,7 @@ export async function importArksFiles(
     }
 
     // Status do caso recalculado uma vez, com tudo que esta linha gravou.
-    if (escreveu) await refreshMedStatus(auth, medCase);
+    if (escreveu) writer.status(medCase, comDefesa.has(med.id));
 
     if (!gravou && jaRegistrado) {
       tocados.add(med.id);
@@ -458,6 +433,7 @@ export async function importArksFiles(
     }
   };
   await Promise.all(Array.from({ length: Math.min(8, fila.length) }, trabalhador));
+  await writer.flush();
   report.lines.sort((a, b) => a.line - b.line);
 
   // Na ordem da planilha, não na ordem em que o paralelo terminou.
