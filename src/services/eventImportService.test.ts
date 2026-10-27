@@ -206,3 +206,56 @@ describe('lista de comprovantes gerados', () => {
     expect(segunda.rows).toHaveLength(1);
   });
 });
+
+describe('nome de quem comprou no comprovante', () => {
+  it('usa o nome e o e-mail da planilha, nunca "Transação"', async () => {
+    await createMed(auth, {
+      medId: 'MED-X',
+      amount: 50,
+      currency: 'BRL',
+      openedAt: '2026-10-03T12:00:00.000Z',
+      reason: 'PRODUCT_NOT_RECEIVED',
+      payer: { name: 'Transação' },
+    });
+    const planilha = [
+      'MED,Ordem,Etapa,Registrado em,Quem comprou,Onde falar',
+      'MED-X,P-X,Pedido recebido,01/10/2026 10:05,MARIA DA SILVA,maria@exemplo.com',
+      'MED-X,P-X,Encaminhado ao parceiro,01/10/2026 11:00,MARIA DA SILVA,maria@exemplo.com',
+    ].join('\n');
+    const split = splitArksFiles([planilha]);
+    expect(split.eventos).toHaveLength(1);
+    const report = await importArksFiles(auth, { eventos: split.eventos, pedidos: [] });
+    expect(report.receipts).toBe(1);
+    const { listGeneratedReceipts } = await import('@/services/medService');
+    const { rows } = await listGeneratedReceipts(auth, { limit: 10, offset: 0 });
+    const peca = rows.find((row) => row.med.medId === 'MED-X')?.evidence.value as unknown as {
+      to: string;
+      toName: string | null;
+      body: string;
+    };
+    expect(peca.toName).toBe('MARIA DA SILVA');
+    expect(peca.to).toBe('maria@exemplo.com');
+    expect(peca.body.startsWith('Olá, Maria')).toBe(true);
+  });
+
+  it('sem nome de pessoa em lugar nenhum, a saudação fica sem nome', async () => {
+    await createMed(auth, {
+      medId: 'MED-Y',
+      amount: 50,
+      currency: 'BRL',
+      openedAt: '2026-10-03T12:00:00.000Z',
+      reason: 'PRODUCT_NOT_RECEIVED',
+      payer: { name: 'Usuário', email: 'y@exemplo.com' },
+    });
+    const planilha = [EVENTOS_CABECALHO, ...eventosDe('MED-Y', 'P-Y')].join('\n');
+    await importArksFiles(auth, { eventos: [planilha], pedidos: [] });
+    const { listGeneratedReceipts } = await import('@/services/medService');
+    const { rows } = await listGeneratedReceipts(auth, { limit: 10, offset: 0 });
+    const peca = rows.find((row) => row.med.medId === 'MED-Y')?.evidence.value as unknown as {
+      toName: string | null;
+      body: string;
+    };
+    expect(peca.toName).toBeNull();
+    expect(peca.body.startsWith('Olá\n')).toBe(true);
+  });
+});

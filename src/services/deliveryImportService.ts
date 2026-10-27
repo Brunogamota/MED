@@ -333,6 +333,30 @@ function mergeParsed(partes: ParsedDeliveryLog[]): MergedLog {
   return { rows, fatalError: null, duplicated: repetidas };
 }
 
+/**
+ * Roda `fn` sobre os itens com até `limite` em paralelo, mas os itens de mesma
+ * chave um depois do outro — dois envios do mesmo caso não se atropelam.
+ */
+async function emParalelo<T>(
+  itens: T[],
+  chave: (item: T) => string,
+  fn: (item: T) => Promise<void>,
+  limite = 8,
+): Promise<void> {
+  const grupos = new Map<string, T[]>();
+  for (const item of itens) {
+    const k = chave(item);
+    grupos.set(k, [...(grupos.get(k) ?? []), item]);
+  }
+  const fila = [...grupos.values()];
+  const trabalhador = async () => {
+    for (let grupo = fila.shift(); grupo; grupo = fila.shift()) {
+      for (const item of grupo) await fn(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limite, fila.length) }, trabalhador));
+}
+
 export async function importDeliveryLog(
   auth: AuthContext,
   source: string | string[],
@@ -459,7 +483,9 @@ export async function importDeliveryLog(
   let invalid = 0;
   let withFirstAccess = 0;
 
-  for (const { med, row } of report.matched) {
+  // Linhas em paralelo (oito por vez), mas as do mesmo caso em fila: num lote
+  // de centenas, uma por uma estourava o tempo da função.
+  await emParalelo(report.matched, (item) => item.med.id, async ({ med, row }) => {
     if (row.errors.length > 0) {
       invalid += 1;
       withoutDelivery.set(med.id, { id: med.id, medId: med.medId });
@@ -470,7 +496,7 @@ export async function importDeliveryLog(
         kind: 'INVALID',
         message: row.errors.join(' '),
       });
-      continue;
+      return;
     }
 
     if (row.outcome !== 'DELIVERED') {
@@ -485,7 +511,7 @@ export async function importDeliveryLog(
         kind: 'NOT_DELIVERED',
         message: describeNotDelivered(row),
       });
-      continue;
+      return;
     }
 
     // Quando o log nao traz coluna de envio, o instante da entrega e o que o
@@ -605,9 +631,11 @@ export async function importDeliveryLog(
         ? 'Entrega registrada, com primeiro acesso do comprador.'
         : 'Entrega registrada. O log não traz primeiro acesso: só prova que a mensagem chegou.',
     });
-  }
+  });
 
-  for (const { row, reason } of report.unmatchedRows) {
+  // Linhas em paralelo (oito por vez), mas as do mesmo caso em fila: num lote
+  // de centenas, uma por uma estourava o tempo da função.
+  await emParalelo(report.unmatchedRows, (item) => (item.row.transactionRef ?? item.row.customerEmail ?? item.row.customerName ?? String(item.row.line)).trim().toLowerCase(), async ({ row, reason }) => {
     // Linha de liberacao de acesso: nao traz valor nem horario da cobranca,
     // entao nao casa por transacao — casa pelo comprador. O comprovante que
     // ela gera fica inteiro dentro da propria linha: data, message-id e link
@@ -648,7 +676,7 @@ export async function importDeliveryLog(
           `${porNomeTodos.length} MEDs de ${row.customerName}: o nome não diz a qual desta ` +
           'linha se refere. Suba o arquivo de cobranças junto — o id da transação resolve.',
       });
-      continue;
+      return;
     }
     // Quando nem o nome acha, o motivo do casador fala de valor e data — e a
     // pessoa fica sem saber que a busca por nome tambem foi tentada e falhou.
@@ -663,7 +691,7 @@ export async function importDeliveryLog(
           'Nenhum MED importado tem nome de pagador, então não há por onde ligar esta linha. ' +
           'Importe os MEDs no passo 1 e suba o arquivo de cobranças junto com este.',
       });
-      continue;
+      return;
     }
 
     if (!meds && nome) {
@@ -676,7 +704,7 @@ export async function importDeliveryLog(
           `Nenhum MED com o nome "${row.customerName}". Confira se os MEDs deste lote já foram ` +
           'importados no passo 1 e se o nome do pagador é o mesmo do arquivo de envios.',
       });
-      continue;
+      return;
     }
 
     // Sem MED com esse E2E: dizer isso, e nao falar de valor e data.
@@ -688,7 +716,7 @@ export async function importDeliveryLog(
         kind: 'UNMATCHED',
         message: `Nenhum MED com o E2E ${txn}. Importe esse MED no passo 1 e suba o arquivo de novo.`,
       });
-      continue;
+      return;
     }
 
     const sentAt = row.deliveredAt ?? row.sentAt;
@@ -702,7 +730,7 @@ export async function importDeliveryLog(
           'O MED existe, mas a linha não tem data de envio nem de confirmação de recebimento. ' +
           'Sem data não há entrega a registrar.',
       });
-      continue;
+      return;
     }
     // Ligada pelo proprio E2E, a linha entra mesmo sem link: o caso e certo,
     // e o comprovante so fica sem botao.
@@ -734,7 +762,7 @@ export async function importDeliveryLog(
         });
       }
 
-      if (eligible.length === 0) continue;
+      if (eligible.length === 0) return;
 
       for (const med of eligible) {
         touched.add(med.id);
@@ -809,7 +837,7 @@ export async function importDeliveryLog(
           `${row.firstAccessAt ? ' Com primeiro acesso registrado.' : ''}`,
       });
       if (row.firstAccessAt) withFirstAccess += 1;
-      continue;
+      return;
     }
 
     lines.push({
@@ -819,7 +847,7 @@ export async function importDeliveryLog(
       kind: 'UNMATCHED',
       message: reason,
     });
-  }
+  });
 
   const repository = await getRepository();
   await recordAudit(repository, auth, {

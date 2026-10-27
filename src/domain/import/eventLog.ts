@@ -1,5 +1,6 @@
 import { detectDelimiter, normalizeHeader, parseDelimited, resolveProductTypeValue } from '@/domain/import/csv';
 import { isEventPhrase, parseLogTimestamp } from '@/domain/import/deliveryLog';
+import { personEmail, personName } from '@/domain/person';
 
 export { isEventPhrase };
 import type { ProductType, ShipmentStatus } from '@/domain/types';
@@ -30,6 +31,8 @@ export interface PedidoRow {
   email: string | null;
   /** Quando a etapa atual foi registrada ("Atualizado em"). Sem data, não é marco. */
   atualizadoEm: string | null;
+  /** Nome de quem comprou, quando a planilha traz (já validado como nome de pessoa). */
+  nome: string | null;
   /** Link do pedido no painel da loja ("Console do Pedido"). */
   url: string | null;
 }
@@ -49,6 +52,8 @@ export interface EventoRow {
   distribuidor: string | null;
   idExterno: string | null;
   refFornecedor: string | null;
+  nome: string | null;
+  email: string | null;
 }
 
 const MED_HEADERS = ['idmed', 'medid', 'iddomed', 'med', 'numerodomed', 'endtoendid', 'endtoend', 'e2e', 'e2eid', 'idendtoend'];
@@ -137,6 +142,53 @@ function medColumn(parsed: { headers: string[]; rows: string[][] }): number {
   return parsed.headers.findIndex((_, i) => share(parsed.rows, i, (v) => E2E.test(v)) >= 0.6);
 }
 
+const NOME_HEADERS = [
+  'comprador', 'compradora', 'cliente', 'nome', 'nomedocliente', 'nomedocomprador', 'nomecompleto',
+  'destinatario', 'titular', 'nomedopagador', 'pagador', 'nomecliente', 'customername', 'name',
+];
+
+/**
+ * Onde estão o nome e o e-mail de quem comprou. Pelo cabeçalho quando o
+ * conteúdo confirma; senão, pela coluna que de fato tem nomes de pessoa ou
+ * e-mails. Assim a planilha não precisa seguir nome de coluna nenhum.
+ */
+function peopleColumns(parsed: { headers: string[]; rows: string[][] }, skip: number[]): {
+  nome: number;
+  email: number;
+} {
+  const { headers, rows } = parsed;
+  const colunas = headers.map((_, i) => i).filter((i) => !skip.includes(i));
+  const ehEmail = (v: string) => personEmail(v) !== null;
+  const ehNome = (v: string) => personName(v) !== null;
+
+  let email = colunas.find(
+    (i) => /email|contato/.test(headers[i] ?? '') && share(rows, i, ehEmail) >= 0.5,
+  );
+  if (email === undefined) email = colunas.find((i) => share(rows, i, ehEmail) >= 0.6);
+
+  let nome = colunas.find(
+    (i) => i !== email &&
+      (NOME_HEADERS.includes(headers[i] ?? '') || /nome|cliente|compr|titular|destinat|pagador/.test(headers[i] ?? '')) &&
+      share(rows, i, ehNome) >= 0.5,
+  );
+  if (nome === undefined) {
+    // Sem cabeçalho que diga: a coluna com mais nomes de pessoa (duas
+    // palavras ou mais), desde que seja a maioria das linhas.
+    let melhor = { i: -1, nota: 0 };
+    for (const i of colunas) {
+      if (i === email) continue;
+      // Nome de comprador muda de um caso para outro; coluna com o mesmo
+      // valor em tudo ("Parceiro X") é outra coisa.
+      const distintos = new Set(rows.map((row) => row[i]?.trim()).filter(Boolean)).size;
+      if (distintos < 2) continue;
+      const nota = share(rows, i, (v) => ehNome(v) && v.trim().includes(' '));
+      if (nota > melhor.nota) melhor = { i, nota };
+    }
+    if (melhor.nota >= 0.6) nome = melhor.i;
+  }
+  return { nome: nome ?? -1, email: email ?? -1 };
+}
+
 export function isPedidosFile(text: string): boolean {
   const parsed = table(text);
   if (!parsed) return false;
@@ -159,8 +211,21 @@ export function parseEventLog(text: string): EventoRow[] {
   const parsed = table(text);
   if (!parsed) return [];
   const h = parsed.headers;
+  const base = eventColumns(parsed);
+  const conhecidas = {
+    pedido: h.findIndex(PEDIDO),
+    canal: headerIndex(h, ['canal', 'modulo']),
+    codigo: headerIndex(h, ['codigodoevento', 'codigo']),
+    url: headerIndex(h, ['urloperacional', 'url', 'recurso', 'link']),
+    observacao: headerIndex(h, ['observacao', 'obs', 'detalhe', 'detalhes']),
+    distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor', 'parceiro', 'parceirodeorigem']),
+    idExterno: headerIndex(h, ['idexternodopedido', 'idexterno', 'pedidoexterno']),
+    refFornecedor: headerIndex(h, ['referenciadofornecedor', 'refparceiro', 'referenciadoparceiro']),
+  };
+  const pessoas = peopleColumns(parsed, [base.med, base.evento, base.data, ...Object.values(conhecidas)]);
   const at = {
-    ...eventColumns(parsed),
+    ...base,
+    ...pessoas,
     pedido: h.findIndex(PEDIDO),
     canal: headerIndex(h, ['canal', 'modulo']),
     codigo: headerIndex(h, ['codigodoevento', 'codigo']),
@@ -190,6 +255,8 @@ export function parseEventLog(text: string): EventoRow[] {
         distribuidor: cell(row, at.distribuidor),
         idExterno: cell(row, at.idExterno),
         refFornecedor: cell(row, at.refFornecedor),
+        nome: personName(cell(row, at.nome)),
+        email: personEmail(cell(row, at.email)),
       } satisfies EventoRow;
     })
     .filter((row): row is EventoRow => row !== null);
@@ -206,7 +273,7 @@ export function parsePedidos(text: string): PedidoRow[] {
     status: headerIndex(h, STATUS_ATUAL_HEADERS),
     distribuidor: headerIndex(h, ['canaldistribuidor', 'distribuidor', 'parceirodeorigem', 'parceiro']),
     idNoFornecedor: headerIndex(h, ['iddopedidonofornecedor', 'pedidoexterno', 'idexterno']),
-    email: h.findIndex((header) => header.includes('email') || header === 'contato'),
+    ...peopleColumns(parsed, [medColumn(parsed)]),
     atualizadoEm: headerIndex(h, ['atualizadoem', 'ultimaatualizacao', 'datadaetapa', 'dataetapaatual']),
     url: h.findIndex((header) => header.startsWith('console') || ['urldopedido', 'linkdopedido', 'url'].includes(header)),
   };
@@ -222,7 +289,8 @@ export function parsePedidos(text: string): PedidoRow[] {
         statusAtual: cell(row, at.status),
         distribuidor: cell(row, at.distribuidor),
         idNoFornecedor: cell(row, at.idNoFornecedor),
-        email: cell(row, at.email),
+        email: personEmail(cell(row, at.email)),
+        nome: personName(cell(row, at.nome)),
         atualizadoEm: (() => {
           const bruto = cell(row, at.atualizadoEm);
           return bruto ? parseLogTimestamp(bruto) : null;

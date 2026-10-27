@@ -17,7 +17,9 @@ import {
   EMAIL_SENDER_NAME,
   draftCommunication,
   orderTrackingMessage,
+  parseCommunicationReceipt,
 } from '@/domain/communication/receipt';
+import { personEmail } from '@/domain/person';
 import { senderNameFor } from '@/services/accountService';
 import type { DeliveryImportLine, DeliveryImportReport } from '@/services/deliveryImportService';
 
@@ -188,6 +190,8 @@ export async function importArksFiles(
       distribuidor: pedido.distribuidor,
       idExterno: pedido.idNoFornecedor,
       refFornecedor: null,
+      nome: pedido.nome,
+      email: pedido.email,
     });
     chavesEventos.set(chave, lista);
   }
@@ -321,12 +325,33 @@ export async function importArksFiles(
       const atualizado = medCase;
       if ((atualizado.tracking?.events.length ?? 0) > 0) {
         const referencia = pedido?.pedido ?? linhasEvento.find((row) => row.pedido)?.pedido ?? med.medId;
-        const jaTem = atualizado.evidences.some(
+        const draft = draftCommunication(atualizado, 'ORDER_TRACKING', { reuseSaved: false, sender });
+        // Nome e e-mail de quem comprou: primeiro o que a planilha traz (já
+        // validado como nome de pessoa / e-mail), depois o que o caso tem.
+        // Nunca "Transação", "Usuário" ou o banco do pagador.
+        const nome =
+          pedido?.nome ??
+          linhasEvento.find((row) => row.nome)?.nome ??
+          draft.toName ??
+          null;
+        const email =
+          pedido?.email ?? linhasEvento.find((row) => row.email)?.email ?? personEmail(draft.to);
+        const destinatario = email ?? nome ?? '';
+        const anterior = atualizado.evidences.find(
           (evidence) =>
             evidence.type === 'DELIVERY_COMMUNICATION' && evidence.sourceReference === referencia,
         );
-        const draft = draftCommunication(atualizado, 'ORDER_TRACKING', { reuseSaved: false, sender });
-        const destinatario = draft.to || pedido?.email || draft.toName || '';
+        const pecaAnterior = anterior ? parseCommunicationReceipt(anterior.value) : null;
+        // A peça deste pedido já existe mas saiu com nome/e-mail errado: refaz.
+        const desatualizada =
+          anterior !== undefined &&
+          destinatario !== '' &&
+          ((pecaAnterior?.toName ?? null) !== nome || (pecaAnterior?.to ?? '') !== destinatario);
+        if (anterior && desatualizada) {
+          medCase = writer.removeReconstruction(medCase, anterior.id);
+          partes.push('comprovante refeito com o nome certo');
+        }
+        const jaTem = anterior !== undefined && !desatualizada;
         if (jaTem) {
           partes.push('comprovante já existia');
           jaRegistrado = true;
@@ -359,12 +384,12 @@ export async function importArksFiles(
           const primeiro = atualizado.tracking?.events
             .map((evento) => evento.occurredAt)
             .sort()[0];
-          const mensagem = orderTrackingMessage(draft.toName, link);
+          const mensagem = orderTrackingMessage(nome, link);
           medCase = writer.reconstruction(medCase, {
             template: 'ORDER_TRACKING',
             from: draft.from,
             to: destinatario,
-            toName: draft.toName ?? undefined,
+            toName: nome ?? undefined,
             subject: mensagem.subject,
             sentAt: primeiro ?? draft.sentAt ?? undefined,
             body: mensagem.body,
