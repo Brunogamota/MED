@@ -1,39 +1,23 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Check, CircleDot, Mail, ShieldCheck, TriangleAlert } from 'lucide-react';
-import {
-  COMMUNICATION_TEMPLATE_LABEL,
-  type ClientEmailView,
-  type CommunicationTemplate,
-} from '@/domain/communication/receipt';
-import type { TrackingEvent } from '@/domain/types';
-import { trackingSteps, type TrackingStep } from '@/lib/trackingSteps';
+import { ArrowRight, Mail, ShieldCheck } from 'lucide-react';
+import { COMMUNICATION_TEMPLATE_LABEL, type ClientEmailView } from '@/domain/communication/receipt';
 
 /**
  * Comprovante de envio no ambiente Bulls Cash.
  *
- * Composição: etapas do pedido à esquerda, ficha do envio à direita, a
- * mensagem enviada abaixo num painel de leitura e a declaração de origem no
- * rodapé. Cor literal porque a peça vai impressa e representa documento
- * externo, independente do tema da tela.
+ * Composição: a ficha do envio, a mensagem enviada num painel de leitura e a
+ * declaração de origem no rodapé. Físico ou digital, a peça é só o e-mail
+ * enviado: as etapas do pedido não entram. Cor literal porque a peça vai
+ * impressa e representa documento externo, independente do tema da tela.
  *
  * Só dado real:
  *  - a ficha vem da evidência gravada (`view`), do end-to-end do caso e do id
  *    da mensagem, quando registrado;
- *  - as etapas vêm dos marcos datados do acompanhamento (`trackingEvents`).
- *    Sem marco, a coluna some e a peça fica numa coluna só — etapa nenhuma é
- *    desenhada por suposição;
  *  - o destino do botão não é impresso (a regra do `ActionButton` do
  *    `ClientEmailView`): o link segue no botão, o papel não carrega a URL.
  *
  * A declaração de origem no rodapé é parte da peça. Nunca remova.
  */
-
-/**
- * Modelos em que a peça fala do pedido em trânsito. Uma confirmação de compra
- * ou uma entrega de acesso foram enviadas antes (ou fora) da logística, e pôr
- * os marcos do transporte ao lado delas sugeriria que o e-mail os mostrava.
- */
-const TEMPLATES_WITH_STEPS: CommunicationTemplate[] = ['ORDER_TRACKING', 'DELIVERY_CONFIRMATION'];
 
 function initials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -48,58 +32,6 @@ function Campo({ rotulo, children }: { rotulo: string; children: ReactNode }) {
       <dt className="text-[11.5px] font-semibold tracking-[0.06em] text-[#6e6589] uppercase @[520px]:pt-0.5">{rotulo}</dt>
       <dd className="min-w-0 text-[14px] text-[#1c1530]">{children}</dd>
     </div>
-  );
-}
-
-function StepIcon({ state }: { state: TrackingStep['state'] }) {
-  if (state === 'completed') return <Check className="size-4 text-white" strokeWidth={3} aria-hidden="true" />;
-  if (state === 'issue') return <TriangleAlert className="size-4 text-[#b45309]" strokeWidth={2.25} aria-hidden="true" />;
-  return <CircleDot className="size-4 text-[#7c3aed]" strokeWidth={2.25} aria-hidden="true" />;
-}
-
-function Etapas({ steps }: { steps: TrackingStep[] }) {
-  return (
-    <ol className="relative">
-      {steps.map((step, index) => {
-        const ultimo = index === steps.length - 1;
-        return (
-          <li
-            key={step.key}
-            aria-current={step.state === 'current' ? 'step' : undefined}
-            className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-x-4"
-          >
-            {!ultimo ? (
-              <span aria-hidden="true" className="absolute top-8 bottom-0 left-[15px] w-0.5 rounded-full bg-[#7c3aed]" />
-            ) : null}
-            <span
-              className={
-                step.state === 'completed'
-                  ? 'relative z-10 grid size-8 place-items-center rounded-full bg-[#7c3aed] ring-4 ring-white'
-                  : step.state === 'issue'
-                    ? 'relative z-10 grid size-8 place-items-center rounded-full bg-[#fffbeb] ring-4 ring-white'
-                    : 'relative z-10 grid size-8 place-items-center rounded-full bg-[#f3ecfe] shadow-[0_0_0_4px_#ffffff,0_0_0_7px_#e9d5ff]'
-              }
-            >
-              <StepIcon state={step.state} />
-            </span>
-            <div className={ultimo ? 'min-w-0 pt-1 pb-0' : 'min-w-0 pt-1 pb-7'}>
-              <p className="text-[15px] leading-snug font-semibold text-[#1c1530]">{step.title}</p>
-              <p
-                className={
-                  step.state === 'current'
-                    ? 'mt-0.5 text-[13.5px] font-medium text-[#7c3aed] tabular-nums'
-                    : step.state === 'issue'
-                      ? 'mt-0.5 text-[13.5px] font-medium text-[#b45309] tabular-nums'
-                      : 'mt-0.5 text-[13.5px] text-[#6e6589] tabular-nums'
-                }
-              >
-                {step.dateLabel}
-              </p>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
   );
 }
 
@@ -193,14 +125,11 @@ export function BullsReceipt({
   view,
   sourceReference,
   endToEndId,
-  trackingEvents,
 }: {
   view: ClientEmailView;
   sourceReference?: string | null;
   endToEndId?: string | null;
-  trackingEvents?: readonly TrackingEvent[] | null;
 }) {
-  const steps = TEMPLATES_WITH_STEPS.includes(view.template) ? trackingSteps(trackingEvents) : [];
   const tipo = COMMUNICATION_TEMPLATE_LABEL[view.template];
 
   return (
@@ -226,24 +155,7 @@ export function BullsReceipt({
         </div>
       </header>
 
-      <div
-        className={
-          steps.length > 0
-            ? 'grid border-t border-[#ebe7f3] @[720px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]'
-            : 'border-t border-[#ebe7f3]'
-        }
-      >
-        {steps.length > 0 ? (
-          <section
-            aria-label="Etapas do pedido"
-            className="border-b border-[#ebe7f3] bg-[#f9f5fe] px-6 py-7 @[620px]:px-10 @[720px]:border-r @[720px]:border-b-0"
-          >
-            <h3 className="text-[12px] font-semibold tracking-[0.08em] text-[#7c3aed] uppercase">Etapas do pedido</h3>
-            <p className="mt-1 mb-6 text-[12px] text-[#6e6589]">Marcos registrados no acompanhamento</p>
-            <Etapas steps={steps} />
-          </section>
-        ) : null}
-
+      <div className="border-t border-[#ebe7f3]">
         <section aria-label="Dados do envio" className="px-6 py-5 @[620px]:px-10 @[620px]:py-6">
           <dl className="divide-y divide-[#ebe7f3]">
             <Campo rotulo="Remetente">{view.from}</Campo>

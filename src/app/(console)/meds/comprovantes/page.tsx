@@ -175,7 +175,6 @@ export default async function ComprovantesEmLotePage({
                 skin={skin}
                 sourceReference={peca.evidence.sourceReference}
                 endToEndId={medCase ? resolveEndToEndId(medCase) : null}
-                trackingEvents={medCase?.tracking?.events}
               />
             </div>
           </div>

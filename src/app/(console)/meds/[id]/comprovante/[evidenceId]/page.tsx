@@ -61,7 +61,6 @@ export default async function ComprovantePage({
         skin={skin}
         sourceReference={evidence.sourceReference}
         endToEndId={resolveEndToEndId(medCase)}
-        trackingEvents={medCase.tracking?.events}
       />
     </div>
   );

@@ -6,7 +6,6 @@ import {
   type CommunicationTemplate,
 } from '@/domain/communication/receipt';
 import type { SkinId } from '@/config/skins';
-import type { TrackingEvent } from '@/domain/types';
 import { BullsReceipt } from '@/components/skins/bulls/bulls-receipt';
 
 /**
@@ -125,7 +124,6 @@ export function ClientEmailView({
   receipt,
   sourceReference,
   endToEndId,
-  trackingEvents,
   skin = 'jade',
 }: {
   receipt: CommunicationReceipt;
@@ -141,12 +139,6 @@ export function ClientEmailView({
    * a instituição confere sozinha, no SPI, que o e-mail é daquela cobrança.
    */
   endToEndId?: string | null;
-  /**
-   * Marcos datados do acompanhamento do pedido (`medCase.tracking.events`).
-   * Só a peça do Bulls Cash os desenha, como etapas do pedido; sem marco, não
-   * há etapa.
-   */
-  trackingEvents?: readonly TrackingEvent[] | null;
 }) {
   const view = buildClientEmailView(receipt);
 
@@ -156,7 +148,6 @@ export function ClientEmailView({
         view={view}
         sourceReference={sourceReference}
         endToEndId={endToEndId}
-        trackingEvents={trackingEvents}
       />
     );
   }
