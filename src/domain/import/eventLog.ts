@@ -31,6 +31,8 @@ export interface PedidoRow {
   email: string | null;
   /** Quando a etapa atual foi registrada ("Atualizado em"). Sem data, não é marco. */
   atualizadoEm: string | null;
+  /** "Atualizado em" como veio, para o relatório dizer o que não deu para ler. */
+  atualizadoEmBruto: string | null;
   /** Nome de quem comprou, quando a planilha traz (já validado como nome de pessoa). */
   nome: string | null;
   /** Link do pedido no painel da loja ("Console do Pedido"). */
@@ -112,12 +114,16 @@ function eventColumns(parsed: { headers: string[]; rows: string[][] }): {
   if (evento === -1) {
     evento = colunas.find((i) => i !== med && share(rows, i, isEventPhrase) >= 0.6) ?? -1;
   }
-  let data = headers.findIndex(DATA_EVENTO);
+  const porNome = headers.findIndex(DATA_EVENTO);
+  let data = porNome;
   if (data === -1 || share(rows, data, (v) => parseLogTimestamp(v) !== null) < 0.6) {
+    // A coluna que o cabeçalho diz ser a data, mesmo ilegível, continua sendo
+    // a data: a planilha é reconhecida e o relatório mostra o valor que não
+    // deu para ler, em vez de a aba inteira sumir sem explicação.
     data =
       colunas.find(
         (i) => i !== med && i !== evento && share(rows, i, (v) => parseLogTimestamp(v) !== null) >= 0.6,
-      ) ?? -1;
+      ) ?? porNome;
   }
   return { med, evento, data };
 }
@@ -295,6 +301,7 @@ export function parsePedidos(text: string): PedidoRow[] {
           const bruto = cell(row, at.atualizadoEm);
           return bruto ? parseLogTimestamp(bruto) : null;
         })(),
+        atualizadoEmBruto: cell(row, at.atualizadoEm),
         url: cell(row, at.url),
       } satisfies PedidoRow;
     })

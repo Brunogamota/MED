@@ -15,10 +15,9 @@ import { looksZipped, readZipEntries, ZipError } from '@/lib/zip';
  * abrir um segundo caminho de importacao.
  *
  * O que nao faz, de proposito: formula (le o valor guardado, que e o que a
- * planilha mostra), varias abas (le a primeira), formato de data do Excel
- * (numero de serie fica como numero, e o leitor de CSV recusa em vez de
- * adivinhar um dia). Nenhum desses aparece em export de adquirente, e
- * adivinhar daria erro mais dificil de achar que recusar.
+ * planilha mostra) e formato de data do Excel (numero de serie fica como
+ * numero; quem le a coluna decide). Abas com o mesmo cabecalho sao um lote so;
+ * abas diferentes viram tabelas separadas em `xlsxToCsvTables`.
  */
 
 export class XlsxError extends Error {}
@@ -150,24 +149,33 @@ const cabecalho = (row: string[]): string =>
   row.map((cell) => cell.trim().toLowerCase()).join('\u0000').replace(/\u0000+$/, '');
 
 /**
- * Linhas de todas as abas que tem o mesmo cabecalho da primeira.
+ * As abas agrupadas por cabecalho, na ordem em que aparecem.
  *
- * A instituicao manda um dia por aba. Lendo so a primeira, o lote entrava pela
- * metade e parecia inteiro. Aba com outro cabecalho (resumo, grafico) nao e o
- * lote, e fica de fora.
+ * A instituicao manda um dia por aba: abas com o mesmo cabecalho sao o mesmo
+ * lote e viram uma tabela so. Aba com outro cabecalho e outra tabela.
  */
-function linhasDoLote(input: Uint8Array): string[][] {
+function tabelasPorCabecalho(input: Uint8Array): string[][][] {
   const abas = readXlsxSheets(input)
     .map((rows) => rows.filter((row) => row.some((cell) => cell.trim().length > 0)))
     .filter((rows) => rows.length > 0);
-  const [primeira, ...resto] = abas;
-  if (!primeira) return [];
-  const header = cabecalho(primeira[0] ?? []);
-  const linhas = [...primeira];
-  for (const aba of resto) {
-    if (cabecalho(aba[0] ?? []) === header) linhas.push(...aba.slice(1));
+  const grupos = new Map<string, string[][]>();
+  for (const aba of abas) {
+    const header = cabecalho(aba[0] ?? []);
+    const grupo = grupos.get(header);
+    if (grupo) grupo.push(...aba.slice(1));
+    else grupos.set(header, [...aba]);
   }
-  return linhas;
+  return [...grupos.values()];
+}
+
+function paraCsv(rows: string[][]): string {
+  return rows
+    .map((row) =>
+      row
+        .map((cell) => (/[;"\n\r]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell))
+        .join(';'),
+    )
+    .join('\n');
 }
 
 /**
@@ -179,14 +187,22 @@ function linhasDoLote(input: Uint8Array): string[][] {
  * ("Silva Junior, Antonio") partiria a linha em duas colunas silenciosamente.
  */
 export function xlsxToCsv(input: Uint8Array): string {
-  const usadas = linhasDoLote(input);
+  // So o lote da primeira aba: aba com outro cabecalho (resumo, grafico) nao
+  // e o lote, e fica de fora.
+  const usadas = tabelasPorCabecalho(input)[0] ?? [];
   if (usadas.length === 0) throw new XlsxError('A planilha está vazia.');
+  return paraCsv(usadas);
+}
 
-  return usadas
-    .map((row) =>
-      row
-        .map((cell) => (/[;"\n\r]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell))
-        .join(';'),
-    )
-    .join('\n');
+/**
+ * Uma tabela por tipo de aba — para o arquivo que traz mais de uma coisa.
+ *
+ * A operacao manda "Pedidos" e "Linha do Tempo" como abas do mesmo .xlsx.
+ * Lendo so a primeira, a linha do tempo nunca entrava e todo MED saia "so
+ * pagamento, nenhuma etapa de envio" — com o arquivo certo na mao.
+ */
+export function xlsxToCsvTables(input: Uint8Array): string[] {
+  const tabelas = tabelasPorCabecalho(input);
+  if (tabelas.length === 0) throw new XlsxError('A planilha está vazia.');
+  return tabelas.map(paraCsv);
 }

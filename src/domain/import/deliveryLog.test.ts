@@ -32,6 +32,9 @@ describe('parseLogTimestamp', () => {
   it('le o formato do log no fuso de Brasilia', () => {
     // 09:29:42 em -03:00 sao 12:29:42 em UTC.
     expect(parseLogTimestamp('2026-09-17 09:29:42')).toBe('2026-09-17T12:29:42.000Z');
+    expect(parseLogTimestamp('2026-09-17T09:29:42Z')).toBe('2026-09-17T09:29:42.000Z');
+    expect(parseLogTimestamp('2026-09-17T09:29:42.123-03:00')).toBe('2026-09-17T12:29:42.000Z');
+    expect(parseLogTimestamp('2026/09/17 09:29')).toBe('2026-09-17T12:29:00.000Z');
   });
 
   it('texto que nao e data vira null, em vez de virar hoje', () => {
