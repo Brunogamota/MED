@@ -240,6 +240,7 @@ export async function importArksFiles(
     // Dados do pedido: só quando o caso ainda não tem pedido — não sobrescreve
     // o que veio de fonte mais forte.
     const tipo = pedido?.natureza ?? medCase.order?.productType ?? medCase.med.productType ?? null;
+    if (pedido && medCase.order) partes.push('pedido já estava registrado');
     if (pedido && !medCase.order && tipo) {
       medCase = writer.order(medCase, {
         externalId: pedido.pedido ?? undefined,
@@ -259,7 +260,9 @@ export async function importArksFiles(
       for (const row of linhasEvento) {
         const evento = eventoDaLinha(row);
         if (evento) novos.push(evento);
-        else if (statusForEvent(row.evento) !== null) semData.push(row.evento);
+        else if (statusForEvent(row.evento) !== null) {
+          semData.push(`${row.evento}: ${row.rawOccurredAt ? `"${row.rawOccurredAt}"` : 'vazia'}`);
+        }
       }
 
       const existentes = medCase.tracking?.events ?? [];
@@ -315,13 +318,34 @@ export async function importArksFiles(
         partes.push('eventos já estavam no acompanhamento');
       }
       if (semData.length > 0) {
-        partes.push(`${semData.length} sem data ficaram de fora (${semData.join(', ')})`);
+        partes.push(
+          `${semData.length} ${semData.length === 1 ? 'etapa' : 'etapas'} sem data e hora legível ficaram de fora (${semData
+            .slice(0, 3)
+            .join('; ')}${semData.length > 3 ? '…' : ''})`,
+        );
       }
     }
 
+    // A etapa atual veio, mas sem data e hora que dê para ler: diz o valor.
+    if (pedido?.statusAtual && !pedido.atualizadoEm && statusForEvent(pedido.statusAtual) !== null) {
+      partes.push(
+        `etapa atual "${pedido.statusAtual}" sem data e hora legível em "Atualizado em" (${
+          pedido.atualizadoEmBruto ? `veio "${pedido.atualizadoEmBruto}"` : 'vazio'
+        })`,
+      );
+    }
+    if (pedido && linhasEvento.length === 0) {
+      partes.push(
+        report.arks?.linhasDeEvento
+          ? 'a linha do tempo não traz este MED'
+          : 'a linha do tempo não veio — suba junto a aba com as etapas (MED, Etapa, Registrado em)',
+      );
+    }
+
     // Comprovante do acompanhamento do pedido, montado com os marcos que a
-    // planilha trouxe. Um por pedido: reimportar não duplica a peça.
-    if (options.generateReceipts !== false && linhasEvento.length > 0) {
+    // planilha trouxe — ou que o caso já tinha de uma importação anterior.
+    // Um por pedido: reimportar não duplica a peça.
+    if (options.generateReceipts !== false && (linhasEvento.length > 0 || pedido)) {
       const atualizado = medCase;
       if ((atualizado.tracking?.events.length ?? 0) > 0) {
         const referencia = pedido?.pedido ?? linhasEvento.find((row) => row.pedido)?.pedido ?? med.medId;

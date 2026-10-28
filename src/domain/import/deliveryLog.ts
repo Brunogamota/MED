@@ -299,12 +299,17 @@ export function parseLogTimestamp(raw: string): string | null {
     );
   }
 
+  // ISO, com ou sem fuso: sem fuso e horario de Brasilia; com "Z" ou
+  // "-03:00", vale o fuso escrito. Aceita tambem 2026/10/12 14:22.
   const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})[\sT](\d{2}):(\d{2})(?::(\d{2}))?/,
+    /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:[.,]\d+)?\s*(Z|[+-]\d{2}:?\d{2})?/i,
   );
   if (!match) return null;
-  const [, year, month, day, hour, minute, second = '00'] = match as unknown as string[];
-  const parsed = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}${BR_OFFSET}`);
+  const [, year, month, day, hour, minute, second = '00', zona] = match as unknown as string[];
+  const fuso = !zona ? BR_OFFSET : zona.toUpperCase() === 'Z' ? 'Z' : zona.includes(':') ? zona : `${zona.slice(0, 3)}:${zona.slice(3)}`;
+  const parsed = new Date(
+    `${year}-${pad(Number(month))}-${pad(Number(day))}T${pad(Number(hour))}:${minute}:${second}${fuso}`,
+  );
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 

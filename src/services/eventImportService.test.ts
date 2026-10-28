@@ -192,6 +192,48 @@ describe('planilhas Bulls', () => {
     expect(medCase.tracking?.events.map((e) => e.status)).toEqual(['IN_PRODUCTION']);
     expect(medCase.tracking?.events[0]?.sourceReference).toBe('planilha de pedidos, linha 2');
   });
+
+  it('só pedidos, com o pedido já registrado e sem data na etapa: diz o que faltou', async () => {
+    await importArksFiles(auth, { eventos: [], pedidos: [PEDIDOS_BULLS] });
+    const semData = PEDIDOS_BULLS.replace('02/10/2026 14:00', '02/10/2026');
+    const report = await importArksFiles(auth, { eventos: [], pedidos: [semData] }, { generateReceipts: false });
+    const linha = report.lines[0];
+    expect(linha?.kind).toBe('INVALID');
+    expect(linha?.message).toMatch(/pedido já estava registrado/);
+    expect(linha?.message).toMatch(/Atualizado em" \(veio "02\/10\/2026"\)/);
+    expect(linha?.message).toMatch(/linha do tempo não veio/);
+    expect(linha?.message).not.toMatch(/só traz pagamento/);
+  });
+
+  it('caso que já tem etapas de antes ganha o comprovante ao subir só pedidos', async () => {
+    await importArksFiles(auth, { eventos: [LINHA_DO_TEMPO], pedidos: [] }, { generateReceipts: false });
+    const semData = PEDIDOS_BULLS.replace('02/10/2026 14:00', '');
+    const report = await importArksFiles(auth, { eventos: [], pedidos: [semData] }, { generateReceipts: true });
+    expect(report.receipts).toBe(1);
+    expect(report.lines[0]?.kind).toBe('RECORDED');
+  });
+
+  it('linha do tempo com data em ISO (com fuso) é lida', async () => {
+    const iso = LINHA_DO_TEMPO.replace('01/10/2026 10:05', '2026-10-01T13:05:00Z').replace(
+      '01/10/2026 11:00',
+      '2026-10-01T14:00:00.000Z',
+    ).replace('01/10/2026 10:00', '2026-10-01T13:00:00Z');
+    expect(splitArksFiles([iso]).eventos).toHaveLength(1);
+    const report = await importArksFiles(auth, { eventos: [iso], pedidos: [] });
+    const medCase = await getCase(auth, report.touchedMedIds[0] ?? '');
+    expect(medCase.tracking?.events.map((e) => e.occurredAt)).toEqual([
+      '2026-10-01T13:05:00.000Z',
+      '2026-10-01T14:00:00.000Z',
+    ]);
+  });
+
+  it('linha do tempo com data ilegível continua reconhecida e o relatório mostra o valor', async () => {
+    const ruim = LINHA_DO_TEMPO.replace(/01\/10\/2026 \d{2}:\d{2}/g, 'ontem');
+    expect(splitArksFiles([ruim]).eventos).toHaveLength(1);
+    const report = await importArksFiles(auth, { eventos: [ruim], pedidos: [] });
+    expect(report.lines[0]?.kind).toBe('INVALID');
+    expect(report.lines[0]?.message).toMatch(/sem data e hora legível.*"ontem"/);
+  });
 });
 
 describe('lista de comprovantes gerados', () => {

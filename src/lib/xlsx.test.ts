@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deflateRawSync } from 'node:zlib';
-import { looksXlsx, readXlsxRows, xlsxToCsv, XlsxError } from '@/lib/xlsx';
+import { looksXlsx, readXlsxRows, xlsxToCsv, xlsxToCsvTables, XlsxError } from '@/lib/xlsx';
 import { parseMedImport } from '@/domain/import/csv';
 
 /**
@@ -224,5 +224,20 @@ describe('planilha com varias abas', () => {
       }),
     );
     expect(csv.split('\n')).toEqual(['medId;Valor', 'E-1;1,00']);
+  });
+
+  it('abas de tipos diferentes viram tabelas separadas (Pedidos + Linha do Tempo)', () => {
+    const bytes = planilha(linhas(header, `<row r="2">${inline('A2', 'E-1')}${inline('B2', '1,00')}</row>`), {
+      'xl/worksheets/sheet2.xml': linhas(
+        `<row r="1">${inline('A1', 'MED')}${inline('B1', 'Etapa')}</row>`,
+        `<row r="2">${inline('A2', 'E-1')}${inline('B2', 'Pedido recebido')}</row>`,
+      ),
+      'xl/worksheets/sheet3.xml': linhas(header, `<row r="2">${inline('A2', 'E-2')}${inline('B2', '2,00')}</row>`),
+    });
+    expect(xlsxToCsvTables(bytes)).toEqual([
+      'medId;Valor\nE-1;1,00\nE-2;2,00',
+      'MED;Etapa\nE-1;Pedido recebido',
+    ]);
+    expect(xlsxToCsv(bytes)).toBe('medId;Valor\nE-1;1,00\nE-2;2,00');
   });
 });

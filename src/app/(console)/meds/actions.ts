@@ -34,7 +34,7 @@ import {
 } from '@/domain/schemas';
 import { address, compact, dateTime, integer, number, text } from '@/lib/forms';
 import { looksZipped, readZipEntries, ZipError } from '@/lib/zip';
-import { looksXlsx, xlsxToCsv, XlsxError } from '@/lib/xlsx';
+import { looksXlsx, xlsxToCsv, xlsxToCsvTables, XlsxError } from '@/lib/xlsx';
 import { importParsedMeds, planImport, type ImportPlan } from '@/services/importService';
 import { recordDigitalDelivery, recordShipment } from '@/services/fulfillmentService';
 import { recordDigitalDeliverySchema, recordShipmentSchema, createCommunicationSchema } from '@/domain/schemas';
@@ -477,7 +477,13 @@ const TABLE_EXTENSIONS = ['.csv', '.tsv', '.txt'];
  * Dentro do zip, o que nao e tabela e ignorado em silencio — README, pasta do
  * macOS, logo. Nao e erro; e o que vem junto.
  */
-async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | { ok: false; error: string }> {
+async function openAsTexts(
+  file: File,
+  // Uma tabela por aba diferente: o .xlsx de operação traz "Pedidos" e "Linha
+  // do Tempo" como abas do mesmo arquivo. A importação de MEDs lê só o lote.
+  { everyTab = false }: { everyTab?: boolean } = {},
+): Promise<{ ok: true; texts: string[] } | { ok: false; error: string }> {
+  const lerPlanilha = (planilha: Uint8Array) => (everyTab ? xlsxToCsvTables(planilha) : [xlsxToCsv(planilha)]);
   const bytes = new Uint8Array(await file.arrayBuffer());
 
   // Antes do zip, e nao depois: um .xlsx **e** um zip, e cairia no ramo de
@@ -485,7 +491,7 @@ async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | 
   // incompleto — quando o arquivo esta inteiro e certo.
   if (looksXlsx(bytes)) {
     try {
-      return { ok: true, texts: [xlsxToCsv(bytes)] };
+      return { ok: true, texts: lerPlanilha(bytes) };
     } catch (error) {
       return {
         ok: false,
@@ -506,7 +512,7 @@ async function openAsTexts(file: File): Promise<{ ok: true; texts: string[] } | 
         // Planilha dentro do zip vira tabela do mesmo jeito: quem zipa o que a
         // instituicao mandou nao devia ter de abrir para converter primeiro.
         if (looksXlsx(entry.bytes)) {
-          tabelas.push(xlsxToCsv(entry.bytes));
+          tabelas.push(...lerPlanilha(entry.bytes));
           continue;
         }
         if (TABLE_EXTENSIONS.some((extensao) => nome.endsWith(extensao))) {
@@ -599,7 +605,7 @@ async function readImportTexts(form: FormData): Promise<ImportReadMany> {
   const csvs: string[] = [];
   for (const entry of form.getAll('file')) {
     if (!(entry instanceof File) || entry.size === 0) continue;
-    const aberto = await openAsTexts(entry);
+    const aberto = await openAsTexts(entry, { everyTab: true });
     if (!aberto.ok) return aberto;
     csvs.push(...aberto.texts);
   }
