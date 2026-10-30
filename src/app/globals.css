@@ -770,3 +770,297 @@ html[data-skin='bulls'] [data-slot='alert'][class*='text-destructive'] {
   background: var(--bulls-error-soft);
   color: var(--bulls-error-ink);
 }
+
+/* =========================================================================
+   Ambiente Marketplace Verificado (`<html data-skin="marketplace">`) — "Selo Azul"
+
+   Claro e institucional: chão cinza-azulado, superfícies brancas com filete,
+   azul de confiança na marca, Inter e JetBrains Mono. Navegação no topo (o
+   cromo mora em `components/skins/marketplace`). Só claro, como o Bulls: o
+   bloco `html.dark[...]` repete os valores para a paleta não virar.
+
+   Fora de camada de propósito, para ganhar das classes das primitivas; tudo
+   escopado pelo atributo no <html>, então os outros ambientes não veem nada.
+   ========================================================================= */
+
+html[data-skin='marketplace'],
+html.dark[data-skin='marketplace'] {
+  color-scheme: light;
+
+  /* Paleta própria */
+  --mkv-bg: #f6f8fb;
+  --mkv-ink: #0b1f3a;
+  --mkv-ink-2: #425466;
+  --mkv-ink-3: #6b7c93;
+  --mkv-line: #e3e8ef;
+  --mkv-line-strong: #d5dce6;
+  --mkv-brand: #1d4ed8;
+  --mkv-brand-hover: #1e40af;
+  --mkv-brand-soft: #eef3ff;
+  --mkv-sky: #0ea5e9;
+  --mkv-sky-soft: #f0f9ff;
+  --mkv-sky-ink: #0369a1;
+  --mkv-success: #059669;
+  --mkv-success-soft: #ecfdf5;
+  --mkv-success-ink: #047857;
+  --mkv-warning: #d97706;
+  --mkv-warning-soft: #fffbeb;
+  --mkv-warning-ink: #b45309;
+  --mkv-error: #dc2626;
+  --mkv-error-soft: #fef2f2;
+  --mkv-error-ink: #b91c1c;
+  --mkv-shadow: 0 1px 2px rgb(11 31 58 / 0.04), 0 1px 3px rgb(11 31 58 / 0.06);
+  --mkv-shadow-lg: 0 12px 32px -12px rgb(11 31 58 / 0.18), 0 2px 6px rgb(11 31 58 / 0.06);
+
+  /* Papéis do shadcn */
+  --radius: 0.625rem;
+  --background: #f6f8fb;
+  --foreground: #0b1f3a;
+  --card: #ffffff;
+  --card-foreground: #0b1f3a;
+  --popover: #ffffff;
+  --popover-foreground: #0b1f3a;
+  --primary: #1d4ed8;
+  --primary-foreground: #ffffff;
+  --secondary: #eef2f7;
+  --secondary-foreground: #0b1f3a;
+  --muted: #f1f4f9;
+  --muted-foreground: #6b7c93;
+  --accent: #eef3ff;
+  --accent-foreground: #1e40af;
+  --destructive: #dc2626;
+  --border: #e3e8ef;
+  --input: #d5dce6;
+  --ring: #1d4ed8;
+  --chart-1: #1d4ed8;
+  --chart-2: #0ea5e9;
+  --chart-3: #425466;
+  --chart-4: #059669;
+  --chart-5: #d97706;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0b1f3a;
+  --sidebar-primary: #1d4ed8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eef3ff;
+  --sidebar-accent-foreground: #1e40af;
+  --sidebar-border: #e3e8ef;
+  --sidebar-ring: #1d4ed8;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, 'SF Mono', monospace;
+}
+
+html[data-skin='marketplace'] body {
+  background: var(--mkv-bg);
+  color: var(--mkv-ink);
+}
+
+html[data-skin='marketplace'] ::selection {
+  background: #dbe6ff;
+  color: var(--mkv-ink);
+}
+
+/* --- Cabeçalho de página ------------------------------------------------ */
+
+html[data-skin='marketplace'] [data-page-header] h1 {
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--mkv-ink);
+}
+html[data-skin='marketplace'] [data-page-header] h1 + p {
+  color: var(--mkv-ink-2);
+}
+
+/* --- Cartão: branco, filete e sombra curta ------------------------------ */
+
+html[data-skin='marketplace'] [data-slot='card'] {
+  border-radius: 12px;
+  border: 1px solid var(--mkv-line);
+  background: #ffffff;
+  box-shadow: var(--mkv-shadow);
+  --tw-ring-shadow: 0 0 #0000;
+}
+html[data-skin='marketplace'] [data-slot='card-title'] {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--mkv-ink);
+}
+html[data-skin='marketplace'] [data-slot='card-description'] {
+  color: var(--mkv-ink-3);
+}
+html[data-skin='marketplace'] section > [data-slot='card'] {
+  background-image: none;
+}
+
+/* --- Botão ------------------------------------------------------------- */
+
+html[data-skin='marketplace'] [data-slot='button'] {
+  border-radius: 9px;
+  font-weight: 600;
+}
+html[data-skin='marketplace'] [data-slot='button'][data-variant='default'] {
+  background: var(--mkv-brand);
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgb(11 31 58 / 0.15);
+}
+html[data-skin='marketplace'] [data-slot='button'][data-variant='default']:hover {
+  background: var(--mkv-brand-hover);
+}
+html[data-skin='marketplace'] [data-slot='button'][data-variant='outline'] {
+  border-color: var(--mkv-line-strong);
+  background: #ffffff;
+  color: var(--mkv-ink);
+  box-shadow: 0 1px 2px rgb(11 31 58 / 0.05);
+}
+html[data-skin='marketplace'] [data-slot='button'][data-variant='outline']:hover {
+  background: var(--mkv-bg);
+}
+html[data-skin='marketplace'] [data-slot='button'][data-variant='ghost']:hover {
+  background: var(--mkv-brand-soft);
+  color: var(--mkv-brand-hover);
+}
+html[data-skin='marketplace'] [data-slot='button'][data-variant='secondary'] {
+  background: var(--mkv-brand-soft);
+  color: var(--mkv-brand-hover);
+}
+
+/* --- Campos ------------------------------------------------------------- */
+
+html[data-skin='marketplace'] :is([data-slot='input'], [data-slot='select-trigger'], [data-slot='textarea'], select, textarea) {
+  border-radius: 9px;
+  border-color: var(--mkv-line-strong);
+  background: #ffffff;
+}
+html[data-skin='marketplace'] :is([data-slot='input'], [data-slot='textarea'], [data-slot='select-trigger'], select, textarea):focus-visible {
+  border-color: var(--mkv-brand);
+  box-shadow: 0 0 0 3px rgb(29 78 216 / 0.15);
+}
+html[data-skin='marketplace'] [data-slot='checkbox'][data-state='checked'] {
+  border-color: var(--mkv-brand);
+  background: var(--mkv-brand);
+}
+html[data-skin='marketplace'] [data-slot='switch'][data-state='checked'] {
+  background: var(--mkv-brand);
+}
+
+/* --- Tabela: cabeçalho em versalete, linha com filete -------------------- */
+
+html[data-skin='marketplace'] :is([data-slot='table-head'], thead th) {
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mkv-ink-3);
+}
+html[data-skin='marketplace'] :is([data-slot='table-row'], tbody tr):hover {
+  background: #f8fafd;
+}
+
+/* --- Selos -------------------------------------------------------------- */
+
+html[data-skin='marketplace'] [data-slot='badge'] {
+  border-radius: 9999px;
+  font-weight: 500;
+}
+html[data-skin='marketplace'] [data-badge-status] {
+  border-radius: 9999px;
+  border-width: 1px;
+}
+html[data-skin='marketplace'] [data-badge-status='success'] {
+  border-color: color-mix(in oklab, var(--mkv-success) 22%, transparent);
+  background: var(--mkv-success-soft);
+  color: var(--mkv-success-ink);
+}
+html[data-skin='marketplace'] [data-badge-status='warning'] {
+  border-color: color-mix(in oklab, var(--mkv-warning) 24%, transparent);
+  background: var(--mkv-warning-soft);
+  color: var(--mkv-warning-ink);
+}
+html[data-skin='marketplace'] [data-badge-status='danger'] {
+  border-color: color-mix(in oklab, var(--mkv-error) 22%, transparent);
+  background: var(--mkv-error-soft);
+  color: var(--mkv-error-ink);
+}
+html[data-skin='marketplace'] [data-badge-status='info'] {
+  border-color: color-mix(in oklab, var(--mkv-brand) 22%, transparent);
+  background: var(--mkv-brand-soft);
+  color: var(--mkv-brand-hover);
+}
+html[data-skin='marketplace'] :is([data-badge-status='neutral'], [data-badge-status='loading']) {
+  border-color: var(--mkv-line-strong);
+  background: #f1f4f9;
+  color: var(--mkv-ink-2);
+}
+
+/* --- Abas: sublinhado azul ---------------------------------------------- */
+
+html[data-skin='marketplace'] [data-tabs-nav] {
+  border-color: var(--mkv-line);
+}
+html[data-skin='marketplace'] [data-tabs-nav] a {
+  font-weight: 500;
+  color: var(--mkv-ink-2);
+}
+html[data-skin='marketplace'] [data-tabs-nav] a:hover {
+  color: var(--mkv-ink);
+}
+html[data-skin='marketplace'] [data-tabs-nav] a[aria-current='page'] {
+  border-color: var(--mkv-brand);
+  font-weight: 600;
+  color: var(--mkv-brand);
+}
+html[data-skin='marketplace'] [data-slot='tabs-trigger'][data-state='active'] {
+  color: var(--mkv-brand);
+}
+
+/* --- Avisos, vazio, progresso, sobreposições ------------------------------ */
+
+html[data-skin='marketplace'] [data-slot='alert'] {
+  border-radius: 10px;
+  border-color: var(--mkv-line);
+  background: #ffffff;
+}
+html[data-skin='marketplace'] [data-slot='empty-icon'] {
+  border-radius: 10px;
+  background: var(--mkv-brand-soft);
+  color: var(--mkv-brand);
+}
+html[data-skin='marketplace'] [data-slot='progress'] {
+  background: #eef2f7;
+}
+html[data-skin='marketplace'] [data-slot='progress-indicator'] {
+  background: var(--mkv-brand);
+}
+html[data-skin='marketplace'] :is([data-slot='dropdown-menu-content'], [data-slot='popover-content'], [data-slot='select-content']) {
+  border-radius: 12px;
+  border: 1px solid var(--mkv-line);
+  box-shadow: var(--mkv-shadow-lg);
+}
+html[data-skin='marketplace'] [data-slot='dialog-content'] {
+  border-radius: 14px;
+  border: 1px solid var(--mkv-line);
+  box-shadow: var(--mkv-shadow-lg);
+}
+html[data-skin='marketplace'] :is([data-slot='dialog-overlay'], [data-slot='sheet-overlay']) {
+  background: rgb(11 31 58 / 0.28);
+}
+/* Bloco de seção que não é Card (contas, lotes). */
+html[data-skin='marketplace'] [data-bulls-surface] {
+  border-radius: 12px;
+  border: 1px solid var(--mkv-line);
+  background: #ffffff;
+  box-shadow: var(--mkv-shadow);
+}
+html[data-skin='marketplace'] [data-slot='alert'][class*='text-destructive'] {
+  border-color: color-mix(in oklab, var(--mkv-error) 22%, transparent);
+  background: var(--mkv-error-soft);
+  color: var(--mkv-error-ink);
+}
+@media print {
+  html[data-skin='marketplace'] body {
+    background: #fff;
+  }
+}

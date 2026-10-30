@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BullsBackBar } from '@/components/skins/bulls/bulls-back-bar';
+import { PrintBackBar } from '@/components/PrintBackBar';
 import { notFound } from 'next/navigation';
 import { serverPageContext } from '@/infra/auth/context';
 import { getActiveAccount } from '@/services/accountService';
@@ -40,9 +40,9 @@ export default async function ComprovantePage({
   if (!evidence || !receipt) notFound();
 
   return (
-    <div className={`mx-auto py-4 ${skin === 'bulls' ? 'max-w-[900px]' : 'max-w-[680px]'}`}>
-      {skin === 'bulls' ? (
-        <BullsBackBar href={`/meds/${id}?tab=evidencias`} />
+    <div className={`mx-auto py-4 ${skin !== 'jade' ? 'max-w-[900px]' : 'max-w-[680px]'}`}>
+      {skin !== 'jade' ? (
+        <PrintBackBar href={`/meds/${id}?tab=evidencias`} />
       ) : (
       <div className="mb-3 flex items-center justify-between print:hidden">
         <Link

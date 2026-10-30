@@ -1,4 +1,4 @@
-/** Itens da barra lateral do ambiente Bulls Cash. */
+/** Itens da navegação dos ambientes Bulls Cash e Marketplace Verificado. */
 export type NavId =
   | 'visao-geral'
   | 'contestacoes'

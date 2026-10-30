@@ -92,6 +92,7 @@ export default async function MedsPage({
   const auth = await serverPageContext();
   const account = await getActiveAccount();
   const bulls = account.skin === 'bulls';
+  const marketplace = account.skin === 'marketplace';
 
   // O dia escolhido vira intervalo aqui, num lugar so: `de` abre no primeiro
   // instante do dia e `ate` fecha no ultimo, para que escolher o mesmo dia nos
@@ -144,13 +145,19 @@ export default async function MedsPage({
             </h1>
             <p className="mt-1.5 text-[14px] text-bulls-ink-3">Qual caso atender agora, em ordem de urgência.</p>
           </div>
+        ) : marketplace ? (
+          <div>
+            <p className="text-[13px] font-medium text-primary">{account.name}</p>
+            <h1 className="mt-1 text-[28px] leading-tight font-semibold tracking-[-0.025em]">Contestações</h1>
+            <p className="mt-1 text-[14px] text-muted-foreground">Qual caso atender agora, em ordem de urgência.</p>
+          </div>
         ) : (
           <div>
             <h1 className="font-semibold text-2xl tracking-tight">MEDs</h1>
             <p className="text-muted-foreground text-sm">Qual caso atender agora, em ordem de urgência.</p>
           </div>
         )}
-        <div className={cn('flex items-center gap-2', bulls && 'flex-wrap')}>
+        <div className={cn('flex items-center gap-2', (bulls || marketplace) && 'flex-wrap')}>
           <Button asChild variant="outline">
             <Link href="/meds/entregas">
               <MailCheck data-icon="inline-start" />

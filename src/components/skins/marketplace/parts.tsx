@@ -1,17 +1,17 @@
 import { cn } from '@/lib/cn';
 
 /**
- * Marca da conta na barra superior (a partir do "Verified Badge", 21st.dev 27733).
+ * Marca do ambiente Marketplace Verificado, ao lado do nome da conta.
  *
- * É só a marca do ambiente, ao lado do nome da conta. Não aparece no
- * comprovante: lá ela leria como selo de autenticidade do registro.
+ * É só a marca do console. Não vai no comprovante: lá ela leria como selo de
+ * autenticidade do registro, e o registro não afirma isso.
  */
 export function BrandSeal({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
       className={cn(
-        'relative inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-primary shadow-(--o1-shadow)',
+        'relative inline-flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-primary shadow-(--mkv-shadow)',
         className,
       )}
     >
@@ -20,4 +20,12 @@ export function BrandSeal({ className }: { className?: string }) {
       </svg>
     </span>
   );
+}
+
+/** "Camila Duarte" → "CD"; um nome só → as duas primeiras letras. */
+export function initials(name: string | null | undefined): string {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '—';
+  if (words.length === 1) return (words[0] ?? '').slice(0, 2).toUpperCase();
+  return `${words[0]?.[0] ?? ''}${words[words.length - 1]?.[0] ?? ''}`.toUpperCase();
 }

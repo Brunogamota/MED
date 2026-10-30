@@ -5,7 +5,7 @@ import { getCase } from '@/services/medService';
 import { NotFoundError } from '@/services/errors';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
 import { getActiveAccount } from '@/services/accountService';
-import { BullsBackBar } from '@/components/skins/bulls/bulls-back-bar';
+import { PrintBackBar } from '@/components/PrintBackBar';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,8 +34,8 @@ export default async function ComprovantePagamentoPage({
 
   return (
     <div className="mx-auto max-w-[440px] py-4">
-      {skin === 'bulls' ? (
-        <BullsBackBar href={`/meds/${id}?tab=evidencias`} />
+      {skin !== 'jade' ? (
+        <PrintBackBar href={`/meds/${id}?tab=evidencias`} />
       ) : (
       <div className="mb-3 flex items-center justify-between print:hidden">
         <Link
