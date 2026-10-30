@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeNavFor } from '@/components/skins/bulls/nav';
+import { activeNavFor } from '@/components/skins/nav';
 
 describe('activeNavFor', () => {
   it('acende o item pela rota', () => {

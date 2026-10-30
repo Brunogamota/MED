@@ -88,6 +88,8 @@ export default async function ComprovantesEmLotePage({
   const auth = await serverPageContext();
   const { skin, name: accountName } = await getActiveAccount();
   const bulls = skin === 'bulls';
+  // Peça larga nos ambientes com comprovante próprio.
+  const largo = skin !== 'jade';
 
   // Dois caminhos de entrada: a selecao da fila (`ids`) e o recorte por data,
   // que e como o lote costuma ser pensado — "os do dia 24".
@@ -116,7 +118,7 @@ export default async function ComprovantesEmLotePage({
 
   return (
     <div
-      className={`mx-auto py-4 ${bulls ? 'max-w-[900px]' : 'max-w-[680px]'}`}
+      className={`mx-auto py-4 ${largo ? 'max-w-[900px]' : 'max-w-[680px]'}`}
       data-lote-comprovantes
     >
       {bulls ? (

@@ -7,6 +7,7 @@ import {
 } from '@/domain/communication/receipt';
 import type { SkinId } from '@/config/skins';
 import { BullsReceipt } from '@/components/skins/bulls/bulls-receipt';
+import { MarketplaceReceipt } from '@/components/skins/marketplace/marketplace-receipt';
 
 /**
  * Painel de envios: reconstrói a comunicação como o painel administrativo do
@@ -141,6 +142,10 @@ export function ClientEmailView({
   endToEndId?: string | null;
 }) {
   const view = buildClientEmailView(receipt);
+
+  if (skin === 'marketplace') {
+    return <MarketplaceReceipt view={view} sourceReference={sourceReference} endToEndId={endToEndId} />;
+  }
 
   if (skin === 'bulls') {
     return (

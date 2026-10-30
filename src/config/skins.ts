@@ -15,7 +15,14 @@ export const SKINS = {
     label: 'Bulls Cash',
     description: 'Barra lateral recolhível, bento claro em lavanda e roxo, Plus Jakarta Sans.',
   },
+  marketplace: {
+    label: 'Marketplace Verificado',
+    description: 'Navegação no topo, branco e azul de confiança, Inter.',
+  },
 } as const;
+
+/** Ambientes que são só claros: o tema do sistema não escurece a paleta. */
+export const LIGHT_ONLY_SKINS: readonly SkinId[] = ['bulls', 'marketplace'];
 
 export type SkinId = keyof typeof SKINS;
 

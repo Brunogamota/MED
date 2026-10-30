@@ -5,7 +5,7 @@ import { MotionProvider } from '@/components/layout/motion-provider';
 import { ThemeProvider } from '@/components/layout/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getActiveAccount } from '@/services/accountService';
-import type { SkinId } from '@/config/skins';
+import { LIGHT_ONLY_SKINS, type SkinId } from '@/config/skins';
 import './globals.css';
 
 /**
@@ -73,8 +73,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <body>
-        {/* O Bulls Cash é claro sempre: o tema do sistema não escurece o ambiente. */}
-        <ThemeProvider forcedTheme={skin === 'bulls' ? 'light' : undefined}>
+        {/* Bulls Cash e Marketplace Verificado são claros sempre: o tema do
+            sistema não escurece o ambiente. */}
+        <ThemeProvider forcedTheme={LIGHT_ONLY_SKINS.includes(skin) ? 'light' : undefined}>
           <MotionProvider>
             <TooltipProvider>{children}</TooltipProvider>
           </MotionProvider>

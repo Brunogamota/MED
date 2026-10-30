@@ -12,6 +12,7 @@ import { listMeds } from '@/services/medService';
 import { getActiveAccount } from '@/services/accountService';
 import { buildBullsHome } from '@/lib/bullsHome';
 import { BullsHome } from '@/components/skins/bulls/bulls-home';
+import { MarketplaceHome } from '@/components/skins/marketplace/marketplace-home';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,24 @@ async function BullsDashboard({ accountName }: { accountName: string }) {
   return <BullsHome accountName={accountName} data={buildBullsHome(rows, now)} />;
 }
 
+/** Visão geral do Marketplace Verificado: indicadores, entrada e fila. */
+async function MarketplaceDashboard({ accountName }: { accountName: string }) {
+  const now = new Date();
+  const rows = await listMeds((await serverPageContext()), {});
+  return <MarketplaceHome accountName={accountName} data={buildBullsHome(rows, now)} />;
+}
+
+function MarketplaceDashboardSkeleton() {
+  return (
+    <div className="skeleton-defer flex flex-col gap-6">
+      <Skeleton className="h-20 w-80 rounded-xl" />
+      <Skeleton className="h-36 rounded-xl" />
+      <Skeleton className="h-80 rounded-xl" />
+      <Skeleton className="h-72 rounded-xl" />
+    </div>
+  );
+}
+
 function BullsDashboardSkeleton() {
   return (
     <div className="skeleton-defer flex flex-col gap-5">
@@ -66,6 +85,13 @@ function BullsDashboardSkeleton() {
 
 export default async function DashboardPage() {
   const account = await getActiveAccount();
+  if (account.skin === 'marketplace') {
+    return (
+      <Suspense fallback={<MarketplaceDashboardSkeleton />}>
+        <MarketplaceDashboard accountName={account.name} />
+      </Suspense>
+    );
+  }
   if (account.skin === 'bulls') {
     return (
       <Suspense fallback={<BullsDashboardSkeleton />}>

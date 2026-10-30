@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { serverPageContext } from '@/infra/auth/context';
 import { getActiveAccount, listAccounts } from '@/services/accountService';
 import { BullsShell } from '@/components/skins/bulls/bulls-shell';
+import { MarketplaceShell } from '@/components/skins/marketplace/marketplace-shell';
 import { listMeds } from '@/services/medService';
 import { hoursUntil } from '@/lib/format';
 import type { MedStatus } from '@/domain/types';
@@ -64,6 +65,15 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       >
         {children}
       </BullsShell>
+    );
+  }
+
+  // Marketplace Verificado: navegação no topo, sem trilho lateral.
+  if (active.skin === 'marketplace') {
+    return (
+      <MarketplaceShell accounts={options} counts={counts} demoMode={config.demoMode}>
+        {children}
+      </MarketplaceShell>
     );
   }
 

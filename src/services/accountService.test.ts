@@ -23,6 +23,11 @@ describe('contas', () => {
     expect((await listAccounts()).map((a) => a.name)).toEqual(['Jade', 'Bulls Cash']);
   });
 
+  it('cria a conta com o ambiente Marketplace Verificado', async () => {
+    const conta = await createAccount({ name: 'Marketplace Verificado', skin: 'marketplace' });
+    expect(conta).toMatchObject({ name: 'Marketplace Verificado', skin: 'marketplace', isDefault: false });
+  });
+
   it('ambiente desconhecido cai no padrão', async () => {
     const conta = await createAccount({ name: 'Outra', skin: 'nao-existe' });
     expect(conta.skin).toBe('jade');

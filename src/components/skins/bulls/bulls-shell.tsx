@@ -35,7 +35,7 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTri
 import { switchAccountAction } from '@/app/(console)/contas/actions';
 import { signOutAction } from '@/app/login/actions';
 import { bullsInitials } from '@/components/skins/bulls/parts';
-import { activeNavFor, type NavId } from '@/components/skins/bulls/nav';
+import { activeNavFor, type NavId } from '@/components/skins/nav';
 import {
   Sidebar,
   SidebarFooter,
