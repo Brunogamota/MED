@@ -6,6 +6,7 @@ import {
   type CommunicationTemplate,
 } from '@/domain/communication/receipt';
 import type { SkinId } from '@/config/skins';
+import type { AutoLayout } from '@/domain/master/company';
 import { BullsReceipt } from '@/components/skins/bulls/bulls-receipt';
 import { MarketplaceReceipt } from '@/components/skins/marketplace/marketplace-receipt';
 import { AutoReceipt } from '@/components/skins/auto/auto-receipt';
@@ -128,12 +129,15 @@ export function ClientEmailView({
   endToEndId,
   skin = 'jade',
   brandColor = null,
+  brandLayout = null,
 }: {
   receipt: CommunicationReceipt;
   /** Ambiente da conta: cada um tem a própria peça. */
   skin?: SkinId;
   /** Cor da marca da empresa, no modelo automático. */
   brandColor?: string | null;
+  /** Desenho do comprovante da empresa, no modelo automático. */
+  brandLayout?: AutoLayout | null;
   /** Id da mensagem no painel do gateway, quando registrado na evidência. */
   sourceReference?: string | null;
   /**
@@ -149,7 +153,7 @@ export function ClientEmailView({
 
   if (skin === 'auto') {
     return (
-      <AutoReceipt view={view} brandColor={brandColor} sourceReference={sourceReference} endToEndId={endToEndId} />
+      <AutoReceipt view={view} brandColor={brandColor} brandLayout={brandLayout} sourceReference={sourceReference} endToEndId={endToEndId} />
     );
   }
 

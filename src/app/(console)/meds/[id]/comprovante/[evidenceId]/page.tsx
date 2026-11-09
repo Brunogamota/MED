@@ -23,7 +23,7 @@ export default async function ComprovantePage({
 }) {
   const { id, evidenceId } = await params;
   const auth = await serverPageContext();
-  const { skin, brandColor } = await getActiveAccount();
+  const { skin, brandColor, brandLayout } = await getActiveAccount();
 
   let medCase;
   try {
@@ -60,6 +60,7 @@ export default async function ComprovantePage({
         receipt={receipt}
         skin={skin}
                 brandColor={brandColor}
+                brandLayout={brandLayout}
         sourceReference={evidence.sourceReference}
         endToEndId={resolveEndToEndId(medCase)}
       />

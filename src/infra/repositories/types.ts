@@ -145,6 +145,8 @@ export interface AccountRecord {
   aliases: string[];
   /** Cor da marca do modelo automático; nulo nos ambientes desenhados. */
   brandColor: string | null;
+  /** Desenho do comprovante do modelo automático; nulo nos ambientes desenhados. */
+  brandLayout: string | null;
   createdAt: string;
 }
 
@@ -155,6 +157,7 @@ export interface SaveAccountInput {
   /** Ausente = mantém o que já estava. */
   aliases?: string[];
   brandColor?: string | null;
+  brandLayout?: string | null;
 }
 
 export interface AccountRepository {

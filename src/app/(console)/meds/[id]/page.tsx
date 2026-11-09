@@ -168,7 +168,7 @@ export default async function MedDetailPage({
 
   const auth = await serverPageContext();
   const sender = (await senderNameFor(auth.organizationId)) ?? undefined;
-  const { skin, brandColor } = await getActiveAccount();
+  const { skin, brandColor, brandLayout } = await getActiveAccount();
 
   let medCase;
   try {
@@ -581,6 +581,7 @@ export default async function MedDetailPage({
             sender={sender}
             skin={skin}
             brandColor={brandColor}
+            brandLayout={brandLayout}
           />
 
           <div id="documentos" className="scroll-mt-16 space-y-4">

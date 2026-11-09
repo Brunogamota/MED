@@ -365,6 +365,7 @@ function toAccountRecord(row: {
   skin: string | null;
   aliases: string[];
   brandColor: string | null;
+  brandLayout: string | null;
   createdAt: Date;
 }): AccountRecord {
   return {
@@ -373,6 +374,7 @@ function toAccountRecord(row: {
     skin: row.skin ?? null,
     aliases: row.aliases ?? [],
     brandColor: row.brandColor ?? null,
+    brandLayout: row.brandLayout ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -974,6 +976,7 @@ export class PrismaMedRepository
     const extra = {
       ...(account.aliases !== undefined ? { aliases: account.aliases } : {}),
       ...(account.brandColor !== undefined ? { brandColor: account.brandColor } : {}),
+      ...(account.brandLayout !== undefined ? { brandLayout: account.brandLayout } : {}),
     };
     const row = await this.prisma.organization.upsert({
       where: { id: account.id },

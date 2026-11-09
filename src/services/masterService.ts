@@ -6,6 +6,8 @@ import {
   identifyCompany,
   learnAliases,
   pickBrandColor,
+  pickBrandLayout,
+  type AutoLayout,
   type CompanyHints,
   type CompanyMatch,
   type CompanyVia,
@@ -61,6 +63,8 @@ export interface MasterGroup {
   isNew: boolean;
   skin: SkinId;
   brandColor: string | null;
+  /** Desenho do comprovante: o da conta, ou o que a empresa nova vai ganhar. */
+  brandLayout: AutoLayout | null;
   via: Partial<Record<CompanyVia, number>>;
   rows: number;
   /** Cabeçalho + até 100 linhas, do arquivo de origem. */
@@ -97,6 +101,7 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
   const files: MasterPreview['files'] = [];
   const unknown: MasterPreview['unknown'] = [];
   const usedColors = accounts.map((account) => account.brandColor);
+  const usedLayouts: (string | null)[] = accounts.map((account) => account.brandLayout);
 
   /** Põe a linha no grupo da empresa (criando o grupo na primeira vez). */
   const place = (
@@ -111,7 +116,11 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
     if (!bucket) {
       const account = match.kind === 'ACCOUNT' ? accounts.find((a) => a.id === match.accountId) : undefined;
       const brandColor = account ? account.brandColor : pickBrandColor(usedColors);
-      if (!account) usedColors.push(brandColor);
+      const brandLayout = account ? account.brandLayout : pickBrandLayout(usedLayouts);
+      if (!account) {
+        usedColors.push(brandColor);
+        usedLayouts.push(brandLayout);
+      }
       bucket = {
         group: {
           key,
@@ -120,6 +129,7 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
           isNew: !account,
           skin: account?.skin ?? 'auto',
           brandColor,
+          brandLayout,
           via: {},
           rows: 0,
           chunks: [],
@@ -230,7 +240,14 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
  * apelidos aprendidos. Devolve, por grupo, a conta onde os MEDs vão entrar.
  */
 export async function applyMasterGroups(
-  groups: { key: string; accountId: string | null; name: string; brandColor: string | null; learned: string[] }[],
+  groups: {
+    key: string;
+    accountId: string | null;
+    name: string;
+    brandColor: string | null;
+    brandLayout: AutoLayout | null;
+    learned: string[];
+  }[],
 ): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   for (const group of groups) {
@@ -252,6 +269,7 @@ export async function applyMasterGroups(
       name: group.name,
       skin: 'auto',
       brandColor: group.brandColor,
+      brandLayout: group.brandLayout,
       aliases: group.learned,
     });
     result[group.key] = created.id;
@@ -485,4 +503,57 @@ export async function markMasterSubmitted(base: AuthContext, accountId: string, 
     }
   }
   return done;
+}
+
+// ---------------------------------------------------------------------------
+// Visão de cima: os números de cada empresa
+// ---------------------------------------------------------------------------
+
+export interface MasterCompanyOverview {
+  id: string;
+  name: string;
+  skin: SkinId;
+  brandColor: string | null;
+  brandLayout: AutoLayout | null;
+  aliases: number;
+  open: number;
+  /** Prazo em até 72h (a mesma janela da visão "Vencendo" da fila). */
+  dueSoon: number;
+  ready: number;
+  blocked: number;
+}
+
+const OPEN: MedStatus[] = [
+  'RECEIVED',
+  'COLLECTING_DATA',
+  'MISSING_EVIDENCE',
+  'READY_TO_GENERATE',
+  'DEFENSE_GENERATED',
+  'READY_TO_SUBMIT',
+];
+
+export async function masterOverview(base: AuthContext, now = new Date()): Promise<MasterCompanyOverview[]> {
+  const accounts = await listAccounts();
+  const out: MasterCompanyOverview[] = [];
+  for (const account of accounts) {
+    const rows = await listMeds({ ...base, organizationId: account.id }, {});
+    const open = rows.filter((row) => OPEN.includes(row.med.status));
+    const dueSoon = open.filter((row) => {
+      const deadline = Date.parse(row.med.responseDeadlineAt ?? '');
+      return !Number.isNaN(deadline) && deadline - now.getTime() <= 72 * 3600 * 1000;
+    }).length;
+    out.push({
+      id: account.id,
+      name: account.name,
+      skin: account.skin,
+      brandColor: account.brandColor,
+      brandLayout: account.brandLayout,
+      aliases: account.aliases.length,
+      open: open.length,
+      dueSoon,
+      ready: rows.filter((row) => row.med.status === 'READY_TO_SUBMIT').length,
+      blocked: rows.filter((row) => row.med.status === 'MISSING_EVIDENCE').length,
+    });
+  }
+  return out;
 }
