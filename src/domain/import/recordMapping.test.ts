@@ -22,6 +22,7 @@ function row(overrides: Partial<ImportedMedRow> = {}): ImportedMedRow {
     payerEmail: null,
     payerPhone: null,
     merchantName: null,
+    merchantDocument: null,
     orderReference: null,
     errors: [],
     ...overrides,

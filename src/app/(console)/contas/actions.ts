@@ -7,6 +7,7 @@ import {
   ACCOUNT_COOKIE,
   createAccount,
   listAccounts,
+  setAccountAliases,
 } from '@/services/accountService';
 import { ValidationError } from '@/services/errors';
 
@@ -52,4 +53,22 @@ export async function createAccountAction(
   await entrar(id);
   revalidatePath('/', 'layout');
   redirect('/');
+}
+
+/**
+ * Como a conta Master reconhece a empresa: um apelido por linha. CNPJ e chave
+ * Pix com "doc:", prefixo de pedido com "prefixo:"; o resto vale como nome.
+ */
+export async function saveAccountAliasesAction(form: FormData): Promise<void> {
+  const id = String(form.get('conta') ?? '');
+  const aliases = String(form.get('apelidos') ?? '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  try {
+    await setAccountAliases(id, aliases);
+  } catch (error) {
+    if (!(error instanceof ValidationError)) throw error;
+  }
+  revalidatePath('/contas');
 }

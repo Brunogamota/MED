@@ -18,6 +18,7 @@ import type {
   ImportBatch,
   ImportBatchRepository,
   AccountRecord,
+  SaveAccountInput,
   AccountRepository,
   IdempotencyStore,
   ListMedsFilter,
@@ -367,10 +368,15 @@ export class InMemoryMedRepository
     return [...this.accounts.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
-  async saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord> {
+  async saveAccount(account: SaveAccountInput): Promise<AccountRecord> {
+    const previous = this.accounts.get(account.id);
     const saved: AccountRecord = {
-      ...account,
-      createdAt: this.accounts.get(account.id)?.createdAt ?? new Date().toISOString(),
+      id: account.id,
+      name: account.name,
+      skin: account.skin,
+      aliases: account.aliases ?? previous?.aliases ?? [],
+      brandColor: account.brandColor !== undefined ? account.brandColor : (previous?.brandColor ?? null),
+      createdAt: previous?.createdAt ?? new Date().toISOString(),
     };
     this.accounts.set(account.id, saved);
     return saved;

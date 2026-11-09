@@ -1064,3 +1064,33 @@ html[data-skin='marketplace'] [data-slot='alert'][class*='text-destructive'] {
     background: #fff;
   }
 }
+
+/* =========================================================================
+   Modelo automático (`<html data-skin="auto">`)
+
+   Empresa criada pela conta Master sem ambiente desenhado: o console é o do
+   Jade, claro, com a cor da marca da empresa (`--brand`, posta no <html>
+   pelo layout raiz) no lugar do preto da ação principal.
+   ========================================================================= */
+
+html[data-skin='auto'],
+html.dark[data-skin='auto'] {
+  color-scheme: light;
+  --brand: #334155;
+  --primary: var(--brand);
+  --primary-foreground: #ffffff;
+  --ring: var(--brand);
+  --chart-1: var(--brand);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: #ffffff;
+  --accent: color-mix(in oklab, var(--brand) 8%, white);
+  --accent-foreground: color-mix(in oklab, var(--brand) 80%, black);
+}
+html[data-skin='auto'] [data-tabs-nav] a[aria-current='page'] {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+html[data-skin='auto'] [data-slot='checkbox'][data-state='checked'] {
+  border-color: var(--brand);
+  background: var(--brand);
+}

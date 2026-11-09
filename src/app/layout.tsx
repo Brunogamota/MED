@@ -39,13 +39,19 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 /** Ambiente da conta em uso. Falha de leitura cai no padrão, não derruba a página. */
-async function activeSkin(): Promise<{ skin: SkinId; name: string | null }> {
+async function activeSkin(): Promise<{ skin: SkinId; name: string | null; brandColor: string | null }> {
   try {
     const account = await getActiveAccount();
-    return { skin: account.skin, name: account.isDefault ? null : account.name };
+    return { skin: account.skin, name: account.isDefault ? null : account.name, brandColor: account.brandColor };
   } catch {
-    return { skin: 'jade', name: null };
+    return { skin: 'jade', name: null, brandColor: null };
   }
+}
+
+/** Só `#rrggbb` vira variável de estilo: o valor vem do banco. */
+function brandStyle(skin: SkinId, color: string | null): React.CSSProperties | undefined {
+  if (skin !== 'auto' || !color || !/^#[0-9a-f]{6}$/i.test(color)) return undefined;
+  return { ['--brand' as string]: color } as React.CSSProperties;
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -64,11 +70,12 @@ export async function generateMetadata(): Promise<Metadata> {
  * ainda não entrou não deve ver o menu do que existe lá dentro.
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { skin } = await activeSkin();
+  const { skin, brandColor } = await activeSkin();
   return (
     <html
       lang="pt-BR"
       data-skin={skin}
+      style={brandStyle(skin, brandColor)}
       className={`${sans.variable} ${mono.variable} ${jakarta.variable}`}
       suppressHydrationWarning
     >

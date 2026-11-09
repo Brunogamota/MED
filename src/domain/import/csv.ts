@@ -113,6 +113,7 @@ export type ImportField =
   | 'payerEmail'
   | 'payerPhone'
   | 'merchantName'
+  | 'merchantDocument'
   | 'orderReference';
 
 /**
@@ -163,7 +164,24 @@ const COLUMN_ALIASES: Record<ImportField, string[]> = {
    * pagador vem em coluna propria ("Nome Debitado", "Pagador"). A tela lista as
    * colunas reconhecidas, entao o mapeamento fica visivel e nao silencioso.
    */
-  merchantName: ['merchant', 'estabelecimento', 'loja', 'nomeloja', 'nomeestabelecimento', 'recebedor', 'customer'],
+  merchantName: [
+    'merchant', 'estabelecimento', 'loja', 'nomeloja', 'nomeestabelecimento', 'recebedor', 'customer',
+    // A empresa dona do MED, na planilha que mistura várias (conta Master).
+    // `company` fica de fora: no export do PSP ela é o gateway, e a loja vem
+    // em `customer`.
+    'empresa', 'nomeempresa', 'nomedaempresa', 'marca', 'nomefantasia',
+    'lojista', 'seller', 'merchantname', 'nomerecebedor', 'nomedorecebedor',
+  ],
+  /**
+   * CNPJ ou chave Pix de quem recebeu o pagamento — a empresa, não o pagador.
+   * `cnpj` sozinho continua sendo do pagador: só entra aqui com o dono no nome.
+   */
+  merchantDocument: [
+    'cnpjrecebedor', 'cnpjdorecebedor', 'cnpjloja', 'cnpjdaloja', 'cnpjestabelecimento', 'cnpjmerchant',
+    'merchantdocument', 'documentorecebedor', 'documentodorecebedor', 'cnpjempresa', 'cnpjdaempresa',
+    'chavepix', 'chavepixrecebedor', 'chavepixdorecebedor', 'pixkey', 'chavedorecebedor', 'chavepixdestino',
+    'chavepixdaempresa',
+  ],
   orderReference: ['pedido', 'numeropedido', 'idpedido', 'orderid', 'order', 'referenciapedido'],
 };
 
@@ -486,6 +504,8 @@ export interface ImportedMedRow {
   payerEmail: string | null;
   payerPhone: string | null;
   merchantName: string | null;
+  /** CNPJ ou chave Pix do recebedor (a empresa), como veio. */
+  merchantDocument: string | null;
   orderReference: string | null;
   /** Linha so e importavel quando esta lista esta vazia. */
   errors: string[];
@@ -680,6 +700,7 @@ export function parseMedImport(text: string): ParsedImport {
       payerEmail: orNull(cell(values, 'payerEmail')),
       payerPhone: orNull(cell(values, 'payerPhone')),
       merchantName: orNull(cell(values, 'merchantName')),
+      merchantDocument: orNull(cell(values, 'merchantDocument')),
       orderReference: orNull(cell(values, 'orderReference')),
       errors,
     });

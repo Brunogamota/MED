@@ -8,6 +8,7 @@ import {
 import type { SkinId } from '@/config/skins';
 import { BullsReceipt } from '@/components/skins/bulls/bulls-receipt';
 import { MarketplaceReceipt } from '@/components/skins/marketplace/marketplace-receipt';
+import { AutoReceipt } from '@/components/skins/auto/auto-receipt';
 
 /**
  * Painel de envios: reconstrói a comunicação como o painel administrativo do
@@ -126,10 +127,13 @@ export function ClientEmailView({
   sourceReference,
   endToEndId,
   skin = 'jade',
+  brandColor = null,
 }: {
   receipt: CommunicationReceipt;
   /** Ambiente da conta: cada um tem a própria peça. */
   skin?: SkinId;
+  /** Cor da marca da empresa, no modelo automático. */
+  brandColor?: string | null;
   /** Id da mensagem no painel do gateway, quando registrado na evidência. */
   sourceReference?: string | null;
   /**
@@ -142,6 +146,12 @@ export function ClientEmailView({
   endToEndId?: string | null;
 }) {
   const view = buildClientEmailView(receipt);
+
+  if (skin === 'auto') {
+    return (
+      <AutoReceipt view={view} brandColor={brandColor} sourceReference={sourceReference} endToEndId={endToEndId} />
+    );
+  }
 
   if (skin === 'marketplace') {
     return <MarketplaceReceipt view={view} sourceReference={sourceReference} endToEndId={endToEndId} />;
