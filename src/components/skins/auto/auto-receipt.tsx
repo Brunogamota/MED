@@ -7,11 +7,15 @@ import type { AutoLayout } from '@/domain/master/company';
  * ambiente desenhado.
  *
  * Seis desenhos, e cada empresa nova fica com um que as outras ainda não
- * usam, além da própria cor: a peça de uma empresa não é a de outra pintada
- * de outra cor. Faixa, Recibo, Carta, Painel, Janela e Selo mudam estrutura,
- * tipografia e composição. Todos mostram a mesma coisa: a ficha do envio, a
- * mensagem enviada e a declaração de origem — só a mensagem, sem etapas do
- * pedido, como nos outros ambientes.
+ * usam, além da própria cor. Cada um segue um gênero de documento que quem
+ * recebe já conhece e em que confia — extrato de banco, recibo de pagamento,
+ * e-mail impresso, formulário, comprovante de aplicativo, recibo enxuto —, e
+ * não um enfeite inventado: tipografia sóbria, filetes finos, a cor da marca
+ * só na marca e no botão que o e-mail tinha.
+ *
+ * Todos mostram a mesma coisa: a ficha do envio, a mensagem enviada e a
+ * declaração de origem — só a mensagem, sem etapas do pedido, como nos outros
+ * ambientes. Nenhum selo de autenticidade: o registro não afirma isso.
  *
  * Cor literal porque a peça vai impressa e representa documento externo. A
  * cor da marca entra por variável de estilo, validada como `#rrggbb`.
@@ -22,7 +26,6 @@ import type { AutoLayout } from '@/domain/master/company';
  */
 
 const FALLBACK = '#334155';
-const SERIF = "ui-serif, Georgia, 'Times New Roman', serif";
 
 function brand(color: string | null | undefined): string {
   return color && /^#[0-9a-f]{6}$/i.test(color) ? color : FALLBACK;
@@ -41,43 +44,42 @@ interface Props {
   endToEndId?: string | null;
 }
 
-interface Field {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}
+type LayoutProps = Props & { color: string };
 
-const MISSING = <span className="text-[#78716c]">não informado</span>;
+const MISSING = <span className="text-[#9ca3af]">não informado</span>;
 
-/** A ficha do envio, igual em todos os desenhos; muda só como é desenhada. */
-function fields({ view, sourceReference, endToEndId }: Props): Field[] {
-  const list: Field[] = [
-    { label: 'Remetente', value: view.from },
-    {
-      label: 'Destinatário',
-      value:
-        view.toName || view.to ? (
-          <>
-            {view.toName ? <span className="block font-medium">{view.toName}</span> : null}
-            {view.to ? <span className="block break-all opacity-80">{view.to}</span> : null}
-          </>
-        ) : (
-          MISSING
-        ),
-    },
-    { label: 'Canal', value: 'E-mail' },
-    { label: 'Tipo', value: COMMUNICATION_TEMPLATE_LABEL[view.template] },
-    { label: 'Enviado em', value: view.sentAtLabel ?? MISSING },
-    // Sempre presente: "não informado" é honesto; o campo sumir não.
-    { label: 'End-to-end', value: endToEndId ?? MISSING, mono: Boolean(endToEndId) },
-  ];
-  if (sourceReference) list.push({ label: 'ID da mensagem', value: sourceReference, mono: true });
-  return list;
-}
-
-function Paragraphs({ view, className }: { view: ClientEmailView; className?: string }) {
+function recipient(view: ClientEmailView): ReactNode {
+  if (!view.toName && !view.to) return MISSING;
   return (
-    <div className={className}>
+    <>
+      {view.toName ? <span className="text-[#111827]">{view.toName}</span> : null}
+      {view.toName && view.to ? ' ' : null}
+      {view.to ? <span className="break-all text-[#4b5563]">{view.toName ? `<${view.to}>` : view.to}</span> : null}
+    </>
+  );
+}
+
+function e2e(endToEndId: string | null | undefined): ReactNode {
+  // Sempre presente: "não informado" é honesto; o campo sumir não.
+  return endToEndId ? <span className="font-mono text-[12.5px] break-all">{endToEndId}</span> : MISSING;
+}
+
+/** A marca da empresa: quadrado com as iniciais, como o logo de quem não mandou logo. */
+function Mark({ name, size = 32, radius = 7 }: { name: string; size?: number; radius?: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{ width: size, height: size, borderRadius: radius, fontSize: Math.round(size * 0.36) }}
+      className="inline-flex shrink-0 items-center justify-center bg-(--marca) font-semibold tracking-[0.02em] text-white"
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
+function Body({ view, className = '' }: { view: ClientEmailView; className?: string }) {
+  return (
+    <div className={`space-y-3 text-[14.5px] leading-[1.65] text-[#374151] [&>p:first-child]:text-[#111827] ${className}`}>
       {view.paragraphs.length > 0 ? (
         view.paragraphs.map((paragraph, index) => (
           <p key={index} className="whitespace-pre-line">
@@ -85,321 +87,382 @@ function Paragraphs({ view, className }: { view: ClientEmailView; className?: st
           </p>
         ))
       ) : (
-        <p className="text-[#78716c]">Sem conteúdo.</p>
+        <p className="text-[#9ca3af]">Sem conteúdo.</p>
       )}
     </div>
   );
 }
 
-/** O botão (ou a nota) que a mensagem trazia, no estilo de cada desenho. */
-function Action({ view, className }: { view: ClientEmailView; className: string }) {
+/** O botão (ou a nota) que a mensagem trazia, como o e-mail mostrava. */
+function Action({ view, className = '' }: { view: ClientEmailView; className?: string }) {
   const action = view.action;
   if (!action) return null;
   if (action.kind === 'NOTE') {
     return (
-      <div className="mt-6 inline-flex max-w-full flex-col rounded-[8px] border border-[#e7e5e4] bg-white px-4 py-3">
-        <span className="text-[11px] font-semibold tracking-[0.08em] text-[#78716c] uppercase">{action.valueLabel}</span>
-        <span className="mt-1 font-mono text-[14px] break-all text-[#1c1917]">{action.value}</span>
+      <div className={`inline-flex max-w-full flex-col rounded-[6px] border border-[#e5e7eb] bg-[#f9fafb] px-4 py-3 ${className}`}>
+        <span className="text-[12px] text-[#6b7280]">{action.valueLabel}</span>
+        <span className="mt-0.5 font-mono text-[13.5px] break-all text-[#111827]">{action.value}</span>
       </div>
     );
   }
+  const look = `inline-flex h-10 items-center rounded-[6px] bg-(--marca) px-5 text-[14px] font-semibold text-white no-underline ${className}`;
   return action.href ? (
-    <a href={action.href} target="_blank" rel="noopener noreferrer" className={`no-underline ${className}`}>
+    <a href={action.href} target="_blank" rel="noopener noreferrer" className={look}>
       {action.label}
     </a>
   ) : (
-    <span className={className}>{action.label}</span>
+    <span className={look}>{action.label}</span>
   );
 }
 
-function Stamp({ view, className }: { view: ClientEmailView; className: string }) {
-  // Declaração de origem — inseparável da peça. Nunca remova.
-  return <p className={className}>{view.stamp}</p>;
+/** O e-mail como chegou: assunto, texto e botão. */
+function Email({ view, className = '' }: { view: ClientEmailView; className?: string }) {
+  return (
+    <div className={className}>
+      <p className="text-[18px] leading-snug font-semibold text-[#111827]">{view.subject || 'Sem assunto'}</p>
+      <Body view={view} className="mt-3" />
+      <Action view={view} className="mt-5" />
+    </div>
+  );
 }
 
-function Shell({
-  color,
-  className,
-  font = 'font-sans',
-  children,
-}: {
-  color: string;
-  className: string;
-  font?: 'font-sans' | 'font-mono';
-  children: ReactNode;
-}) {
+function Shell({ color, className, children }: { color: string; className: string; children: ReactNode }) {
   return (
     <article
       aria-label="Comprovante de envio"
       style={{ '--marca': color } as CSSProperties}
-      className={`@container overflow-hidden bg-white text-[#1c1917] [print-color-adjust:exact] print:shadow-none ${font} ${className}`}
+      className={`@container bg-white font-sans text-[#111827] antialiased [print-color-adjust:exact] print:shadow-none ${className}`}
     >
       {children}
     </article>
   );
 }
 
+function Row({ label, children, mono = false }: { label: string; children: ReactNode; mono?: boolean }) {
+  return (
+    <div className="grid gap-0.5 py-2.5 @[560px]:grid-cols-[170px_minmax(0,1fr)] @[560px]:gap-6">
+      <dt className="text-[13px] text-[#6b7280]">{label}</dt>
+      <dd className={`min-w-0 text-[13.5px] text-[#111827] ${mono ? 'font-mono text-[12.5px] break-all' : ''}`}>{children}</dd>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// 1. Faixa — faixa da marca no topo, ficha em lista, mensagem com fio lateral
+// Extrato — comprovante de banco: data em destaque, linhas com filete fino
 // ---------------------------------------------------------------------------
 
-function Faixa(props: Props & { color: string }) {
-  const { view } = props;
+function Extrato({ view, sourceReference, endToEndId, color }: LayoutProps) {
   return (
-    <Shell color={props.color} className="rounded-[10px] border border-[#e7e5e4] shadow-[0_18px_40px_-28px_rgb(28_25_23/0.35)]">
-      <header className="flex flex-wrap items-end justify-between gap-3 bg-(--marca) px-6 pt-7 pb-6 text-white @[620px]:px-10">
-        <div className="min-w-0">
-          <p className="text-[12px] font-medium tracking-[0.12em] text-white/80 uppercase">Comprovante de envio</p>
-          <p className="mt-1 truncate text-[26px] leading-tight font-semibold tracking-[-0.02em]">{view.from}</p>
+    <Shell color={color} className="border border-[#e5e7eb] border-t-[3px] border-t-(--marca)">
+      <header className="flex items-center justify-between gap-4 px-8 pt-7 pb-6 @[620px]:px-10">
+        <div className="flex min-w-0 items-center gap-3">
+          <Mark name={view.from} />
+          <span className="truncate text-[15px] font-semibold">{view.from}</span>
         </div>
-        <p className="text-[13px] text-white/85">{COMMUNICATION_TEMPLATE_LABEL[view.template]}</p>
+        <span className="text-[13px] text-[#6b7280]">{COMMUNICATION_TEMPLATE_LABEL[view.template]}</span>
       </header>
-      <dl className="px-6 py-3 @[620px]:px-10">
-        {fields(props).map((field) => (
-          <div key={field.label} className="grid gap-1 border-b border-[#e7e5e4] py-3 last:border-b-0 @[560px]:grid-cols-[150px_minmax(0,1fr)] @[560px]:gap-4">
-            <dt className="text-[11px] font-semibold tracking-[0.08em] text-[#78716c] uppercase">{field.label}</dt>
-            <dd className={`min-w-0 text-[14px] ${field.mono ? 'font-mono text-[13px] break-all' : ''}`}>{field.value}</dd>
-          </div>
-        ))}
-      </dl>
-      <section aria-label="Mensagem enviada" className="px-6 pb-9 @[620px]:px-10">
-        <h3 className="mb-3 text-[11px] font-semibold tracking-[0.12em] text-[#78716c] uppercase">Mensagem enviada</h3>
-        <div className="rounded-[10px] border border-l-[5px] border-[#e7e5e4] border-l-(--marca) bg-[#fafaf9] px-6 py-7 @[620px]:px-9">
-          <p className="text-[27px] leading-[1.15] font-semibold tracking-[-0.02em] @[620px]:text-[32px]">{view.subject || 'Sem assunto'}</p>
-          <Paragraphs
-            view={view}
-            className="mt-5 max-w-[60ch] space-y-3 text-[15px] leading-relaxed text-[#44403c] [&>p:first-child]:font-medium [&>p:first-child]:text-[#1c1917]"
-          />
-          <Action view={view} className="mt-7 inline-flex h-11 items-center rounded-[8px] bg-(--marca) px-6 text-[14px] font-semibold text-white" />
-        </div>
+      <div className="border-t border-[#e5e7eb] px-8 py-7 @[620px]:px-10">
+        <p className="text-[13px] text-[#6b7280]">Comprovante de envio de e-mail</p>
+        <p className="mt-1 text-[26px] leading-tight font-semibold tracking-[-0.01em] tabular-nums">
+          {view.sentAtLabel ?? 'Data de envio não informada'}
+        </p>
+        <dl className="mt-6 divide-y divide-[#f0f1f3] border-y border-[#e5e7eb]">
+          <Row label="Para">{recipient(view)}</Row>
+          <Row label="De">{view.from}</Row>
+          <Row label="Canal">E-mail</Row>
+          <Row label="End-to-end da transação">{e2e(endToEndId)}</Row>
+          {sourceReference ? (
+            <Row label="ID da mensagem" mono>
+              {sourceReference}
+            </Row>
+          ) : null}
+        </dl>
+      </div>
+      <section aria-label="Mensagem enviada" className="px-8 pb-8 @[620px]:px-10">
+        <p className="mb-3 text-[13px] font-semibold text-[#111827]">Conteúdo enviado</p>
+        <Email view={view} className="rounded-[8px] border border-[#e5e7eb] bg-[#f9fafb] px-6 py-6" />
       </section>
-      <footer className="border-t border-[#e7e5e4] px-6 py-4 @[620px]:px-10">
-        <Stamp view={view} className="text-[12px] text-[#78716c]" />
+      <footer className="border-t border-[#e5e7eb] px-8 py-4 @[620px]:px-10">
+        <p className="text-[12px] text-[#6b7280]">{view.stamp}</p>
       </footer>
     </Shell>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 2. Recibo — fita de caixa: estreita, monoespaçada, picote e linhas tracejadas
+// Recibo — recibo de pagamento: cartão estreito, resumo em três colunas
 // ---------------------------------------------------------------------------
 
-function Recibo(props: Props & { color: string }) {
-  const { view } = props;
+function Recibo({ view, sourceReference, endToEndId, color }: LayoutProps) {
+  const label = 'text-[11px] font-semibold tracking-[0.06em] text-[#8792a2] uppercase';
   return (
-    <div className="flex justify-center bg-white py-4">
-      <Shell color={props.color} font="font-mono" className="w-full max-w-[560px] border border-[#e7e5e4] shadow-[0_10px_30px_-20px_rgb(0_0_0/0.4)]">
-        {/* Picote do topo */}
-        <div aria-hidden="true" className="h-3 bg-[radial-gradient(circle_at_6px_0,transparent_6px,var(--marca)_6.5px)] bg-[length:12px_12px]" />
-        <header className="px-7 pt-6 pb-5 text-center">
-          <p className="mx-auto inline-flex size-12 items-center justify-center rounded-full border-2 border-(--marca) text-[15px] font-bold text-(--marca)">
-            {initials(view.from)}
-          </p>
-          <p className="mt-3 text-[18px] font-bold tracking-[0.04em] uppercase">{view.from}</p>
-          <p className="mt-1 text-[11.5px] tracking-[0.25em] text-[#78716c] uppercase">Comprovante de envio</p>
-        </header>
-        <div className="mx-7 border-t-2 border-dashed border-[#d6d3d1]" />
-        <dl className="space-y-2.5 px-7 py-5 text-[12.5px]">
-          {fields(props).map((field) => (
-            <div key={field.label} className="flex items-baseline gap-2">
-              <dt className="shrink-0 text-[#78716c] uppercase">{field.label}</dt>
-              <span aria-hidden="true" className="min-w-4 flex-1 translate-y-[-3px] border-b border-dotted border-[#d6d3d1]" />
-              <dd className="max-w-[62%] text-right break-all text-[#1c1917]">{field.value}</dd>
-            </div>
-          ))}
+    <div className="bg-[#f6f8fa] px-4 py-8">
+      <Shell color={color} className="mx-auto w-full max-w-[620px] rounded-[8px] shadow-[0_1px_3px_rgb(16_24_40/0.08),0_8px_24px_-12px_rgb(16_24_40/0.12)]">
+        <div className="px-9 pt-9 pb-7 text-center">
+          <Mark name={view.from} size={44} radius={10} />
+          <p className="mt-4 text-[15px] text-[#4b5563]">{view.from}</p>
+          <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.01em]">Comprovante de envio</h2>
+        </div>
+        <dl className="mx-9 grid grid-cols-1 gap-4 border-y border-[#e6ebf1] py-5 @[520px]:grid-cols-3">
+          <div>
+            <dt className={label}>Enviado em</dt>
+            <dd className="mt-1 text-[13.5px] tabular-nums">{view.sentAtLabel ?? MISSING}</dd>
+          </div>
+          <div>
+            <dt className={label}>Canal</dt>
+            <dd className="mt-1 text-[13.5px]">E-mail</dd>
+          </div>
+          <div className="min-w-0">
+            <dt className={label}>Tipo</dt>
+            <dd className="mt-1 text-[13.5px]">{COMMUNICATION_TEMPLATE_LABEL[view.template]}</dd>
+          </div>
         </dl>
-        <div className="mx-7 border-t-2 border-dashed border-[#d6d3d1]" />
-        <section aria-label="Mensagem enviada" className="px-7 py-6">
-          <p className="text-[11px] tracking-[0.25em] text-[#78716c] uppercase">Mensagem enviada</p>
-          <p className="mt-3 text-[22px] leading-tight font-bold">{view.subject || 'Sem assunto'}</p>
-          <Paragraphs view={view} className="mt-4 space-y-2.5 text-[13px] leading-relaxed text-[#44403c]" />
-          <Action view={view} className="mt-6 flex h-11 w-full items-center justify-center bg-(--marca) text-[13px] font-bold tracking-[0.12em] text-white uppercase" />
+        <section aria-label="Mensagem enviada" className="px-9 py-7">
+          <p className={label}>Mensagem</p>
+          <p className="mt-2 text-[13px] text-[#4b5563]">Para {recipient(view)}</p>
+          <Email view={view} className="mt-4 rounded-[6px] border border-[#e6ebf1] px-6 py-6" />
         </section>
-        <div className="mx-7 border-t-2 border-dashed border-[#d6d3d1]" />
-        <footer className="px-7 py-4 text-center">
-          <Stamp view={view} className="text-[11px] text-[#78716c]" />
+        <section aria-label="Registro" className="px-9 pb-8">
+          <p className={label}>Registro</p>
+          <dl className="mt-2 divide-y divide-[#e6ebf1] text-[13.5px]">
+            <div className="flex justify-between gap-6 py-2.5">
+              <dt className="text-[#4b5563]">Remetente</dt>
+              <dd className="text-right">{view.from}</dd>
+            </div>
+            <div className="flex justify-between gap-6 py-2.5">
+              <dt className="shrink-0 text-[#4b5563]">End-to-end</dt>
+              <dd className="text-right">{e2e(endToEndId)}</dd>
+            </div>
+            {sourceReference ? (
+              <div className="flex justify-between gap-6 py-2.5">
+                <dt className="shrink-0 text-[#4b5563]">ID da mensagem</dt>
+                <dd className="text-right font-mono text-[12.5px] break-all">{sourceReference}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+        <footer className="rounded-b-[8px] border-t border-[#e6ebf1] bg-[#fafbfc] px-9 py-4 text-center">
+          <p className="text-[12px] text-[#8792a2]">{view.stamp}</p>
         </footer>
-        <div aria-hidden="true" className="h-3 bg-[radial-gradient(circle_at_6px_12px,transparent_6px,var(--marca)_6.5px)] bg-[length:12px_12px]" />
       </Shell>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 3. Carta — papel timbrado: serifa, monograma, ficha em três colunas, aspas
+// E-mail impresso — como sai a impressão de um e-mail: cabeçalho De/Para/Data
 // ---------------------------------------------------------------------------
 
-function Carta(props: Props & { color: string }) {
-  const { view } = props;
+function EmailImpresso({ view, sourceReference, endToEndId, color }: LayoutProps) {
   return (
-    <Shell color={props.color} className="border border-[#e7e5e4] bg-[#fffdf9]">
-      <div style={{ fontFamily: SERIF }}>
-        <header className="flex items-center justify-between gap-4 border-b-2 border-(--marca) px-8 pt-9 pb-5 @[620px]:px-12">
-          <div className="flex min-w-0 items-center gap-4">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-(--marca) text-[18px] text-white italic">
-              {initials(view.from)}
-            </span>
-            <p className="truncate text-[26px] leading-tight text-[#1c1917]">{view.from}</p>
-          </div>
-          <p className="hidden text-right text-[13px] text-[#78716c] italic @[560px]:block">Comprovante de envio</p>
-        </header>
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-4 px-8 py-7 @[560px]:grid-cols-3 @[620px]:px-12">
-          {fields(props).map((field) => (
-            <div key={field.label} className="min-w-0">
-              <dt className="text-[11.5px] tracking-[0.14em] text-(--marca) uppercase">{field.label}</dt>
-              <dd className={`mt-1 text-[14.5px] text-[#292524] ${field.mono ? 'font-mono text-[12.5px] break-all' : ''}`}>{field.value}</dd>
-            </div>
-          ))}
-        </dl>
-        <section aria-label="Mensagem enviada" className="px-8 pb-10 @[620px]:px-12">
-          <div className="relative border-y border-[#e7e5e4] py-8 pl-10">
-            <span aria-hidden="true" className="absolute top-3 left-0 text-[64px] leading-none text-(--marca) opacity-40">
-              &ldquo;
-            </span>
-            <p className="text-[30px] leading-[1.15] text-[#1c1917] italic">{view.subject || 'Sem assunto'}</p>
-            <Paragraphs view={view} className="mt-5 max-w-[58ch] space-y-3 text-[16px] leading-[1.7] text-[#44403c]" />
-            <Action view={view} className="mt-7 inline-flex items-center border-b-2 border-(--marca) pb-1 text-[16px] text-(--marca) italic" />
-          </div>
-        </section>
-        <footer className="px-8 pb-8 @[620px]:px-12">
-          <Stamp view={view} className="text-[12.5px] text-[#78716c] italic" />
-        </footer>
-      </div>
-    </Shell>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// 4. Painel — coluna da marca à esquerda com a ficha; mensagem à direita
-// ---------------------------------------------------------------------------
-
-function Painel(props: Props & { color: string }) {
-  const { view } = props;
-  return (
-    <Shell color={props.color} className="rounded-[20px] border border-[#e7e5e4] shadow-[0_24px_48px_-32px_rgb(0_0_0/0.45)]">
-      <div className="grid @[680px]:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="bg-(--marca) px-7 py-8 text-white">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-white/15 text-[14px] font-bold ring-1 ring-white/30">
-            {initials(view.from)}
-          </span>
-          <p className="mt-4 text-[22px] leading-tight font-bold">{view.from}</p>
-          <p className="mt-1 text-[13px] text-white/75">Comprovante de envio</p>
-          <dl className="mt-8 space-y-4">
-            {fields(props).map((field) => (
-              <div key={field.label}>
-                <dt className="text-[10.5px] font-semibold tracking-[0.14em] text-white/65 uppercase">{field.label}</dt>
-                <dd className={`mt-0.5 text-[13.5px] text-white ${field.mono ? 'font-mono text-[12px] break-all' : ''}`}>{field.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </aside>
-        <section aria-label="Mensagem enviada" className="flex flex-col px-7 py-8 @[680px]:px-10">
-          <p className="inline-flex w-fit items-center gap-2 rounded-full bg-[#f5f5f4] px-3 py-1 text-[11.5px] font-semibold tracking-[0.06em] text-[#57534e] uppercase">
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-(--marca)" />
-            Mensagem enviada
+    <Shell color={color} className="px-10 py-9">
+      <header className="flex items-end justify-between gap-4 border-b-2 border-[#111827] pb-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Mark name={view.from} size={26} radius={5} />
+          <span className="truncate text-[16px] font-bold">{view.from}</span>
+        </div>
+        <span className="text-[12.5px] text-[#4b5563]">Comprovante de envio</span>
+      </header>
+      <h2 className="mt-6 text-[21px] leading-snug font-bold">{view.subject || 'Sem assunto'}</h2>
+      <div className="mt-5 border-t border-[#d1d5db] pt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <p className="text-[14px]">
+            <span className="font-bold">{view.from}</span>
           </p>
-          <p className="mt-6 text-[30px] leading-[1.1] font-extrabold tracking-[-0.03em] @[680px]:text-[38px]">{view.subject || 'Sem assunto'}</p>
-          <Paragraphs
-            view={view}
-            className="mt-5 max-w-[52ch] space-y-3 text-[15.5px] leading-relaxed text-[#44403c] [&>p:first-child]:text-[17px] [&>p:first-child]:font-semibold [&>p:first-child]:text-[#1c1917]"
-          />
-          <Action view={view} className="mt-8 inline-flex h-12 w-fit items-center rounded-full bg-(--marca) px-7 text-[14.5px] font-bold text-white" />
-          <Stamp view={view} className="mt-auto pt-10 text-[12px] text-[#78716c]" />
-        </section>
+          <p className="text-[12.5px] text-[#4b5563] tabular-nums">{view.sentAtLabel ?? 'data não informada'}</p>
+        </div>
+        <p className="mt-0.5 text-[12.5px] text-[#4b5563]">Para: {recipient(view)}</p>
+        <Body view={view} className="mt-6" />
+        <Action view={view} className="mt-5" />
+      </div>
+      <dl className="mt-9 grid grid-cols-1 gap-x-8 gap-y-2 border-t border-[#d1d5db] pt-4 text-[12.5px] @[560px]:grid-cols-[auto_minmax(0,1fr)]">
+        <dt className="text-[#6b7280]">Canal</dt>
+        <dd>E-mail · {COMMUNICATION_TEMPLATE_LABEL[view.template]}</dd>
+        <dt className="text-[#6b7280]">End-to-end da transação</dt>
+        <dd>{e2e(endToEndId)}</dd>
+        {sourceReference ? (
+          <>
+            <dt className="text-[#6b7280]">ID da mensagem</dt>
+            <dd className="font-mono break-all">{sourceReference}</dd>
+          </>
+        ) : null}
+      </dl>
+      <p className="mt-6 text-[11.5px] text-[#6b7280]">{view.stamp}</p>
+    </Shell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Formulário — documento oficial: grade de campos, rótulo pequeno em cada caixa
+// ---------------------------------------------------------------------------
+
+function Cell({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <div className={`min-w-0 border-[#9ca3af] px-3 pt-1.5 pb-2 ${className}`}>
+      <p className="text-[9.5px] font-semibold tracking-[0.06em] text-[#4b5563] uppercase">{label}</p>
+      <div className="mt-0.5 text-[13px] text-[#111827]">{children}</div>
+    </div>
+  );
+}
+
+function Formulario({ view, sourceReference, endToEndId, color }: LayoutProps) {
+  return (
+    <Shell color={color} className="p-8">
+      <div className="border border-[#9ca3af]">
+        <div className="grid grid-cols-1 border-b border-[#9ca3af] @[560px]:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="flex items-center gap-3 px-3 py-3 @[560px]:border-r @[560px]:border-[#9ca3af]">
+            <Mark name={view.from} size={38} radius={4} />
+            <div className="min-w-0">
+              <p className="truncate text-[16px] font-bold">{view.from}</p>
+              <p className="text-[12px] text-[#4b5563]">Remetente da comunicação</p>
+            </div>
+          </div>
+          <div className="flex flex-col justify-center px-3 py-3">
+            <p className="text-[14px] font-bold tracking-[0.02em] uppercase">Comprovante de envio</p>
+            <p className="text-[12px] text-[#4b5563]">{COMMUNICATION_TEMPLATE_LABEL[view.template]}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 @[560px]:grid-cols-2">
+          <Cell label="Destinatário" className="border-b @[560px]:col-span-2">
+            {recipient(view)}
+          </Cell>
+          <Cell label="Data e hora do envio" className="border-b @[560px]:border-r">
+            <span className="tabular-nums">{view.sentAtLabel ?? MISSING}</span>
+          </Cell>
+          <Cell label="Canal" className="border-b">
+            E-mail
+          </Cell>
+          <Cell label="End-to-end da transação" className={`border-b ${sourceReference ? '@[560px]:border-r' : '@[560px]:col-span-2'}`}>
+            {e2e(endToEndId)}
+          </Cell>
+          {sourceReference ? (
+            <Cell label="ID da mensagem" className="border-b">
+              <span className="font-mono text-[12.5px] break-all">{sourceReference}</span>
+            </Cell>
+          ) : null}
+          <Cell label="Conteúdo da mensagem" className="border-b @[560px]:col-span-2">
+            <Email view={view} className="py-3" />
+          </Cell>
+          <Cell label="Origem do documento" className="@[560px]:col-span-2">
+            <span className="text-[12px] text-[#4b5563]">{view.stamp}</span>
+          </Cell>
+        </div>
       </div>
     </Shell>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 5. Janela — ficha como tabela de cabeçalho colorido; mensagem num leitor
+// Comprovante de aplicativo — coluna estreita, blocos separados por faixa cinza
 // ---------------------------------------------------------------------------
 
-function Janela(props: Props & { color: string }) {
-  const { view } = props;
-  const list = fields(props);
+function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <Shell color={props.color} className="rounded-[6px] border-2 border-[#1c1917]">
-      <header className="flex items-center justify-between gap-3 border-b-2 border-[#1c1917] px-6 py-4">
-        <p className="text-[20px] font-black tracking-[-0.02em] uppercase">{view.from}</p>
-        <p className="rounded-[4px] bg-(--marca) px-2.5 py-1 text-[11px] font-bold tracking-[0.1em] text-white uppercase">Comprovante de envio</p>
-      </header>
-      <table className="w-full border-collapse text-left text-[13.5px]">
-        <tbody>
-          {list.map((field, index) => (
-            <tr key={field.label} className={index % 2 === 0 ? 'bg-[#fafaf9]' : 'bg-white'}>
-              <th scope="row" className="w-[34%] border-b border-[#e7e5e4] px-6 py-3 align-top text-[11.5px] font-bold tracking-[0.06em] text-(--marca) uppercase">
-                {field.label}
-              </th>
-              <td className={`border-b border-[#e7e5e4] px-6 py-3 ${field.mono ? 'font-mono text-[12.5px] break-all' : ''}`}>{field.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <section aria-label="Mensagem enviada" className="p-6">
-        <div className="overflow-hidden rounded-[6px] border-2 border-[#1c1917]">
-          <div className="border-b-2 border-[#1c1917] bg-(--marca) px-5 py-3 text-white">
-            <p className="text-[11px] font-bold tracking-[0.1em] text-white/80 uppercase">Assunto</p>
-            <p className="mt-0.5 text-[20px] leading-tight font-bold">{view.subject || 'Sem assunto'}</p>
+    <section className="px-6 py-5">
+      <h3 className="text-[15px] font-semibold">{title}</h3>
+      <div className="mt-3 space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function Item({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[12.5px] text-[#6b7280]">{label}</p>
+      <div className="text-[14px] text-[#111827]">{children}</div>
+    </div>
+  );
+}
+
+function Aplicativo({ view, sourceReference, endToEndId, color }: LayoutProps) {
+  const gap = <div aria-hidden="true" className="h-2 bg-[#f2f3f5]" />;
+  return (
+    <div className="bg-white py-4">
+      <Shell color={color} className="mx-auto w-full max-w-[520px] border border-[#e5e7eb]">
+        <header className="px-6 pt-6 pb-5">
+          <div className="flex items-center gap-2.5">
+            <Mark name={view.from} size={36} radius={18} />
+            <span className="truncate text-[14px] font-medium text-[#374151]">{view.from}</span>
           </div>
-          <div className="px-5 py-6">
-            <Paragraphs view={view} className="max-w-[60ch] space-y-3 text-[15px] leading-relaxed text-[#292524]" />
-            <Action view={view} className="mt-6 inline-flex h-11 items-center rounded-[4px] border-2 border-[#1c1917] bg-(--marca) px-6 text-[14px] font-bold text-white shadow-[3px_3px_0_#1c1917]" />
-          </div>
-        </div>
-      </section>
-      <footer className="border-t-2 border-[#1c1917] px-6 py-3">
-        <Stamp view={view} className="text-[12px] text-[#57534e]" />
-      </footer>
-    </Shell>
+          <h2 className="mt-5 text-[24px] leading-tight font-semibold tracking-[-0.01em]">Comprovante de envio</h2>
+          <p className="mt-1 text-[14px] text-[#6b7280] tabular-nums">{view.sentAtLabel ?? 'Data de envio não informada'}</p>
+        </header>
+        {gap}
+        <Block title="Destinatário">
+          <Item label="Nome e e-mail">{recipient(view)}</Item>
+          <Item label="Canal">E-mail</Item>
+        </Block>
+        {gap}
+        <Block title="Mensagem">
+          <Email view={view} />
+        </Block>
+        {gap}
+        <Block title="Registro">
+          <Item label="Remetente">{view.from}</Item>
+          <Item label="Tipo">{COMMUNICATION_TEMPLATE_LABEL[view.template]}</Item>
+          <Item label="End-to-end da transação">{e2e(endToEndId)}</Item>
+          {sourceReference ? (
+            <Item label="ID da mensagem">
+              <span className="font-mono text-[12.5px] break-all">{sourceReference}</span>
+            </Item>
+          ) : null}
+        </Block>
+        {gap}
+        <footer className="px-6 py-4">
+          <p className="text-[12px] text-[#6b7280]">{view.stamp}</p>
+        </footer>
+      </Shell>
+    </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 6. Selo — centrado: monograma grande, ficha em pares, mensagem em cartão
+// Enxuto — recibo de loja grande: muito branco, título largo, filete de citação
 // ---------------------------------------------------------------------------
 
-function Selo(props: Props & { color: string }) {
-  const { view } = props;
+function Enxuto({ view, sourceReference, endToEndId, color }: LayoutProps) {
+  const pair = (label: string, value: ReactNode) => (
+    <div className="min-w-0">
+      <dt className="text-[12.5px] text-[#86868b]">{label}</dt>
+      <dd className="mt-0.5 text-[14px] text-[#1d1d1f]">{value}</dd>
+    </div>
+  );
   return (
-    <Shell color={props.color} className="rounded-[28px] bg-[linear-gradient(180deg,color-mix(in_oklab,var(--marca)_9%,white)_0%,white_45%)] ring-1 ring-[#e7e5e4]">
-      <header className="px-8 pt-10 text-center">
-        <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-(--marca) text-[20px] font-bold text-white shadow-[0_12px_28px_-12px_var(--marca)] ring-[6px] ring-white">
-          {initials(view.from)}
-        </span>
-        <p className="mt-4 text-[24px] font-semibold tracking-[-0.02em]">{view.from}</p>
-        <p className="mt-1 text-[13px] text-[#78716c]">Comprovante de envio</p>
-      </header>
-      <dl className="mx-auto mt-8 grid max-w-[720px] grid-cols-1 gap-3 px-8 @[560px]:grid-cols-2">
-        {fields(props).map((field) => (
-          <div key={field.label} className="rounded-2xl bg-white px-4 py-3 text-center ring-1 ring-[#e7e5e4]">
-            <dt className="text-[11px] font-semibold tracking-[0.1em] text-[#78716c] uppercase">{field.label}</dt>
-            <dd className={`mt-1 text-[14px] ${field.mono ? 'font-mono text-[12.5px] break-all' : ''}`}>{field.value}</dd>
-          </div>
-        ))}
+    <Shell color={color} className="px-10 py-10 @[620px]:px-14">
+      <div className="flex items-center justify-between gap-4">
+        <Mark name={view.from} size={30} radius={8} />
+        <span className="text-[13px] text-[#86868b]">{view.from}</span>
+      </div>
+      <h2 className="mt-10 text-[32px] leading-tight font-semibold tracking-[-0.02em] text-[#1d1d1f]">Comprovante de envio</h2>
+      <p className="mt-1 text-[15px] text-[#86868b] tabular-nums">{view.sentAtLabel ?? 'Data de envio não informada'}</p>
+      <dl className="mt-9 grid grid-cols-1 gap-x-10 gap-y-5 border-t border-[#d2d2d7] pt-6 @[560px]:grid-cols-2">
+        {pair('Para', recipient(view))}
+        {pair('De', view.from)}
+        {pair('Canal', 'E-mail')}
+        {pair('Tipo', COMMUNICATION_TEMPLATE_LABEL[view.template])}
+        {pair('End-to-end da transação', e2e(endToEndId))}
+        {sourceReference ? pair('ID da mensagem', <span className="font-mono text-[12.5px] break-all">{sourceReference}</span>) : null}
       </dl>
-      <section aria-label="Mensagem enviada" className="px-8 py-9">
-        <div className="mx-auto max-w-[720px] rounded-[24px] bg-white px-8 py-9 text-center shadow-[0_20px_44px_-30px_rgb(0_0_0/0.5)] ring-1 ring-[#e7e5e4]">
-          <p className="text-[11.5px] font-semibold tracking-[0.14em] text-(--marca) uppercase">Mensagem enviada</p>
-          <p className="mt-3 text-[28px] leading-tight font-semibold tracking-[-0.02em]">{view.subject || 'Sem assunto'}</p>
-          <Paragraphs view={view} className="mx-auto mt-4 max-w-[52ch] space-y-3 text-[15px] leading-relaxed text-[#44403c]" />
-          <Action view={view} className="mt-7 inline-flex h-12 items-center rounded-full border-2 border-(--marca) px-8 text-[14.5px] font-semibold text-(--marca)" />
-        </div>
+      <section aria-label="Mensagem enviada" className="mt-9 border-t border-[#d2d2d7] pt-6">
+        <p className="text-[12.5px] text-[#86868b]">Mensagem enviada</p>
+        <Email view={view} className="mt-4 border-l-2 border-(--marca) pl-6" />
       </section>
-      <footer className="pb-8 text-center">
-        <Stamp view={view} className="text-[12px] text-[#78716c]" />
-      </footer>
+      <p className="mt-10 border-t border-[#d2d2d7] pt-4 text-[12px] text-[#86868b]">{view.stamp}</p>
     </Shell>
   );
 }
 
-const LAYOUTS: Record<AutoLayout, (props: Props & { color: string }) => ReactNode> = {
-  faixa: Faixa,
+/**
+ * As chaves são as gravadas na conta (`brandLayout`); os nomes de cada
+ * desenho ficam em `AUTO_LAYOUT_LABEL`.
+ */
+const LAYOUTS: Record<AutoLayout, (props: LayoutProps) => ReactNode> = {
+  faixa: Extrato,
   recibo: Recibo,
-  carta: Carta,
-  painel: Painel,
-  janela: Janela,
-  selo: Selo,
+  carta: EmailImpresso,
+  painel: Formulario,
+  janela: Aplicativo,
+  selo: Enxuto,
 };
 
 export function AutoReceipt({

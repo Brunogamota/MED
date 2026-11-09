@@ -255,13 +255,14 @@ export function pickBrandColor(used: (string | null)[]): string {
 export const AUTO_LAYOUTS = ['faixa', 'recibo', 'carta', 'painel', 'janela', 'selo'] as const;
 export type AutoLayout = (typeof AUTO_LAYOUTS)[number];
 
+/** As chaves ficam gravadas na conta; o nome é o gênero de documento de cada desenho. */
 export const AUTO_LAYOUT_LABEL: Record<AutoLayout, string> = {
-  faixa: 'Faixa',
+  faixa: 'Extrato',
   recibo: 'Recibo',
-  carta: 'Carta',
-  painel: 'Painel',
-  janela: 'Janela',
-  selo: 'Selo',
+  carta: 'E-mail impresso',
+  painel: 'Formulário',
+  janela: 'Aplicativo',
+  selo: 'Enxuto',
 };
 
 export function isAutoLayout(value: string | null | undefined): value is AutoLayout {
