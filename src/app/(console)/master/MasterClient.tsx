@@ -740,7 +740,7 @@ function StepLot({ companies, onDone }: { companies: MasterCompanyOverview[]; on
     }
 
     const [{ toBlob, getFontEmbedCSS }, { default: JSZip }] = await Promise.all([import('html-to-image'), import('jszip')]);
-    const fontCss = new Map<SkinId, string>();
+    const fontCss = new Map<string, string>();
     const allPending: { account: string; result: MasterLotResult }[] = [];
     const allIncluded: { accountId: string; id: string }[] = [];
     const newParts: Part[] = [];
@@ -810,9 +810,11 @@ function StepLot({ companies, onDone }: { companies: MasterCompanyOverview[]; on
         await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         const shots = new Map<string, Blob>();
         const nodes = [...(stage.current?.querySelectorAll<HTMLElement>('[data-print-key]') ?? [])];
-        if (nodes.length > 0 && !fontCss.has(company.skin)) fontCss.set(company.skin, await getFontEmbedCSS(nodes[0]!));
+        // Cada desenho do modelo automático tem a própria fonte: a cache é por ambiente e desenho.
+        const fontKey = `${company.skin}:${company.brandLayout ?? ''}`;
+        if (nodes.length > 0 && !fontCss.has(fontKey)) fontCss.set(fontKey, await getFontEmbedCSS(nodes[0]!));
         for (const node of nodes) {
-          const blob = await toBlob(node, { pixelRatio: 1.5, fontEmbedCSS: fontCss.get(company.skin), skipAutoScale: true, backgroundColor: '#ffffff' });
+          const blob = await toBlob(node, { pixelRatio: 1.5, fontEmbedCSS: fontCss.get(fontKey), skipAutoScale: true, backgroundColor: '#ffffff' });
           if (blob) shots.set(node.dataset.printKey ?? '', blob);
         }
 

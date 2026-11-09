@@ -257,12 +257,12 @@ export type AutoLayout = (typeof AUTO_LAYOUTS)[number];
 
 /** As chaves ficam gravadas na conta; o nome é o gênero de documento de cada desenho. */
 export const AUTO_LAYOUT_LABEL: Record<AutoLayout, string> = {
-  faixa: 'Extrato',
-  recibo: 'Recibo',
+  faixa: 'Carta timbrada',
+  recibo: 'Cupom',
   carta: 'E-mail impresso',
   painel: 'Formulário',
   janela: 'Aplicativo',
-  selo: 'Enxuto',
+  selo: 'Vitrine',
 };
 
 export function isAutoLayout(value: string | null | undefined): value is AutoLayout {
