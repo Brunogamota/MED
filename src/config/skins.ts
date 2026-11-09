@@ -19,10 +19,14 @@ export const SKINS = {
     label: 'Marketplace Verificado',
     description: 'Navegação no topo, branco e azul de confiança, Inter.',
   },
+  auto: {
+    label: 'Modelo automático',
+    description: 'Console do Jade na cor da marca da empresa; comprovante com o nome e a cor dela.',
+  },
 } as const;
 
 /** Ambientes que são só claros: o tema do sistema não escurece a paleta. */
-export const LIGHT_ONLY_SKINS: readonly SkinId[] = ['bulls', 'marketplace'];
+export const LIGHT_ONLY_SKINS: readonly SkinId[] = ['bulls', 'marketplace', 'auto'];
 
 export type SkinId = keyof typeof SKINS;
 

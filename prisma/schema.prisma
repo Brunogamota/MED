@@ -123,6 +123,11 @@ model Organization {
   name      String
   /// Ambiente visual da conta (src/config/skins.ts). Nulo = o padrão.
   skin      String?
+  /// Como a conta Master reconhece a empresa numa planilha misturada:
+  /// "nome:…", "doc:…" (CNPJ ou chave Pix) e "prefixo:…" (do pedido).
+  aliases    String[] @default([])
+  /// Cor da marca do modelo automático (#rrggbb). Nulo nos ambientes desenhados.
+  brandColor String?
   createdAt DateTime @default(now())
 
   meds Med[]

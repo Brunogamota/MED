@@ -141,12 +141,25 @@ export interface AccountRecord {
   id: string;
   name: string;
   skin: string | null;
+  /** Como reconhecer a empresa: "nome:…", "doc:…", "prefixo:…". */
+  aliases: string[];
+  /** Cor da marca do modelo automático; nulo nos ambientes desenhados. */
+  brandColor: string | null;
   createdAt: string;
+}
+
+export interface SaveAccountInput {
+  id: string;
+  name: string;
+  skin: string | null;
+  /** Ausente = mantém o que já estava. */
+  aliases?: string[];
+  brandColor?: string | null;
 }
 
 export interface AccountRepository {
   listAccounts(): Promise<AccountRecord[]>;
-  saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord>;
+  saveAccount(account: SaveAccountInput): Promise<AccountRecord>;
 }
 
 /**

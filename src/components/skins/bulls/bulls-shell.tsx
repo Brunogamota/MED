@@ -11,6 +11,7 @@ import {
   FileUp,
   Inbox,
   LayoutGrid,
+  Layers,
   LogOut,
   Menu,
   Plug,
@@ -257,6 +258,12 @@ function AccountSwitcher({ accounts, demoMode }: { accounts: BullsAccount[]; dem
           <Link href="/contas">
             <ArrowLeftRight className="size-4" aria-hidden="true" />
             Gerenciar contas
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild className="gap-2.5 py-2">
+          <Link href="/master">
+            <Layers className="size-4" aria-hidden="true" />
+            Master: todas as empresas
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem

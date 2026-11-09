@@ -29,6 +29,7 @@ import type {
   ImportBatch,
   ImportBatchRepository,
   AccountRecord,
+  SaveAccountInput,
   AccountRepository,
   IdempotencyStore,
   ListMedsFilter,
@@ -356,6 +357,24 @@ export function createPrismaClient(connectionString: string): PrismaClient {
   // runtime; point DATABASE_URL at a pooled connection string.
   const adapter = new PrismaPg({ connectionString: withRequiredSsl(connectionString) });
   return new PrismaClient({ adapter });
+}
+
+function toAccountRecord(row: {
+  id: string;
+  name: string;
+  skin: string | null;
+  aliases: string[];
+  brandColor: string | null;
+  createdAt: Date;
+}): AccountRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    skin: row.skin ?? null,
+    aliases: row.aliases ?? [],
+    brandColor: row.brandColor ?? null,
+    createdAt: row.createdAt.toISOString(),
+  };
 }
 
 export class PrismaMedRepository
@@ -948,26 +967,20 @@ export class PrismaMedRepository
 
   async listAccounts(): Promise<AccountRecord[]> {
     const rows = await this.prisma.organization.findMany({ orderBy: { createdAt: 'asc' } });
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      skin: row.skin ?? null,
-      createdAt: row.createdAt.toISOString(),
-    }));
+    return rows.map(toAccountRecord);
   }
 
-  async saveAccount(account: { id: string; name: string; skin: string | null }): Promise<AccountRecord> {
+  async saveAccount(account: SaveAccountInput): Promise<AccountRecord> {
+    const extra = {
+      ...(account.aliases !== undefined ? { aliases: account.aliases } : {}),
+      ...(account.brandColor !== undefined ? { brandColor: account.brandColor } : {}),
+    };
     const row = await this.prisma.organization.upsert({
       where: { id: account.id },
-      create: { id: account.id, name: account.name, skin: account.skin },
-      update: { name: account.name, skin: account.skin },
+      create: { id: account.id, name: account.name, skin: account.skin, ...extra },
+      update: { name: account.name, skin: account.skin, ...extra },
     });
-    return {
-      id: row.id,
-      name: row.name,
-      skin: row.skin ?? null,
-      createdAt: row.createdAt.toISOString(),
-    };
+    return toAccountRecord(row);
   }
 
   /**

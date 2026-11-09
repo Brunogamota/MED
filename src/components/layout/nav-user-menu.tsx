@@ -85,6 +85,9 @@ export function NavUserMenu({
             <DropdownMenuItem asChild>
               <Link href="/contas">Gerenciar contas</Link>
             </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/master">Master: todas as empresas</Link>
+            </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>

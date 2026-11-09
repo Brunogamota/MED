@@ -45,6 +45,7 @@ export function CommunicationPanel({
   reconstructions,
   sender,
   skin,
+  brandColor,
 }: {
   medCase: MedCase;
   template: CommunicationTemplate;
@@ -52,6 +53,8 @@ export function CommunicationPanel({
   /** Quem envia, pela conta. Sem valor, o remetente padrão. */
   sender?: string;
   skin?: SkinId;
+  /** Cor da marca da empresa, no modelo automático. */
+  brandColor?: string | null;
 }) {
   const draft = draftCommunication(medCase, template, { sender });
   const latest = reconstructions[reconstructions.length - 1];
@@ -252,6 +255,7 @@ export function CommunicationPanel({
                   <ClientEmailView
                     receipt={receipt}
                     skin={skin}
+                    brandColor={brandColor}
                     sourceReference={evidence.sourceReference}
                     endToEndId={resolveEndToEndId(medCase)}
                   />
