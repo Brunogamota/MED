@@ -486,3 +486,54 @@ export async function markMasterSubmitted(base: AuthContext, accountId: string, 
   }
   return done;
 }
+
+// ---------------------------------------------------------------------------
+// Visão de cima: os números de cada empresa
+// ---------------------------------------------------------------------------
+
+export interface MasterCompanyOverview {
+  id: string;
+  name: string;
+  skin: SkinId;
+  brandColor: string | null;
+  aliases: number;
+  open: number;
+  /** Prazo em até 72h (a mesma janela da visão "Vencendo" da fila). */
+  dueSoon: number;
+  ready: number;
+  blocked: number;
+}
+
+const OPEN: MedStatus[] = [
+  'RECEIVED',
+  'COLLECTING_DATA',
+  'MISSING_EVIDENCE',
+  'READY_TO_GENERATE',
+  'DEFENSE_GENERATED',
+  'READY_TO_SUBMIT',
+];
+
+export async function masterOverview(base: AuthContext, now = new Date()): Promise<MasterCompanyOverview[]> {
+  const accounts = await listAccounts();
+  const out: MasterCompanyOverview[] = [];
+  for (const account of accounts) {
+    const rows = await listMeds({ ...base, organizationId: account.id }, {});
+    const open = rows.filter((row) => OPEN.includes(row.med.status));
+    const dueSoon = open.filter((row) => {
+      const deadline = Date.parse(row.med.responseDeadlineAt ?? '');
+      return !Number.isNaN(deadline) && deadline - now.getTime() <= 72 * 3600 * 1000;
+    }).length;
+    out.push({
+      id: account.id,
+      name: account.name,
+      skin: account.skin,
+      brandColor: account.brandColor,
+      aliases: account.aliases.length,
+      open: open.length,
+      dueSoon,
+      ready: rows.filter((row) => row.med.status === 'READY_TO_SUBMIT').length,
+      blocked: rows.filter((row) => row.med.status === 'MISSING_EVIDENCE').length,
+    });
+  }
+  return out;
+}
