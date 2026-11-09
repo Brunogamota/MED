@@ -6,6 +6,8 @@ import {
   identifyCompany,
   learnAliases,
   pickBrandColor,
+  pickBrandLayout,
+  type AutoLayout,
   type CompanyHints,
   type CompanyMatch,
   type CompanyVia,
@@ -61,6 +63,8 @@ export interface MasterGroup {
   isNew: boolean;
   skin: SkinId;
   brandColor: string | null;
+  /** Desenho do comprovante: o da conta, ou o que a empresa nova vai ganhar. */
+  brandLayout: AutoLayout | null;
   via: Partial<Record<CompanyVia, number>>;
   rows: number;
   /** Cabeçalho + até 100 linhas, do arquivo de origem. */
@@ -97,6 +101,7 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
   const files: MasterPreview['files'] = [];
   const unknown: MasterPreview['unknown'] = [];
   const usedColors = accounts.map((account) => account.brandColor);
+  const usedLayouts: (string | null)[] = accounts.map((account) => account.brandLayout);
 
   /** Põe a linha no grupo da empresa (criando o grupo na primeira vez). */
   const place = (
@@ -111,7 +116,11 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
     if (!bucket) {
       const account = match.kind === 'ACCOUNT' ? accounts.find((a) => a.id === match.accountId) : undefined;
       const brandColor = account ? account.brandColor : pickBrandColor(usedColors);
-      if (!account) usedColors.push(brandColor);
+      const brandLayout = account ? account.brandLayout : pickBrandLayout(usedLayouts);
+      if (!account) {
+        usedColors.push(brandColor);
+        usedLayouts.push(brandLayout);
+      }
       bucket = {
         group: {
           key,
@@ -120,6 +129,7 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
           isNew: !account,
           skin: account?.skin ?? 'auto',
           brandColor,
+          brandLayout,
           via: {},
           rows: 0,
           chunks: [],
@@ -230,7 +240,14 @@ export async function previewMasterImport(tables: NamedTable[]): Promise<MasterP
  * apelidos aprendidos. Devolve, por grupo, a conta onde os MEDs vão entrar.
  */
 export async function applyMasterGroups(
-  groups: { key: string; accountId: string | null; name: string; brandColor: string | null; learned: string[] }[],
+  groups: {
+    key: string;
+    accountId: string | null;
+    name: string;
+    brandColor: string | null;
+    brandLayout: AutoLayout | null;
+    learned: string[];
+  }[],
 ): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
   for (const group of groups) {
@@ -252,6 +269,7 @@ export async function applyMasterGroups(
       name: group.name,
       skin: 'auto',
       brandColor: group.brandColor,
+      brandLayout: group.brandLayout,
       aliases: group.learned,
     });
     result[group.key] = created.id;
@@ -496,6 +514,7 @@ export interface MasterCompanyOverview {
   name: string;
   skin: SkinId;
   brandColor: string | null;
+  brandLayout: AutoLayout | null;
   aliases: number;
   open: number;
   /** Prazo em até 72h (a mesma janela da visão "Vencendo" da fila). */
@@ -528,6 +547,7 @@ export async function masterOverview(base: AuthContext, now = new Date()): Promi
       name: account.name,
       skin: account.skin,
       brandColor: account.brandColor,
+      brandLayout: account.brandLayout,
       aliases: account.aliases.length,
       open: open.length,
       dueSoon,

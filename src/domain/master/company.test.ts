@@ -8,6 +8,9 @@ import {
   learnAliases,
   orderPrefix,
   pickBrandColor,
+  pickBrandLayout,
+  resolveBrandLayout,
+  AUTO_LAYOUTS,
   type CompanyHints,
 } from '@/domain/master/company';
 
@@ -114,5 +117,19 @@ describe('normalização', () => {
     expect(pickBrandColor([])).toBe(AUTO_BRAND_COLORS[0]);
     expect(pickBrandColor([AUTO_BRAND_COLORS[0], null])).toBe(AUTO_BRAND_COLORS[1]);
     expect(pickBrandColor([...AUTO_BRAND_COLORS])).toBe(AUTO_BRAND_COLORS[0]);
+  });
+});
+
+describe('desenho do comprovante', () => {
+  it('cada empresa nova ganha um desenho que as outras não usam', () => {
+    const used: string[] = [];
+    for (let i = 0; i < AUTO_LAYOUTS.length; i += 1) used.push(pickBrandLayout(used));
+    expect(new Set(used).size).toBe(AUTO_LAYOUTS.length);
+    expect(pickBrandLayout(used)).toBe(AUTO_LAYOUTS[0]);
+  });
+
+  it('conta antiga sem desenho gravado fica sempre com o mesmo', () => {
+    expect(resolveBrandLayout(null, 'org_x')).toBe(resolveBrandLayout(null, 'org_x'));
+    expect(resolveBrandLayout('carta', 'org_x')).toBe('carta');
   });
 });

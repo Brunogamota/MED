@@ -37,7 +37,7 @@ import { MasterStepper } from '@/components/master/stepper';
 import { LiveSteps, type LiveRow } from '@/components/master/live-steps';
 import { CompanyAvatar, CountUp, companyColor } from '@/components/master/parts';
 import { MED_STATUS_LABEL } from '@/lib/labels';
-import { VIA_LABEL, type CompanyVia } from '@/domain/master/company';
+import { AUTO_LAYOUT_LABEL, VIA_LABEL, type AutoLayout, type CompanyVia } from '@/domain/master/company';
 import { SKINS, type SkinId } from '@/config/skins';
 import type {
   MasterCompanyOverview,
@@ -98,8 +98,9 @@ function ErrorLine({ message }: { message: string | null }) {
 }
 
 /** Os ambientes desenhados levam o nome da própria marca: dizer o tipo, não repetir o nome. */
-function skinNote(skin: SkinId): string {
-  return skin === 'auto' ? SKINS.auto.label : 'Ambiente desenhado';
+function skinNote(skin: SkinId, layout: AutoLayout | null): string {
+  if (skin !== 'auto') return 'Ambiente desenhado';
+  return layout ? `Modelo automático · ${AUTO_LAYOUT_LABEL[layout]}` : SKINS.auto.label;
 }
 
 function formData(files: File[], extra: Record<string, boolean> = {}): FormData {
@@ -185,7 +186,7 @@ function CompanyStrip({ companies }: { companies: MasterCompanyOverview[] }) {
               <CompanyAvatar name={company.name} color={color} />
               <div className="min-w-0">
                 <p className="truncate text-[14px] font-semibold">{company.name}</p>
-                <p className="truncate text-[12px] text-muted-foreground">{skinNote(company.skin)}</p>
+                <p className="truncate text-[12px] text-muted-foreground">{skinNote(company.skin, company.brandLayout)}</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -253,10 +254,10 @@ function GroupCard({ group, index }: { group: MasterGroup; index: number }) {
             {group.isNew ? (
               <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11.5px] font-medium text-primary">
                 <Sparkles className="size-3" aria-hidden="true" />
-                Nova · modelo automático
+                Nova · desenho {group.brandLayout ? AUTO_LAYOUT_LABEL[group.brandLayout] : 'próprio'}
               </p>
             ) : (
-              <p className="text-[12px] text-muted-foreground">{skinNote(group.skin)}</p>
+              <p className="text-[12px] text-muted-foreground">{skinNote(group.skin, group.brandLayout)}</p>
             )}
           </div>
         </div>
@@ -336,6 +337,7 @@ function StepMeds({ onDone }: { onDone: (summary: string) => void }) {
         accountId: group.accountId,
         name: group.name,
         brandColor: group.brandColor,
+        brandLayout: group.brandLayout,
         learned: group.learned,
       })),
     );
@@ -641,6 +643,7 @@ interface Rendered {
   result: MasterLotResult;
   skin: SkinId;
   brandColor: string | null;
+  brandLayout: AutoLayout | null;
   receiptIndex: number;
 }
 
@@ -799,6 +802,7 @@ function StepLot({ companies, onDone }: { companies: MasterCompanyOverview[]; on
               result,
               skin: company.skin,
               brandColor: company.brandColor,
+              brandLayout: company.brandLayout,
               receiptIndex,
             })),
           );
@@ -1137,6 +1141,7 @@ function StepLot({ companies, onDone }: { companies: MasterCompanyOverview[]; on
                   receipt={entry.receipt}
                   skin={item.skin}
                   brandColor={item.brandColor}
+                  brandLayout={item.brandLayout}
                   sourceReference={entry.sourceReference}
                   endToEndId={item.result.endToEndId}
                 />

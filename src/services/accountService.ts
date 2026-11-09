@@ -4,7 +4,7 @@ import type { AccountRecord } from '@/infra/repositories/types';
 import { getConfig } from '@/lib/env';
 import { ValidationError } from '@/services/errors';
 import { resolveSkin, type SkinId } from '@/config/skins';
-import { pickBrandColor } from '@/domain/master/company';
+import { pickBrandColor, pickBrandLayout, resolveBrandLayout, type AutoLayout } from '@/domain/master/company';
 
 /**
  * Contas do console.
@@ -28,6 +28,8 @@ export interface Account {
   aliases: string[];
   /** Cor da marca do modelo automático; nulo nos ambientes desenhados. */
   brandColor: string | null;
+  /** Desenho do comprovante no modelo automático; nulo nos ambientes desenhados. */
+  brandLayout: AutoLayout | null;
 }
 
 const DEFAULT_ACCOUNT_NAME = 'Jade';
@@ -43,6 +45,7 @@ function toAccount(record: AccountRecord, defaultId: string): Account {
     isDefault,
     aliases: record.aliases ?? [],
     brandColor: record.brandColor ?? null,
+    brandLayout: resolveSkin(record.skin) === 'auto' ? resolveBrandLayout(record.brandLayout, record.id) : null,
   };
 }
 
@@ -59,6 +62,7 @@ export async function listAccounts(): Promise<Account[]> {
       isDefault: true,
       aliases: [],
       brandColor: null,
+      brandLayout: null,
     });
   }
   return accounts.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
@@ -91,6 +95,7 @@ export async function createAccount(input: {
   skin: string;
   aliases?: string[];
   brandColor?: string | null;
+  brandLayout?: AutoLayout | null;
 }): Promise<Account> {
   const name = input.name.trim();
   if (name.length < 2) throw new ValidationError('Dê um nome à conta.');
@@ -108,6 +113,9 @@ export async function createAccount(input: {
   // Modelo automático: cada empresa com uma cor que as outras não usam.
   const brandColor =
     input.brandColor ?? (skin === 'auto' ? pickBrandColor(accounts.map((account) => account.brandColor)) : null);
+  // E um desenho de comprovante que as outras também não usam.
+  const brandLayout =
+    input.brandLayout ?? (skin === 'auto' ? pickBrandLayout(accounts.map((account) => account.brandLayout)) : null);
   const repository = await getRepository();
   const saved = await repository.saveAccount({
     id,
@@ -115,6 +123,7 @@ export async function createAccount(input: {
     skin,
     aliases: normalizeAliases(input.aliases ?? []),
     brandColor,
+    brandLayout,
   });
   return toAccount(saved, getConfig().organizationId);
 }

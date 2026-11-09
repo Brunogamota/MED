@@ -86,7 +86,7 @@ export default async function ComprovantesEmLotePage({
 }) {
   const { ids, de, ate } = await searchParams;
   const auth = await serverPageContext();
-  const { skin, brandColor, name: accountName } = await getActiveAccount();
+  const { skin, brandColor, brandLayout, name: accountName } = await getActiveAccount();
   const bulls = skin === 'bulls';
   // Peça larga nos ambientes com comprovante próprio.
   const largo = skin !== 'jade';
@@ -176,6 +176,7 @@ export default async function ComprovantesEmLotePage({
                 receipt={receipt}
                 skin={skin}
                 brandColor={brandColor}
+                brandLayout={brandLayout}
                 sourceReference={peca.evidence.sourceReference}
                 endToEndId={medCase ? resolveEndToEndId(medCase) : null}
               />

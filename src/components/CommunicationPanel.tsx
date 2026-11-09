@@ -19,6 +19,7 @@ import { formatDateTimeSmart } from '@/lib/format';
 import { DateTimeField, Field, Select, SubmitButton } from '@/components/form';
 import { ClientEmailView } from '@/components/ClientEmailView';
 import type { SkinId } from '@/config/skins';
+import type { AutoLayout } from '@/domain/master/company';
 import { PaymentReceiptCard } from '@/components/PaymentReceiptCard';
 import {
   addCommunicationAction,
@@ -46,6 +47,7 @@ export function CommunicationPanel({
   sender,
   skin,
   brandColor,
+  brandLayout,
 }: {
   medCase: MedCase;
   template: CommunicationTemplate;
@@ -55,6 +57,8 @@ export function CommunicationPanel({
   skin?: SkinId;
   /** Cor da marca da empresa, no modelo automático. */
   brandColor?: string | null;
+  /** Desenho do comprovante da empresa, no modelo automático. */
+  brandLayout?: AutoLayout | null;
 }) {
   const draft = draftCommunication(medCase, template, { sender });
   const latest = reconstructions[reconstructions.length - 1];
@@ -256,6 +260,7 @@ export function CommunicationPanel({
                     receipt={receipt}
                     skin={skin}
                     brandColor={brandColor}
+                    brandLayout={brandLayout}
                     sourceReference={evidence.sourceReference}
                     endToEndId={resolveEndToEndId(medCase)}
                   />

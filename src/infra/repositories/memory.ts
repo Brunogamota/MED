@@ -376,6 +376,7 @@ export class InMemoryMedRepository
       skin: account.skin,
       aliases: account.aliases ?? previous?.aliases ?? [],
       brandColor: account.brandColor !== undefined ? account.brandColor : (previous?.brandColor ?? null),
+      brandLayout: account.brandLayout !== undefined ? account.brandLayout : (previous?.brandLayout ?? null),
       createdAt: previous?.createdAt ?? new Date().toISOString(),
     };
     this.accounts.set(account.id, saved);

@@ -54,7 +54,7 @@ export async function masterPreviewAction(form: FormData): Promise<Result<Master
 }
 
 export async function masterApplyGroupsAction(
-  groups: { key: string; accountId: string | null; name: string; brandColor: string | null; learned: string[] }[],
+  groups: Parameters<typeof applyMasterGroups>[0],
 ): Promise<Result<Record<string, string>>> {
   try {
     await serverPageContext();

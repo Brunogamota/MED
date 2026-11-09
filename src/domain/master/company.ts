@@ -246,3 +246,41 @@ export function pickBrandColor(used: (string | null)[]): string {
   }
   return best;
 }
+
+/**
+ * Desenhos do comprovante do modelo automático. Cada empresa nova ganha um
+ * que as outras ainda não usam — estrutura, tipografia e composição
+ * diferentes, não só a cor.
+ */
+export const AUTO_LAYOUTS = ['faixa', 'recibo', 'carta', 'painel', 'janela', 'selo'] as const;
+export type AutoLayout = (typeof AUTO_LAYOUTS)[number];
+
+export const AUTO_LAYOUT_LABEL: Record<AutoLayout, string> = {
+  faixa: 'Faixa',
+  recibo: 'Recibo',
+  carta: 'Carta',
+  painel: 'Painel',
+  janela: 'Janela',
+  selo: 'Selo',
+};
+
+export function isAutoLayout(value: string | null | undefined): value is AutoLayout {
+  return (AUTO_LAYOUTS as readonly string[]).includes(value ?? '');
+}
+
+/** O primeiro desenho que nenhuma conta usa; acabados, o menos usado. */
+export function pickBrandLayout(used: (string | null)[]): AutoLayout {
+  const counts = new Map<AutoLayout, number>(AUTO_LAYOUTS.map((layout) => [layout, 0]));
+  for (const layout of used) if (isAutoLayout(layout)) counts.set(layout, (counts.get(layout) ?? 0) + 1);
+  let best: AutoLayout = AUTO_LAYOUTS[0];
+  for (const layout of AUTO_LAYOUTS) if ((counts.get(layout) ?? 0) < (counts.get(best) ?? 0)) best = layout;
+  return best;
+}
+
+/** Conta antiga sem desenho gravado: um fixo, tirado do id. */
+export function resolveBrandLayout(layout: string | null | undefined, accountId: string): AutoLayout {
+  if (isAutoLayout(layout)) return layout;
+  let hash = 0;
+  for (const char of accountId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return AUTO_LAYOUTS[hash % AUTO_LAYOUTS.length]!;
+}

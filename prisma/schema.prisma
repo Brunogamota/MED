@@ -128,6 +128,8 @@ model Organization {
   aliases    String[] @default([])
   /// Cor da marca do modelo automático (#rrggbb). Nulo nos ambientes desenhados.
   brandColor String?
+  /// Desenho do comprovante no modelo automático (src/domain/master/company.ts).
+  brandLayout String?
   createdAt DateTime @default(now())
 
   meds Med[]

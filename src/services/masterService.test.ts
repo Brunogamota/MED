@@ -48,7 +48,7 @@ describe('conta Master', () => {
 
     const accounts = await listAccounts();
     const auroraAccount = accounts.find((account) => account.name === 'Loja Aurora');
-    expect(auroraAccount).toMatchObject({ skin: 'auto', brandColor: aurora?.brandColor });
+    expect(auroraAccount).toMatchObject({ skin: 'auto', brandColor: aurora?.brandColor, brandLayout: aurora?.brandLayout });
     expect(accounts.find((account) => account.name === 'Bulls Cash')?.aliases).toContain('prefixo:BLS-');
 
     // Cada MED na conta da sua empresa, e só nela.
@@ -56,6 +56,14 @@ describe('conta Master', () => {
     const naAurora = await listMeds({ ...base, organizationId: auroraAccount!.id }, {});
     expect(naBulls).toHaveLength(4);
     expect(naAurora).toHaveLength(1);
+  });
+
+  it('duas empresas novas não saem com o mesmo desenho nem a mesma cor', async () => {
+    const csv = [HEADER, linha(1, 'A-1', 'Loja Um', ''), linha(2, 'B-1', 'Loja Dois', '')].join('\n');
+    const preview = await previewMasterImport([{ name: 'x.csv', text: csv }]);
+    const [a, b] = preview.groups;
+    expect(a?.brandLayout).not.toBe(b?.brandLayout);
+    expect(a?.brandColor).not.toBe(b?.brandColor);
   });
 
   it('conta inexistente não recebe importação', async () => {
